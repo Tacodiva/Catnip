@@ -360,7 +360,7 @@ export class WasmStruct<TMembers extends WasmStructMembersDefinition> implements
     }
 
     public set(ptr: number, buffer: DataView, value: Partial<WasmStructValue<TMembers>>): void {
-            for (const memberName in value) {
+        for (const memberName in value) {
             const member = this.members[memberName];
             member.type.set(ptr + member.offset, buffer, value[memberName]);
         }

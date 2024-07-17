@@ -1,14 +1,13 @@
-import { CatnipOpTypes } from "../CatnipOpTypes";
-import { Control } from "./Control"
-import { Core } from "./Core"
-import { Operator } from "./Operator";
 
-type Ops = typeof Core & typeof Control & typeof Operator;
+import { CatnipOps } from "../CatnipOps";
+import control from "./control";
+import core from "./core";
 
-declare module "../CatnipOpTypes" {
-    interface CatnipOpTypes extends Ops {}
+type Ops = typeof core & typeof control;
+
+Object.assign(CatnipOps, core);
+Object.assign(CatnipOps, control);
+
+declare module "../CatnipOps" {
+    interface CatnipOps extends Ops {}
 }
-
-Object.assign(CatnipOpTypes, Core);
-Object.assign(CatnipOpTypes, Operator);
-Object.assign(CatnipOpTypes, Control);

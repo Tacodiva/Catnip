@@ -1,5 +1,5 @@
 
-export * from "./CatnipOpTypes";
-export * from "./CatnipOp";
+export * from "./CatnipOps";
 export * from "./ops";
-export * from "./types";
+
+export * from "./CatnipOp";

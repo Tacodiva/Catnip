@@ -1,4 +1,4 @@
-import { CatnipOpTypes } from "./ir";
+import { CatnipOps } from "./ir";
 import { CatnipRuntimeModule } from "./runtime/CatnipRuntimeModule";
 
 
@@ -29,8 +29,8 @@ async function main() {
                     {
                         id: "a",
                         commands: [
-                            CatnipOpTypes.core_dbg_log.create({
-                                message: CatnipOpTypes.core_const.create({ value: "Hello, World!!" })
+                            CatnipOps.core_log.create({
+                                msg: CatnipOps.core_const.create({ value: "Hello, World!!" })
                             })
                         ],
                         trigger: {

@@ -78,7 +78,7 @@ export class CatnipProject {
     }
 
     private async _rewrite(): Promise<void> {
-        this._recompile();
+        await this._recompile();
 
         if (this._rewriteSpritesList) {
             let spritesArray = this.runtimeInstance.getMember("sprites");

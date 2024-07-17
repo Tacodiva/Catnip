@@ -51,12 +51,22 @@ export class CatnipRuntimeModule {
     public readonly instance: WebAssembly.Instance;
     public readonly imports: CatnipRuntimeModuleImports;
     public readonly functions: CatnipRuntimeModuleFunctionsObject;
-
-    public readonly memory: DataView;
-    public readonly memoryBytes: Uint8Array;
+    
+    private _memory: DataView | null;
+    public get memory(): DataView {
+        if (this._memory === null || this._memory.buffer !== this.imports.env.memory.buffer)
+            this._memory = new DataView(this.imports.env.memory.buffer);
+        return this._memory;
+    }
+    
+    private _memoryBytes: Uint8Array | null;
+    public get memoryBytes(): Uint8Array {
+        if (this._memoryBytes === null || this._memoryBytes.buffer !== this.imports.env.memory.buffer)
+            this._memoryBytes = new Uint8Array(this.imports.env.memory.buffer);
+        return this._memoryBytes;
+    }
 
     public get indirectFunctionTable() { return this.imports.env.__indirect_function_table; }
-
 
     /** @internal */
     public constructor(module: WebAssembly.Module, imports: CatnipRuntimeModuleImports, instance: WebAssembly.Instance) {
@@ -65,8 +75,8 @@ export class CatnipRuntimeModule {
         this.imports = imports;
         this.functions = this.instance.exports as CatnipRuntimeModuleFunctionsObject;
 
-        this.memory = new DataView(this.imports.env.memory.buffer);
-        this.memoryBytes = new Uint8Array(this.imports.env.memory.buffer);
+        this._memory = null;
+        this._memoryBytes = null;
     }
 
     public loadProject(projectDesc: CatnipProjectDesc) {
