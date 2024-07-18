@@ -10,7 +10,7 @@ export class Logger {
         this.name = name;
     }
 
-    public assert(condition: boolean, error: boolean = true, message?: string) {
+    public assert(condition: boolean, error: boolean = true, message?: string): asserts condition {
         if (!condition) { 
             message ??= "Assertion failed.";
             const throwable = new Error(message);

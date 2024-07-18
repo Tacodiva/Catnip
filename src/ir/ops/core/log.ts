@@ -1,5 +1,5 @@
 
-import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompiler";
+import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrCommandOp, CatnipIrCommandOpType } from "../../CatnipIrOp";
 import { CatnipCommandOpType, CatnipInputOp } from "../../CatnipOp";

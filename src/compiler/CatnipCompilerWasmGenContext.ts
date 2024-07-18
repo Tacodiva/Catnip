@@ -1,13 +1,14 @@
 import { SpiderExpression, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipCompiledFunction } from './CatnipCompiledFunction';
-import { CatnipIrOp } from "../ir/CatnipIrOp";
+import { CatnipIrFunction } from './CatnipIrFunction';
+import { CatnipIrCallType, CatnipIrOp } from "../ir/CatnipIrOp";
+import { createLogger, Logger } from "../log";
 
 export class CatnipCompilerWasmGenerator {
     public readonly compiler: CatnipCompiler;
 
-    public currentFunction: CatnipCompiledFunction | null;
+    public currentFunction: CatnipIrFunction | null;
 
     public constructor(compoiler: CatnipCompiler) {
         this.compiler = compoiler;
@@ -19,6 +20,8 @@ export class CatnipCompilerWasmGenerator {
 }
 
 export class CatnipCompilerWasmGenContext {
+    private static readonly _logger: Logger = createLogger("CatnipCompilerWasmGenContext");
+
     public readonly compiler: CatnipCompiler;
     public get projectModule() { return this.compiler.module; }
     public get spiderModule() { return this.projectModule.spiderModule; }
@@ -26,46 +29,66 @@ export class CatnipCompilerWasmGenContext {
 
     public get project() { return this.compiler.project; }
 
-    private _expression: SpiderExpression;
+    private _func: CatnipIrFunction;
 
-    public constructor(compiler: CatnipCompiler, expression: SpiderExpression) {
-        this.compiler = compiler;
-        this._expression = expression;
+    private _expressionNullable: SpiderExpression | null;
+    private _expressions: SpiderExpression[];
+
+    private get _expression(): SpiderExpression {
+        CatnipCompilerWasmGenContext._logger.assert(this._expressionNullable !== null, true, "No expression to write to.");
+        return this._expressionNullable;
     }
 
-    public emitBranch(branch: CatnipIrOp, expression?: SpiderExpression) {
+    public constructor(func: CatnipIrFunction) {
+        this.compiler = func.compiler;
+        this._func = func;
+        this._expressionNullable = null;
+        this._expressions = [];
+        this.pushExpression(this._func.spiderFunction.body);
+    }
 
-        const oldExpression = this._expression;
-        if (expression !== undefined) {
-            this._expression = expression;
+    public pushExpression(expr?: SpiderExpression) {
+        if (this._expressionNullable !== null) {
+            this._expressions.push(this._expressionNullable);
+        } else {
+            CatnipCompilerWasmGenContext._logger.assert(this._expressions.length === 0);
         }
+        this._expressionNullable = expr ?? new SpiderExpression();
+    }
 
-        // "inline" branches are branches that are only called from one place
-        // "block" branches are branches that are only called from places in the same function before the branch destination
-        //   -> In this case we wrap everything from the first jump to the start of the branch in a "block" and use br / br_if
-        // "loop" branches are branches that are only called from places in the same function after the branch destination
-        //   -> In this case we wrap everything from the start of the branch to the last jump to it in a "loop" and use br / br_if
-        // "function" branches are everything else
-        //   -> We create a function and use call to jump to it
+    public popExpression(): SpiderExpression {
+        const expression = this._expressionNullable;
+        CatnipCompilerWasmGenContext._logger.assert(this._expressions.length !== 0);
+        this._expressionNullable = this._expressions.pop() ?? null;
+        return expression!;
+    }
 
-        if (branch.prev.length <= 1) {
-            // Inline branch
+    public emitBranchExpression(head: CatnipIrOp) {
+        this.pushExpression();
+        this.emitBranch(head);
+        return this.popExpression();
+    }
 
-            let next: CatnipIrOp | undefined = branch;
-            while (next !== undefined && next.prev.length <= 1) {
-                this.emitIr(next);
-                next = next.branches.next;
-            }
+    public emitBranch(head: CatnipIrOp) {
+        //     CatnipCompilerWasmGenContext._logger.assert(head.callType !== undefined);
 
-            if (next !== undefined)
-                throw new Error();
+        //     let op: CatnipIrOp | undefined = head;
 
+        //     while (op !== undefined && op.callType === CatnipIrCallType.Inline) {
+        //         this.emitIr(op);
+        //         op = op.branches.next;
+        //     }
 
-        } else throw new Error();
+        //     if (op === undefined) return;
 
-        this._expression = oldExpression;
+        //     throw new Error();
 
-        return null!;
+        let op: CatnipIrOp | undefined = head;
+
+        while (op !== undefined) {
+            this.emitIr(op);
+            op = op.branches.next;
+        }
     }
 
     public emitIr(head: CatnipIrOp) {

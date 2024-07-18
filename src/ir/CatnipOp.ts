@@ -1,4 +1,4 @@
-import { CatnipCompilerIrGenContext } from "../compiler/CatnipCompiler";
+import { CatnipCompilerIrGenContext } from "../compiler/CatnipCompilerIrGenContext";
 import { CatnipInputFlags, CatnipInputFormat } from "./types";
 
 export type CatnipCommandList = CatnipCommandOp<CatnipOpInputs>[];

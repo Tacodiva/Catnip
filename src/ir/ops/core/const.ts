@@ -1,5 +1,5 @@
 import { SpiderNumberType } from "wasm-spider";
-import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompiler";
+import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipInputOpType } from "../../CatnipOp";

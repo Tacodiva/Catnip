@@ -29,9 +29,23 @@ async function main() {
                     {
                         id: "a",
                         commands: [
+                            CatnipOps.control_if_else.create({
+                                condition: CatnipOps.core_const.create({ value: "true" }),
+                                true_branch: [
+                                    CatnipOps.core_log.create({
+                                        msg: CatnipOps.core_const.create({ value: "A" })
+                                    }),
+                                ],
+                                false_branch: [
+                                    CatnipOps.core_log.create({
+                                        msg: CatnipOps.core_const.create({ value: "B" })
+                                    }),
+                                    CatnipOps.core_yield.create({}),
+                                ]
+                            }),
                             CatnipOps.core_log.create({
-                                msg: CatnipOps.core_const.create({ value: "Hello, World!!" })
-                            })
+                                msg: CatnipOps.core_const.create({ value: "C" })
+                            }),
                         ],
                         trigger: {
                             type: "event",
