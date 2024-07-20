@@ -3,39 +3,32 @@ import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenC
 import { CatnipInputFlags, CatnipInputFormat } from "./types";
 
 export type CatnipIrOpInputs = Record<string, any>;
-export type CatnipIrOpBranches = Record<string, CatnipIrOp> & { next?: never };
+export type CatnipIrOpBranches = Record<string, CatnipIrBranch>;
 
-export enum CatnipIrCallType {
-    // "inline" branches are branches that are only called from one place
-    Inline,
-    // "block" branches are branches that are only called from places in the same function before the branch destination
-    //   -> In this case we wrap everything from the first jump to the start of the branch in a "block" and use br / br_if
-    Block,
-    // "loop" branches are branches that are only called from places in the same function after the branch destination
-    //   -> In this case we wrap everything from the start of the branch to the last jump to it in a "loop" and use br / br_if
-    Loop,
-    // "function" branches are everything else
-    //   -> We create a function and use call to jump to it
-    Function
+export class CatnipIrBranch {
+
+    readonly func: CatnipIrFunction;
+    readonly ops: CatnipIrOp[];
+    readonly tails: CatnipIrBranch[];
+
+    public constructor(func: CatnipIrFunction) {
+        this.func = func;
+        this.ops = [];
+        this.tails = [this];
+    }
 }
 
 export interface CatnipIrOp {
     readonly type: CatnipIrOpType<CatnipIrOpInputs, CatnipIrOpBranches>;
     readonly inputs: CatnipIrOpInputs;
 
-    readonly branches: Omit<CatnipIrOpBranches, "next"> & { next?: CatnipIrOp };
-    readonly prev: CatnipIrOp[];
-
-    readonly func: CatnipIrFunction;
-    
-    index?: number;
-    callType?: CatnipIrCallType;
+    readonly branches: CatnipIrOpBranches;
 }
 
 export interface CatnipIrOpBase<TInputs extends CatnipIrOpInputs = CatnipIrOpInputs, TBranches extends CatnipIrOpBranches = CatnipIrOpBranches> extends CatnipIrOp {
     readonly type: CatnipIrOpType<TInputs, TBranches>;
     readonly inputs: TInputs;
-    readonly branches: Omit<TBranches, "next"> & { next?: CatnipIrOp };
+    readonly branches: TBranches;
 }
 
 export interface CatnipIrCommandOp<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpBase<TInputs, TBranches> {

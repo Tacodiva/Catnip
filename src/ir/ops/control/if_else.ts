@@ -3,7 +3,7 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrCommandOp, CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
+import { CatnipIrBranch, CatnipIrCommandOp, CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../../CatnipOp";
 import { CatnipInputFlags, CatnipInputFormat } from "../../types";
 
@@ -16,15 +16,15 @@ export const op_if_else = new class extends CatnipCommandOpType<if_else_inputs> 
             {
                 true_branch: ctx.emitBranch(inputs.true_branch),
                 false_branch: ctx.emitBranch(inputs.false_branch)
-            },
-            false);
+            }
+        );
     }
 }
 
-type if_else_branches = { true_branch: CatnipIrOp, false_branch: CatnipIrOp };
+type if_else_branches = { true_branch: CatnipIrBranch, false_branch: CatnipIrBranch };
 
 export const ir_if_else = new class extends CatnipIrCommandOpType<{}, if_else_branches> {
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrCommandOp<{}, if_else_branches>): void {
-        ctx.emitWasm(SpiderOpcodes.if, ctx.emitBranchExpression(ir.branches.true_branch), ctx.emitBranchExpression(ir.branches.false_branch));
+        ctx.emitWasm(SpiderOpcodes.if, ctx.emitBranch(ir.branches.true_branch), ctx.emitBranch(ir.branches.false_branch));
     }
 }

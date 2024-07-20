@@ -5,14 +5,19 @@ import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipInputOpType } from "../../CatnipOp";
 import { CatnipInputFormat, CatnipInputFlags } from "../../types";
 
-export const ir_const = new class extends CatnipIrInputOpType<{value: string}> {
-    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<{ value: string; }>): void {
-        ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString(ir.inputs.value));
+export const ir_const = new class extends CatnipIrInputOpType<{value: string | number}> {
+    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<{ value: string | number; }>): void {
+        const value = ir.inputs.value;
+        if (typeof value === "string") {
+            ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString(value));
+        } else {
+            ctx.emitWasmConst(SpiderNumberType.i32, value);
+        }
     }
 }
 
-export const op_const = new class extends CatnipInputOpType<{value: string}> {
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: { value: string; }, format: CatnipInputFormat, flags: CatnipInputFlags): void {
+export const op_const = new class extends CatnipInputOpType<{value: string | number}> {
+    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: { value: string | number; }, format: CatnipInputFormat, flags: CatnipInputFlags): void {
         ctx.emitIrInput(ir_const, inputs, format, flags, {});
     }
 }

@@ -1,6 +1,6 @@
 import { SpiderFunctionDefinition } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
-import { CatnipIrOp } from "../ir/CatnipIrOp";
+import { CatnipIrBranch, CatnipIrOp } from "../ir/CatnipIrOp";
 
 export class CatnipIrFunction {
 
@@ -9,12 +9,11 @@ export class CatnipIrFunction {
 
     public readonly spiderFunction: SpiderFunctionDefinition;
 
-    public readonly head: CatnipIrOp;
+    public readonly body: CatnipIrBranch;
 
-    public constructor(compiler: CatnipCompiler, head: CatnipIrOp) {
+    public constructor(compiler: CatnipCompiler) {
         this.compiler = compiler;
-        this.head = head;
-
         this.spiderFunction = this.spiderModule.createFunction();
+        this.body = new CatnipIrBranch(this);
     }
 }

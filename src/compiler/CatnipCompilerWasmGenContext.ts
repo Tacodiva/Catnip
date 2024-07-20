@@ -2,22 +2,8 @@ import { SpiderExpression, SpiderFunctionDefinition, SpiderNumberType, SpiderOpc
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipIrFunction } from './CatnipIrFunction';
-import { CatnipIrCallType, CatnipIrOp } from "../ir/CatnipIrOp";
+import { CatnipIrBranch, CatnipIrOp } from "../ir/CatnipIrOp";
 import { createLogger, Logger } from "../log";
-
-export class CatnipCompilerWasmGenerator {
-    public readonly compiler: CatnipCompiler;
-
-    public currentFunction: CatnipIrFunction | null;
-
-    public constructor(compoiler: CatnipCompiler) {
-        this.compiler = compoiler;
-        this.currentFunction = null;
-    }
-
-
-
-}
 
 export class CatnipCompilerWasmGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerWasmGenContext");
@@ -63,31 +49,15 @@ export class CatnipCompilerWasmGenContext {
         return expression!;
     }
 
-    public emitBranchExpression(head: CatnipIrOp) {
+    public emitBranch(branch: CatnipIrBranch): SpiderExpression {
         this.pushExpression();
-        this.emitBranch(head);
+        this.emitBranchInline(branch);
         return this.popExpression();
     }
 
-    public emitBranch(head: CatnipIrOp) {
-        //     CatnipCompilerWasmGenContext._logger.assert(head.callType !== undefined);
-
-        //     let op: CatnipIrOp | undefined = head;
-
-        //     while (op !== undefined && op.callType === CatnipIrCallType.Inline) {
-        //         this.emitIr(op);
-        //         op = op.branches.next;
-        //     }
-
-        //     if (op === undefined) return;
-
-        //     throw new Error();
-
-        let op: CatnipIrOp | undefined = head;
-
-        while (op !== undefined) {
+    public emitBranchInline(branch: CatnipIrBranch) {
+        for (const op of branch.ops) {
             this.emitIr(op);
-            op = op.branches.next;
         }
     }
 

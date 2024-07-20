@@ -30,7 +30,7 @@ async function main() {
                         id: "a",
                         commands: [
                             CatnipOps.control_if_else.create({
-                                condition: CatnipOps.core_const.create({ value: "true" }),
+                                condition: CatnipOps.core_const.create({ value: 0 }),
                                 true_branch: [
                                     CatnipOps.core_log.create({
                                         msg: CatnipOps.core_const.create({ value: "A" })

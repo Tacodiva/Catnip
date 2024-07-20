@@ -1,11 +1,11 @@
 import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList } from "../ir";
-import { CatnipIrOp, CatnipIrOpBranches, CatnipIrCommandOpType, CatnipIrCommandOp, CatnipIrInputOpType, CatnipIrInputOp, CatnipIrOpInputs, CatnipIrOpBase } from "../ir/CatnipIrOp";
-import { ir_nop } from "../ir/ops/core/nop";
+import { CatnipIrOpBranches, CatnipIrCommandOpType, CatnipIrCommandOp, CatnipIrInputOpType, CatnipIrInputOp, CatnipIrOpInputs, CatnipIrOpBase, CatnipIrBranch } from "../ir/CatnipIrOp";
+import { ir_call } from "../ir/ops/core/call";
+import { ir_yield } from "../ir/ops/core/yield";
 import { CatnipInputFormat, CatnipInputFlags } from "../ir/types";
 import { createLogger, Logger } from "../log";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";
-import { ir_call } from '../ir/ops/core/call';
 
 /*
 
@@ -18,7 +18,6 @@ Stage 1: Generate
 Stage 2: Analyse
     -> Inlining!
     -> Constant folding / Dead branch removal
-    -> Analyze and place Blocks / Loops 
     -> Type analysis + Simplification
 
 Stage 3: Emit
@@ -26,114 +25,59 @@ Stage 3: Emit
 
 */
 
-interface CantipIrBranch {
-    head: CatnipIrOp;
-    tails: CatnipIrOp[];
-}
-
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
     public readonly compiler: CatnipCompiler;
 
-    private _function: CatnipIrFunction | null;
     public functions: CatnipIrFunction[];
+    private _function: CatnipIrFunction;
 
-    private _head: CatnipIrOp | null;
-    private _prev: CatnipIrOp[];
-    private _yield: boolean;
+    private _branch: CatnipIrBranch;
+    private _tails: CatnipIrBranch[];
 
-    public constructor(compiler: CatnipCompiler) {
+    public constructor(compiler: CatnipCompiler, func: CatnipIrFunction) {
         this.compiler = compiler;
-        this._prev = [];
-        this._head = null;
-        this._function = null;
-        this.functions = [];
-        this._yield = false;
+        this._function = func;
+        this.functions = [this._function];
+        this._branch = this._function.body;
+        this._tails = [];
     }
 
     private _emitIr<TOp extends CatnipIrOpBase<CatnipIrOpInputs, TBranches>, TBranches extends CatnipIrOpBranches>(
-        partialOp: Omit<TOp, "branches" | "prev" | "func">,
-        branches: { [Key in keyof TBranches]: CantipIrBranch },
-        includeNext: boolean
+        op: TOp
     ): TOp {
 
+        for (const branch of this._tails) {
+            if (branch.func !== this._function) {
 
-        (partialOp as { branches?: CatnipIrOpBranches }).branches = {};
-        (partialOp as { prev?: CatnipIrOp[] }).prev = [];
+                this._switchToFunction(this._createFunction());
 
-        const op = partialOp as TOp;
-
-        let func = this._function;
-
-        if (this._yield || func === null) {
-            func = new CatnipIrFunction(this.compiler, op);
-            this._yield = false;
-        }
-        
-        if (func === this._function) {
-            for (const prev of this._prev) {
-                if (prev.func !== func) {
-                    func = new CatnipIrFunction(this.compiler, op);
-                    break;
-                }
-            }
-        }
-
-        (op as { func?: CatnipIrFunction }).func = func;
-
-        if (func === this._function) {
-            // If we haven't changed functions...
-            for (const prev of this._prev) {
-                CatnipCompilerIrGenContext._logger.assert(prev.branches.next === undefined);
-                prev.branches.next = op;
-                op.prev.push(prev);
-            }
-        } else {
-            // We have changed functions, we need to emit a call to each prev
-
-            // If we actually were in a function, emit a call to the new function
-            if (this._function !== null && this._prev.length === 0) {
-                CatnipCompilerIrGenContext._logger.assert(this._head === null);
-
-                this._emitIr({
-                    type: ir_call,
-                    inputs: { func },
-                }, {}, false);
-            } else {
-                for (const prev of this._prev) {
-                    CatnipCompilerIrGenContext._logger.assert(prev.branches.next === undefined);
-
-                    const callOp: CatnipIrOp = {
+                for (const branch of this._tails) {
+                    branch.ops.push({
                         type: ir_call,
-                        inputs: { func },
-                        branches: {},
-                        prev: [prev],
-                        func: prev.func
-                    };
-
-                    prev.branches.next = callOp;
+                        inputs: {},
+                        branches: { func: this._function.body },
+                    });
                 }
+
+                break;
             }
-
-            this._function = func;
-            this.functions.push(func);
         }
 
-        this._prev.length = 0;
+        this._branch.ops.push(op);
 
-        if (includeNext) this._prev.push(op);
+        this._branch.tails.length = 0;
 
-        for (const branchName in branches) {
-            const branch = branches[branchName];
-            for (const branchTail of branch.tails) {
-                this._prev.push(branchTail);
+        const branchNames = Object.keys(op.branches);
+        if (branchNames.length === 0) {
+            this._branch.tails.push(this._branch);
+        } else {
+            for (const branchName of branchNames) {
+                this._branch.tails.push(...op.branches[branchName].tails);
             }
-            (op.branches as CatnipIrOpBranches)[branchName] = branch.head;
         }
 
-        if (this._head === null) {
-            this._head = op;
-        }
+        this._tails = this._branch.tails;
 
         return op;
     }
@@ -141,13 +85,13 @@ export class CatnipCompilerIrGenContext {
     public emitIrCommand<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
         op: CatnipIrCommandOpType<TInputs, TBranches>,
         inputs: TInputs,
-        branches: { [Key in keyof TBranches]: CantipIrBranch },
-        includeNext: boolean = true
+        branches: TBranches
     ): CatnipIrCommandOp<TInputs, TBranches> {
         return this._emitIr<CatnipIrCommandOp<TInputs, TBranches>, TBranches>({
             type: op,
-            inputs
-        }, branches, includeNext);
+            inputs,
+            branches
+        });
     }
 
     public emitIrInput<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
@@ -155,19 +99,32 @@ export class CatnipCompilerIrGenContext {
         inputs: TInputs,
         format: CatnipInputFormat,
         flags: CatnipInputFlags,
-        branches: { [Key in keyof TBranches]: CantipIrBranch },
-        includeNext: boolean = true
+        branches: TBranches,
     ): CatnipIrInputOp<TInputs, TBranches> {
         return this._emitIr<CatnipIrInputOp<TInputs, TBranches>, TBranches>({
             type: op,
             inputs,
             format,
-            flags
-        }, branches, includeNext);
+            flags,
+            branches
+        });
     }
 
     public emitYield() {
-        this._yield = true;
+        const func = this._createFunction();
+        this.emitIrCommand(ir_yield, {}, { func: func.body });
+        this._switchToFunction(func);
+    }
+
+    private _createFunction(): CatnipIrFunction {
+        const func = new CatnipIrFunction(this.compiler);
+        this.functions.push(func);
+        return func;
+    }
+
+    private _switchToFunction(func: CatnipIrFunction) {
+        this._function = func;
+        this._branch = func.body;
     }
 
     public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipInputFormat, flags: CatnipInputFlags) {
@@ -178,34 +135,22 @@ export class CatnipCompilerIrGenContext {
         op.type.generateIr(this, op.inputs);
     }
 
-    public emitBranch(commands: CatnipCommandList): CantipIrBranch {
-        const oldPrev = this._prev;
-        const oldHead = this._head;
+    public emitBranch(commands: CatnipCommandList): CatnipIrBranch {
         const oldFunc = this._function;
-        const oldYield = this._yield;
+        const oldBranch = this._branch;
+        const oldTails = this._tails;
 
-        let tails: CatnipIrOp[] = this._prev = [];
-        this._head = null;
-        this._yield = false;
+        let branch: CatnipIrBranch = this._branch = new CatnipIrBranch(this._function);
 
         for (const command of commands) {
             this.emitCommand(command);
         }
 
-        if (this._yield || this._head === null) {
-            this.emitIrCommand(ir_nop, {}, {});
-        }
-        
-        let head = this._head as CatnipIrOp | null;
-
-        CatnipCompilerIrGenContext._logger.assert(head !== null);
-
-        this._prev = oldPrev;
-        this._head = oldHead;
         this._function = oldFunc;
-        this._yield = oldYield;
+        this._branch = oldBranch;
+        this._tails = oldTails;
 
-        return { head, tails };
+        return branch;
     }
 
 }
