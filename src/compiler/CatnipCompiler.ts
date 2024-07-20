@@ -4,8 +4,11 @@ import { CatnipProjectModule } from "./CatnipProjectModule";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipIrFunction } from "./CatnipIrFunction";
+import { createLogger, Logger } from "../log";
+import { ir_thread_terminate } from "../ir/ops/core/thread_terminate";
 
 export class CatnipCompiler {
+    private static readonly _logger: Logger = createLogger("CatnipCompiler");
 
     public readonly project: CatnipProject;
     public readonly module: CatnipProjectModule;
@@ -19,14 +22,16 @@ export class CatnipCompiler {
 
     public compile(script: CatnipScript) {
 
-        const irFunc = new CatnipIrFunction(this);
+        const irFunc = new CatnipIrFunction(this, true);
         const irGenCtx = new CatnipCompilerIrGenContext(this, irFunc);
-
-        // const irBranch = irGenCtx.emitBranch(script.commands);
 
         for (const command of script.commands) {
             irGenCtx.emitCommand(command);
         }
+        irGenCtx.emitIrCommand(ir_thread_terminate, {}, {});
+
+        this._allocateFunctionIndices(irGenCtx.functions);
+        this.module.createFunctionsElement(irGenCtx.functions);
 
         console.log(irFunc.body);
         console.log(irGenCtx.functions);
@@ -39,51 +44,26 @@ export class CatnipCompiler {
         this.spiderModule.exportFunction("testFunction", irFunc.spiderFunction);
     }
 
-    // private _analyzeIrCalltype(irHead: CatnipIrOp) {
-    //     let op: CatnipIrOp | undefined = irHead;
+    private _allocateFunctionIndices(functions: CatnipIrFunction[]) {
+        const needsFunctionIndices = functions.filter(fn => fn.needsFunctionTableIndex);
+        let index = 1;
 
-    //     while (op != null) {
-    //         if (op.callType !== undefined) return;
+        for (const fn of needsFunctionIndices) {
+            fn.functionTableIndex = index++;
+        } 
+    }
 
-    //         if (op.prev.length <= 1) {
-    //             op.callType = CatnipIrCallType.Inline;
-    //         } else {
-    //             for (const caller of op.prev) {
-    //                 if (caller.func !== op.func) {
-    //                     op.callType = CatnipIrCallType.Function;
-    //                     break;
-    //                 }
-
-    //                 if (caller.callType !== undefined) {
-    //                     // We've already analyzed the caller, meaning it's before us in this function
-    //                     if (op.callType === CatnipIrCallType.Loop) {
-    //                         // This means we've also called this caller afterwards... we probably need to make a new function here
-    //                         throw new Error("not implemented");
-    //                     }
-
-    //                     op.callType = CatnipIrCallType.Block;
-    //                 } else {
-    //                     // We've haven't analyzed the caller, meaning it's after us in this function
-    //                     if (op.callType === CatnipIrCallType.Block) {
-    //                         // Same as above
-    //                         console.log(op);
-    //                         throw new Error("not implemented");
-    //                     }
-    //                     op.callType = CatnipIrCallType.Loop;
-    //                 }
-    //             }
-    //         }
-
-    //         // Analyze the branches
-    //         for (const branchName in op.branches) {
-    //             if (branchName === "next") continue;
-    //             this._analyzeIrCalltype(op.branches[branchName]);
-    //         }
-
-    //         // We analyze the "next" branch in this function to avoid a stack overflow
-    //         op = op.branches.next;
-    //     }
-    // }
-
+    // TODO This is a temporary crapy solution
+    private takenIndices: Set<number> = new Set();
+    private _allocateFunctionTableIndex(): number {
+        for (let i = 1; i < 99999; i++) {
+            if (!this.takenIndices.has(i) &&
+                !this.module.runtimeModule.indirectFunctionTable.get(i)) {
+                this.takenIndices.add(i);
+                return i;
+            }
+        }
+        throw new Error();
+    }
 
 }

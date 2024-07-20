@@ -125,7 +125,17 @@ export class CatnipProject {
             catnip: this.runtimeModule.functions
         });
 
-        (instance.exports as any).testFunction();
+        const target = this.runtimeModule.functions.catnip_target_new(this.runtimeInstance.ptr, 1);
+        const thread = this.runtimeModule.functions.catnip_thread_new(target, 1);
+
+        console.log("1");
+        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
+        console.log("2");
+        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
+        console.log("3");
+        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
+        console.log("4");
+        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
 
     }
 }

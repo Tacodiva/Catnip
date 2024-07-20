@@ -4,6 +4,8 @@
 #include "catnip_mem.c"
 #include "catnip_numconv.c"
 #include "catnip_runtime.c"
+#include "catnip_target.c"
+#include "catnip_thread.c"
 #include "catnip_unicode.c"
 #include "catnip_util.c"
 #include "catnip_blockutil.c"
@@ -51,8 +53,24 @@ catnip_runtime *CATNIP_EXPORT(catnip_runtime_new)() {
   return catnip_runtime_new();
 }
 
-void *CATNIP_EXPORT(fnptr)() {
-  return &catnip_runtime_new;
+void CATNIP_EXPORT(catnip_runtime_tick)(catnip_runtime *runtime) {
+  catnip_runtime_tick(runtime);
+}
+
+catnip_target *CATNIP_EXPORT(catnip_target_new)(catnip_runtime *runtime, catnip_sprite *sprite) {
+  return catnip_target_new(runtime, sprite);
+}
+
+catnip_thread *CATNIP_EXPORT(catnip_thread_new)(catnip_target *target, catnip_thread_fnptr fnptr) {
+  return catnip_thread_new(target, fnptr);
+}
+
+void CATNIP_EXPORT(catnip_thread_yield)(catnip_thread *thread, catnip_thread_fnptr fnptr) {
+  return catnip_thread_yield(thread, fnptr);
+}
+
+void CATNIP_EXPORT(catnip_thread_terminate)(catnip_thread* thread) {
+  return catnip_thread_terminate(thread);
 }
 
 void CATNIP_EXPORT(catnip_blockutil_debug_log)(catnip_hstring *str) {

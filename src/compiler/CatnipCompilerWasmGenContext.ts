@@ -16,6 +16,7 @@ export class CatnipCompilerWasmGenContext {
     public get project() { return this.compiler.project; }
 
     private _func: CatnipIrFunction;
+    public get func() { return this._func; }
 
     private _expressionNullable: SpiderExpression | null;
     private _expressions: SpiderExpression[];
@@ -79,7 +80,11 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public emitWasmRuntimeFunctionCall(funcName: CatnipRuntimeModuleFunctionName) {
-        this._expression.emit(SpiderOpcodes.call, this.projectModule.getRuntimeFunction(funcName));
+        this.emitWasm(SpiderOpcodes.call, this.projectModule.getRuntimeFunction(funcName));
+    }
+
+    public emitWasmGetThread() {
+        this.emitWasm(SpiderOpcodes.local_get, this.func.spiderThreadParam);
     }
 
 }

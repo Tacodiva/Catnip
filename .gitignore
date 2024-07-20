@@ -5,3 +5,4 @@ package-lock.json
 bundle.js
 bundle.js.map
 *.wasm
+.fuse_hidden*

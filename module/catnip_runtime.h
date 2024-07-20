@@ -10,11 +10,13 @@ struct catnip_runtime {
     catnip_sprite **sprites;
 
     catnip_list targets; // list of catnip_target*
+    catnip_list threads; // list of catnip_thread*
 
 };
 
 typedef struct catnip_runtime catnip_runtime;
 
 catnip_runtime *catnip_runtime_new();
+void catnip_runtime_tick(catnip_runtime *runtime);
 
 #endif

@@ -17,6 +17,7 @@ struct catnip_target;
 typedef struct catnip_target catnip_target;
 
 struct catnip_target {
+    struct catnip_runtime *runtime;
     catnip_sprite *sprite;
     catnip_target_flags flags;
     catnip_target *next;
@@ -39,5 +40,6 @@ struct catnip_target {
     catnip_i32_t tempo;
 };
 
+catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *sprite);
 
 #endif

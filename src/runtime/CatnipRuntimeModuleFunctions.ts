@@ -23,7 +23,20 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_runtime_new: fn<[], SpiderNumberType.i32>
         ([], SpiderNumberType.i32),
 
+    catnip_runtime_tick: fn<[runtime: SpiderNumberType.i32], undefined>
+        ([SpiderNumberType.i32], undefined),
+
     main: fn<[ptr: SpiderNumberType.i32], undefined>
+        ([SpiderNumberType.i32], undefined),
+
+    catnip_target_new: fn<[runtime: SpiderNumberType.i32, sprite: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+
+    catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_thread_yield: fn<[thread: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], undefined>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_thread_terminate: fn<[thread: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32], undefined),
 
     catnip_blockutil_debug_log: fn<[SpiderNumberType.i32], undefined>

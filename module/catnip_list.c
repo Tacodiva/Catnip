@@ -1,10 +1,10 @@
 
 #include "./catnip.h"
 
-#define CATNIP_ASSERT_LIST_VALID(list) CATNIP_ASSERT(catinp_list_is_valid(list))
+#define CATNIP_ASSERT_LIST_VALID(list) CATNIP_ASSERT(catnip_list_is_valid(list))
 #define CATNIP_ASSERT_LIST_INDEX_VALID(list, index) CATNIP_ASSERT(catnip_list_index_is_valid((list), (index)))
 
-inline catnip_bool_t catinp_list_is_valid(catnip_list *list) {
+inline catnip_bool_t catnip_list_is_valid(catnip_list *list) {
   if (list == CATNIP_NULL)
     return CATNIP_FALSE;
   if (list->length >= list->capacity)
@@ -12,7 +12,7 @@ inline catnip_bool_t catinp_list_is_valid(catnip_list *list) {
   return CATNIP_TRUE;
 }
 
-inline catnip_bool_t catnip_list_index_is_valid(catnip_list *list, catnip_ui32_t index) {
+catnip_bool_t catnip_list_index_is_valid(catnip_list *list, catnip_ui32_t index) {
   return index < list->length;
 }
 
@@ -46,13 +46,13 @@ inline catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size
   return list->length++;
 }
 
-inline void *catinp_list_get(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index) {
+void *catnip_list_get(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index) {
   CATNIP_ASSERT_LIST_VALID(list);
   CATNIP_ASSERT_LIST_INDEX_VALID(list, index);
   return &list->data[index * item_size];
 }
 
-inline void catinp_list_remove(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index) {
+void catnip_list_remove(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index) {
   CATNIP_ASSERT_LIST_VALID(list);
   CATNIP_ASSERT_LIST_INDEX_VALID(list, index);
   const catnip_ui32_t byteIndex = index * item_size;
@@ -60,7 +60,7 @@ inline void catinp_list_remove(catnip_list *list, catnip_ui32_t item_size, catni
   --list->length;
 }
 
-inline catnip_ui32_t catinp_list_length(catnip_list *list) {
+catnip_ui32_t catnip_list_length(catnip_list *list) {
   CATNIP_ASSERT_LIST_VALID(list);
   return list->length;
 }

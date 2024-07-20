@@ -6,6 +6,7 @@ import { CatnipIrBranch, CatnipIrCommandOp, CatnipIrCommandOpType } from "../../
 export const ir_call = new class extends CatnipIrCommandOpType<{}, {func: CatnipIrBranch}> {
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrCommandOp<{}, {func: CatnipIrBranch}>): void {
+        ctx.emitWasm(SpiderOpcodes.local_get, ctx.func.spiderThreadParam);
         ctx.emitWasm(SpiderOpcodes.call, ir.branches.func.func.spiderFunction);
     }
 }

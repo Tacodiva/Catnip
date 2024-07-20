@@ -50,7 +50,7 @@ export class CatnipCompilerIrGenContext {
         for (const branch of this._tails) {
             if (branch.func !== this._function) {
 
-                this._switchToFunction(this._createFunction());
+                this._switchToFunction(this._createFunction(false));
 
                 for (const branch of this._tails) {
                     branch.ops.push({
@@ -111,13 +111,13 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitYield() {
-        const func = this._createFunction();
+        const func = this._createFunction(true);
         this.emitIrCommand(ir_yield, {}, { func: func.body });
         this._switchToFunction(func);
     }
 
-    private _createFunction(): CatnipIrFunction {
-        const func = new CatnipIrFunction(this.compiler);
+    private _createFunction(needsFunctionTableIndex: boolean): CatnipIrFunction {
+        const func = new CatnipIrFunction(this.compiler, needsFunctionTableIndex);
         this.functions.push(func);
         return func;
     }
