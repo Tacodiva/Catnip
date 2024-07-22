@@ -1,11 +1,14 @@
 import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList } from "../ir";
-import { CatnipIrOpBranches, CatnipIrCommandOpType, CatnipIrCommandOp, CatnipIrInputOpType, CatnipIrInputOp, CatnipIrOpInputs, CatnipIrOpBase, CatnipIrBranch } from "../ir/CatnipIrOp";
-import { ir_call } from "../ir/ops/core/call";
+import { CatnipIrOpBranches, CatnipIrCommandOpType, CatnipIrCommandOp, CatnipIrInputOpType, CatnipIrInputOp, CatnipIrOpInputs, CatnipIrOpBase } from "../ir/CatnipIrOp";
+import { CatnipIrBranch } from "../ir/CatnipIrBranch";
+import { ir_branch } from "../ir/ops/core/branch";
 import { ir_yield } from "../ir/ops/core/yield";
 import { CatnipInputFormat, CatnipInputFlags } from "../ir/types";
 import { createLogger, Logger } from "../log";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";
+import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThreadStatus";
+import { ir_nop } from "../ir/ops/core/nop";
 
 /*
 
@@ -30,54 +33,115 @@ export class CatnipCompilerIrGenContext {
     public readonly compiler: CatnipCompiler;
 
     public functions: CatnipIrFunction[];
-    private _function: CatnipIrFunction;
 
     private _branch: CatnipIrBranch;
-    private _tails: CatnipIrBranch[];
 
     public constructor(compiler: CatnipCompiler, func: CatnipIrFunction) {
         this.compiler = compiler;
-        this._function = func;
-        this.functions = [this._function];
-        this._branch = this._function.body;
-        this._tails = [];
+        this.functions = [func];
+        this._branch = func.body;
     }
 
     private _emitIr<TOp extends CatnipIrOpBase<CatnipIrOpInputs, TBranches>, TBranches extends CatnipIrOpBranches>(
         op: TOp
     ): TOp {
+        if (!this._branch.doesContinue()) return op;
 
-        for (const branch of this._tails) {
-            if (branch.func !== this._function) {
+        const opBranchNames = Object.keys(op.branches);
 
-                this._switchToFunction(this._createFunction(false));
+        if (this._branch.funcNullable !== null) {
+            for (const branchName of opBranchNames) {
+                const branch = op.branches[branchName];
+                if (branch.funcNullable === null)
+                    branch.setFunction(this._branch.func);
+            }
+        }
 
-                for (const branch of this._tails) {
-                    branch.ops.push({
-                        type: ir_call,
-                        inputs: {},
-                        branches: { func: this._function.body },
-                    });
-                }
+        const branchTails = this._branch.getTails();
 
+        let splitAfter = false;
+        for (const branchName of opBranchNames) {
+            const branch = op.branches[branchName];
+
+            if (op.type.doesBranchContinue(branchName, op) && branch.isYielding()) {
+                splitAfter = true;
                 break;
+            }
+        }
+
+        let mergeBefore = false;
+        for (const tailBranch of branchTails) {
+            if (tailBranch.funcNullable !== this._branch.funcNullable) {
+                mergeBefore = true;
+                break;
+            }
+        }
+
+        if (mergeBefore) {
+            this._switchToBranch(this._createFunction(false).body);
+
+            for (const tailBranch of branchTails) {
+                tailBranch.ops.push({
+                    type: ir_branch,
+                    inputs: { here: "before merge " + op.type.name + " " + JSON.stringify(op.inputs) },
+                    branches: { branch: this._branch },
+                });
+            }
+
+            for (const branchName of opBranchNames) {
+                const branch = op.branches[branchName];
+                branch.setFunction(this._branch.func);
             }
         }
 
         this._branch.ops.push(op);
 
-        this._branch.tails.length = 0;
+        if (splitAfter) {
 
-        const branchNames = Object.keys(op.branches);
-        if (branchNames.length === 0) {
-            this._branch.tails.push(this._branch);
-        } else {
-            for (const branchName of branchNames) {
-                this._branch.tails.push(...op.branches[branchName].tails);
+            let hasNonYieldingBranch = false;
+            let yieldingBrachTails: Set<CatnipIrBranch> = new Set();
+
+            for (const branchName of opBranchNames) {
+                const branch = op.branches[branchName];
+
+                if (op.type.doesBranchContinue(branchName, op)) {
+                    if (branch.isYielding()) {
+                        for (const tail of branch.getTails())
+                            yieldingBrachTails.add(tail);
+                    } else {
+                        hasNonYieldingBranch = true;
+                    }
+                }
+            }
+
+            // We don't need to create a new function if there is only one place we continue
+            if (!hasNonYieldingBranch && yieldingBrachTails.size === 1) {
+                for (const branchTail of yieldingBrachTails) {
+                    this._switchToBranch(branchTail);
+                    break;
+                }
+            } else {
+                const newBranch = this._createFunction(false).body;
+
+                if (hasNonYieldingBranch) {
+                    this._branch.ops.push({
+                        type: ir_branch,
+                        inputs: {},
+                        branches: { branch: newBranch },
+                    });
+                } else {
+                    for (const branchTail of yieldingBrachTails) {
+                        branchTail.ops.push({
+                            type: ir_branch,
+                            inputs: { here: "after split " + op.type.name + " " + JSON.stringify(op.inputs) },
+                            branches: { branch: newBranch },
+                        });
+                    }
+                }
+
+                this._switchToBranch(newBranch);
             }
         }
-
-        this._tails = this._branch.tails;
 
         return op;
     }
@@ -110,10 +174,15 @@ export class CatnipCompilerIrGenContext {
         });
     }
 
-    public emitYield() {
-        const func = this._createFunction(true);
-        this.emitIrCommand(ir_yield, {}, { func: func.body });
-        this._switchToFunction(func);
+    public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, branch?: CatnipIrBranch) {
+        if (branch === undefined) {
+            branch = this._createFunction(true).body;
+
+        } else {
+            this._createBranchFunction(branch, true);
+        }
+        this.emitIrCommand(ir_yield, { status }, { branch });
+        this._switchToBranch(branch);
     }
 
     private _createFunction(needsFunctionTableIndex: boolean): CatnipIrFunction {
@@ -122,9 +191,19 @@ export class CatnipCompilerIrGenContext {
         return func;
     }
 
-    private _switchToFunction(func: CatnipIrFunction) {
-        this._function = func;
-        this._branch = func.body;
+    private _switchToBranch(branch: CatnipIrBranch) {
+        this._branch = branch;
+    }
+
+    private _createBranchFunction(branch: CatnipIrBranch, needsFunctionTableIndex: boolean): CatnipIrFunction {
+        if (branch.isFuncBody) {
+            branch.func.needsFunctionTableIndex ||= needsFunctionTableIndex;
+            return branch.func;
+        }
+
+        const func = new CatnipIrFunction(this.compiler, needsFunctionTableIndex, branch);
+        this.functions.push(func);
+        return func;
     }
 
     public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipInputFormat, flags: CatnipInputFlags) {
@@ -135,22 +214,97 @@ export class CatnipCompilerIrGenContext {
         op.type.generateIr(this, op.inputs);
     }
 
-    public emitBranch(commands: CatnipCommandList): CatnipIrBranch {
-        const oldFunc = this._function;
-        const oldBranch = this._branch;
-        const oldTails = this._tails;
-
-        let branch: CatnipIrBranch = this._branch = new CatnipIrBranch(this._function);
-
+    public emitCommands(commands: CatnipCommandList) {
         for (const command of commands) {
             this.emitCommand(command);
         }
+    }
 
-        this._function = oldFunc;
+    public emitJump(branch: CatnipIrBranch) {
+        // TODO what if "loop"?
+        this._createBranchFunction(branch, true);
+        this.emitIrCommand(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
+    }
+
+    public emitBranch(commands: CatnipCommandList): CatnipIrBranch {
+        const oldBranch = this._branch;
+        let branch: CatnipIrBranch = this._branch = new CatnipIrBranch();
+
+        this.emitCommands(commands);
+
         this._branch = oldBranch;
-        this._tails = oldTails;
-
         return branch;
+    }
+
+    public emitComplexBranch(lambda: (branch: CatnipIrBranch) => void) {
+        const oldBranch = this._branch;
+        let branch: CatnipIrBranch = this._branch = new CatnipIrBranch();
+
+        lambda(branch);
+
+        this._branch = oldBranch;
+        return branch;
+    }
+
+    private _getFuncName(func: CatnipIrFunction) {
+        return "Func" + this.functions.indexOf(func);
+    }
+
+    public stringifyIr(): string {
+        let string = "";
+
+
+        const stringifyIr = (branch: CatnipIrBranch, indent: string, branches: Set<CatnipIrBranch>) => {
+
+            let string = "";
+
+            for (const op of branch.ops) {
+                string += indent;
+                string += op.type.name;
+                if (Object.keys(op.inputs).length !== 0) {
+                    string += " ";
+                    string += JSON.stringify(op.inputs);
+                }
+                if (Object.keys(op.branches).length !== 0) {
+                    for (const subbranchName in op.branches) {
+                        const subbranch = op.branches[subbranchName];
+                        string += "\n  ";
+                        string += indent;
+                        string += subbranchName;
+                        if (subbranch.func === branch.func && !subbranch.isFuncBody) {
+                            if (branches.has(branch)) {
+                                string += ": ??\n";
+                            } else {
+                                branches.add(branch);
+                                string += ": \n";
+                                string += stringifyIr(subbranch, indent + "    ", branches);
+                            }
+                        } else {
+                            string += " -> ";
+                            if (!subbranch.isFuncBody) string += "[INVALID] ";
+                            string += this._getFuncName(subbranch.func);
+                            string += "\n";
+                        }
+                    }
+                } else {
+                    string += "\n";
+                }
+            }
+
+            return string;
+        }
+
+        for (const func of this.functions) {
+            string += this._getFuncName(func);
+            if (func.body.isYielding()) string += ": (yielding)\n";
+            else string += ": \n";
+
+            // string += ": \n";
+            string += stringifyIr(func.body, "  ", new Set());
+            string += "\n";
+        }
+
+        return string;
     }
 
 }

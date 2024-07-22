@@ -2,11 +2,12 @@ import { SpiderExpression, SpiderFunctionDefinition, SpiderNumberType, SpiderOpc
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipIrFunction } from './CatnipIrFunction';
-import { CatnipIrBranch, CatnipIrOp } from "../ir/CatnipIrOp";
+import { CatnipIrOp } from "../ir/CatnipIrOp";
+import { CatnipIrBranch } from "../ir/CatnipIrBranch";
 import { createLogger, Logger } from "../log";
 
 export class CatnipCompilerWasmGenContext {
-    private static readonly _logger: Logger = createLogger("CatnipCompilerWasmGenContext");
+    public static readonly logger: Logger = createLogger("CatnipCompilerWasmGenContext");
 
     public readonly compiler: CatnipCompiler;
     public get projectModule() { return this.compiler.module; }
@@ -22,7 +23,11 @@ export class CatnipCompilerWasmGenContext {
     private _expressions: SpiderExpression[];
 
     private get _expression(): SpiderExpression {
-        CatnipCompilerWasmGenContext._logger.assert(this._expressionNullable !== null, true, "No expression to write to.");
+        CatnipCompilerWasmGenContext.logger.assert(
+            this._expressionNullable !== null,
+            true, "No expression to write to."
+        );
+
         return this._expressionNullable;
     }
 
@@ -38,14 +43,14 @@ export class CatnipCompilerWasmGenContext {
         if (this._expressionNullable !== null) {
             this._expressions.push(this._expressionNullable);
         } else {
-            CatnipCompilerWasmGenContext._logger.assert(this._expressions.length === 0);
+            CatnipCompilerWasmGenContext.logger.assert(this._expressions.length === 0);
         }
         this._expressionNullable = expr ?? new SpiderExpression();
     }
 
     public popExpression(): SpiderExpression {
         const expression = this._expressionNullable;
-        CatnipCompilerWasmGenContext._logger.assert(this._expressions.length !== 0);
+        CatnipCompilerWasmGenContext.logger.assert(this._expressions.length !== 0);
         this._expressionNullable = this._expressions.pop() ?? null;
         return expression!;
     }
@@ -57,12 +62,29 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public emitBranchInline(branch: CatnipIrBranch) {
-        for (const op of branch.ops) {
-            this.emitIr(op);
+        if (branch.isFuncBody) {
+            this.emitWasmGetThread();
+            this.emitWasm(SpiderOpcodes.call, branch.func.spiderFunction);
+
+            if (branch.isYielding()) {
+                this.emitWasm(SpiderOpcodes.return);
+            }
+        } else {
+            CatnipCompilerWasmGenContext.logger.assert(
+                branch.func === this._func,
+                true, "Branch must be a part of the current function or a function body."
+            );
+
+            this.emitOps(branch.ops);
         }
+
     }
 
-    public emitIr(head: CatnipIrOp) {
+    public emitOps(ops: CatnipIrOp[]) {
+        for (const op of ops) this.emitOp(op);
+    }
+
+    public emitOp(head: CatnipIrOp) {
         head.type.generateWasm(this, head);
     }
 

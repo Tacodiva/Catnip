@@ -10,7 +10,7 @@ typedef catnip_ui32_t catnip_thread_status;
 #define CATNIP_THREAD_STATUS_RUNNING 0
 #define CATNIP_THREAD_STATUS_YIELD 1
 #define CATNIP_THREAD_STATUS_YIELD_TICK 2
-#define CATNIP_THREAD_STATUS_TERMINATED 2
+#define CATNIP_THREAD_STATUS_TERMINATED 3
 
 struct catnip_thread;
 typedef struct catnip_thread catnip_thread;

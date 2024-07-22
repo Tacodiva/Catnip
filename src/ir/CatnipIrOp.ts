@@ -1,22 +1,9 @@
-import { CatnipIrFunction } from "../compiler/CatnipIrFunction";
 import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenContext";
 import { CatnipInputFlags, CatnipInputFormat } from "./types";
+import { CatnipIrBranch } from "./CatnipIrBranch";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranches = Record<string, CatnipIrBranch>;
-
-export class CatnipIrBranch {
-
-    readonly func: CatnipIrFunction;
-    readonly ops: CatnipIrOp[];
-    readonly tails: CatnipIrBranch[];
-
-    public constructor(func: CatnipIrFunction) {
-        this.func = func;
-        this.ops = [];
-        this.tails = [this];
-    }
-}
 
 export interface CatnipIrOp {
     readonly type: CatnipIrOpType<CatnipIrOpInputs, CatnipIrOpBranches>;
@@ -44,7 +31,36 @@ export interface CatnipIrInputOp<TInputs extends CatnipIrOpInputs = {}, TBranche
 }
 
 export abstract class CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranches> {
+    public readonly name: string;
+
+    public constructor(name: string) {
+        this.name = name;
+    }
+
     public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOpBase<TInputs, TBranches>): void;
+
+    public isYielding(ir: CatnipIrOpBase<TInputs, TBranches>, visited: Set<CatnipIrBranch>): boolean {
+        for (const branchName in ir.branches) {
+            const branch = ir.branches[branchName];
+            if (branch.isYielding(visited)) return true;
+        }
+        return false;
+    }
+
+
+    public doesContinue(ir: CatnipIrOpBase<TInputs, TBranches>) {
+        const branchNames = Object.keys(ir.branches);
+        if (branchNames.length === 0) return true;
+        for (const branchName of branchNames) {
+            if (this.doesBranchContinue(branchName, ir))
+                return true;
+        }
+        return false;
+    }
+
+    public doesBranchContinue(branch: keyof TBranches, ir: CatnipIrOpBase<TInputs, TBranches>): boolean {
+        return true;
+    }
 }
 
 export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpType<TInputs, TBranches> {

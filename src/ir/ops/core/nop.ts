@@ -6,5 +6,7 @@ export const op_nop = new class extends CatnipCommandOpType<{}> {
 }
 
 export const ir_nop = new class extends CatnipIrCommandOpType {
+    constructor() { super("core_nop"); }
+
     public generateWasm(): void { }
 }

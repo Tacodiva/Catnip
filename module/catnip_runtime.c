@@ -8,8 +8,8 @@ catnip_runtime *catnip_runtime_new() {
   rt->sprite_count = 0;
   rt->sprites = CATNIP_NULL;
 
-  CATNIP_LIST_INIT(&rt->targets, catnip_target*, 8);
-  CATNIP_LIST_INIT(&rt->threads, catnip_thread*, 8);
+  CATNIP_LIST_INIT(&rt->targets, catnip_target *, 8);
+  CATNIP_LIST_INIT(&rt->threads, catnip_thread *, 8);
 
   return rt;
 }
@@ -17,17 +17,20 @@ catnip_runtime *catnip_runtime_new() {
 void catnip_runtime_tick(catnip_runtime *runtime) {
   CATNIP_ASSERT(runtime != CATNIP_NULL);
 
-  for (catnip_i32_t i = 0; i < CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread*); i++) {
+  for (catnip_i32_t i = 0; i < CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *); i++) {
 
-    catnip_thread *thread = CATNIP_LIST_GET(&runtime->threads, catnip_thread*, i);
+    catnip_thread *thread = CATNIP_LIST_GET(&runtime->threads, catnip_thread *, i);
 
     if (thread->status == CATNIP_THREAD_STATUS_YIELD) {
       thread->status = CATNIP_THREAD_STATUS_RUNNING;
     }
 
+    catnip_i32_t lc = 0;
+
     while (thread->status == CATNIP_THREAD_STATUS_RUNNING) {
       thread->function(thread);
+      if (++lc > 1000)
+        CATNIP_ASSERT(CATNIP_FALSE);
     }
-
   }
 }

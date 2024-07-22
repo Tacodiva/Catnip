@@ -6,6 +6,8 @@ import { CatnipInputOpType } from "../../CatnipOp";
 import { CatnipInputFormat, CatnipInputFlags } from "../../types";
 
 export const ir_const = new class extends CatnipIrInputOpType<{value: string | number}> {
+    public constructor() { super("core_const"); }
+
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<{ value: string | number; }>): void {
         const value = ir.inputs.value;
         if (typeof value === "string") {

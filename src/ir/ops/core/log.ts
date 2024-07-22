@@ -13,6 +13,8 @@ export const op_log = new class extends CatnipCommandOpType<{ msg: CatnipInputOp
 }
 
 export const ir_log = new class extends CatnipIrCommandOpType {
+    public constructor() { super("core_log"); }
+    
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrCommandOp): void {
         ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_debug_log");
     }

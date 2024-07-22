@@ -4,12 +4,9 @@ import { CatnipProjectModule } from "./CatnipProjectModule";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipIrFunction } from "./CatnipIrFunction";
-import { createLogger, Logger } from "../log";
 import { ir_thread_terminate } from "../ir/ops/core/thread_terminate";
 
 export class CatnipCompiler {
-    private static readonly _logger: Logger = createLogger("CatnipCompiler");
-
     public readonly project: CatnipProject;
     public readonly module: CatnipProjectModule;
 
@@ -25,20 +22,17 @@ export class CatnipCompiler {
         const irFunc = new CatnipIrFunction(this, true);
         const irGenCtx = new CatnipCompilerIrGenContext(this, irFunc);
 
-        for (const command of script.commands) {
-            irGenCtx.emitCommand(command);
-        }
+        irGenCtx.emitCommands(script.commands);
         irGenCtx.emitIrCommand(ir_thread_terminate, {}, {});
 
         this._allocateFunctionIndices(irGenCtx.functions);
         this.module.createFunctionsElement(irGenCtx.functions);
 
-        console.log(irFunc.body);
-        console.log(irGenCtx.functions);
+        console.log(irGenCtx.stringifyIr());
 
         for (const func of irGenCtx.functions) {
             const wasmGenCtx = new CatnipCompilerWasmGenContext(func);
-            wasmGenCtx.emitBranchInline(func.body);
+            wasmGenCtx.emitOps(func.body.ops);
         }
 
         this.spiderModule.exportFunction("testFunction", irFunc.spiderFunction);

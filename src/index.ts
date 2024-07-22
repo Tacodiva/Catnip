@@ -28,34 +28,49 @@ async function main() {
                 scripts: [
                     {
                         id: "a",
+                        // commands: [
+                        //     CatnipOps.core_log.create({
+                        //         msg: CatnipOps.core_const.create({ value: "A" })
+                        //     }),
+                        //     CatnipOps.control_if_else.create({
+                        //         condition: CatnipOps.core_const.create({ value: 1 }),
+                        //         true_branch: [
+                        //             CatnipOps.core_yield.create({}),
+                        //             CatnipOps.core_log.create({
+                        //                 msg: CatnipOps.core_const.create({ value: "B" })
+                        //             }),
+                        //         ],
+                        //         false_branch: [
+                        //             CatnipOps.core_log.create({
+                        //                 msg: CatnipOps.core_const.create({ value: "C" })
+                        //             }),
+                        //             CatnipOps.core_yield.create({}),
+                        //             CatnipOps.core_log.create({
+                        //                 msg: CatnipOps.core_const.create({ value: "D" })
+                        //             }),
+                        //             CatnipOps.core_yield.create({}),
+                        //         ]
+                        //     }),
+                        //     CatnipOps.core_log.create({
+                        //         msg: CatnipOps.core_const.create({ value: "E" })
+                        //     }),
+                        //     CatnipOps.core_yield.create({}),
+                        //     CatnipOps.core_log.create({
+                        //         msg: CatnipOps.core_const.create({ value: "F" })
+                        //     }),
+                        // ],
                         commands: [
                             CatnipOps.core_log.create({
-                                msg: CatnipOps.core_const.create({ value: "A" })
+                                msg: CatnipOps.core_const.create({ value: "Outer!" })
                             }),
-                            CatnipOps.control_if_else.create({
-                                condition: CatnipOps.core_const.create({ value: 0 }),
-                                true_branch: [
+                            CatnipOps.control_forever.create({
+                                loop: [
                                     CatnipOps.core_log.create({
-                                        msg: CatnipOps.core_const.create({ value: "B" })
-                                    }),
-                                ],
-                                false_branch: [
-                                    CatnipOps.core_log.create({
-                                        msg: CatnipOps.core_const.create({ value: "C" })
+                                        msg: CatnipOps.core_const.create({ value: "Inner! " })
                                     }),
                                     CatnipOps.core_yield.create({}),
-                                    CatnipOps.core_log.create({
-                                        msg: CatnipOps.core_const.create({ value: "D" })
-                                    }),
                                 ]
-                            }),
-                            CatnipOps.core_log.create({
-                                msg: CatnipOps.core_const.create({ value: "E" })
-                            }),
-                            CatnipOps.core_yield.create({}),
-                            CatnipOps.core_log.create({
-                                msg: CatnipOps.core_const.create({ value: "F" })
-                            }),
+                            })
                         ],
                         trigger: {
                             type: "event",

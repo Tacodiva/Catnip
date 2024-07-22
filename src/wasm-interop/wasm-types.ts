@@ -321,8 +321,8 @@ export class WasmStruct<TMembers extends WasmStructMembersDefinition> implements
 
     public readonly members: {
         [TMember in keyof TMembers]: {
-            offset: number,
-            type: TMembers[TMember]
+            readonly offset: number,
+            readonly type: TMembers[TMember]
         }
     };
 
@@ -388,6 +388,10 @@ export class WasmStruct<TMembers extends WasmStructMembersDefinition> implements
     public getMemberWrapper<MemberName extends keyof TMembers>(ptr: number, buffer: DataView, memberName: MemberName): WasmTypeValueWrapper<TMembers[MemberName]> {
         const member = this.members[memberName];
         return member.type.getWrapper(ptr + member.offset, buffer);
+    }
+
+    public getMemberOffset(memberName: keyof TMembers): number {
+        return this.members[memberName].offset;
     }
 
     public getWrapper(ptr: number, buffer: DataView): WasmStructWrapper<WasmStruct<TMembers>> {
