@@ -1,6 +1,8 @@
 
 #include "./catnip.h"
 
+const catnip_ui32_t INITIAL_STACK_SIZE = 128;
+
 catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entrypoint) {
   CATNIP_ASSERT(target != CATNIP_NULL);
   CATNIP_ASSERT(entrypoint != CATNIP_NULL);
@@ -11,6 +13,10 @@ catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entr
   thread->function = entrypoint;
   thread->target = target;
   thread->status = CATNIP_THREAD_STATUS_RUNNING;
+
+  thread->stack_start = catnip_mem_alloc(INITIAL_STACK_SIZE);
+  thread->stack_ptr = thread->stack_start;
+  thread->stack_end = thread->stack_start + INITIAL_STACK_SIZE;
 
   CATNIP_LIST_ADD(&thread->runtime->threads, catnip_thread *, thread);
 
@@ -28,4 +34,31 @@ void catnip_thread_yield(catnip_thread *thread, catnip_thread_fnptr dst) {
 void catnip_thread_terminate(catnip_thread *thread) {
   CATNIP_ASSERT(thread != CATNIP_NULL);
   thread->status = CATNIP_THREAD_STATUS_TERMINATED;
+}
+
+void catnip_thread_resize_stack(catnip_thread *thread, catnip_ui32_t extraCapacity) {
+  CATNIP_ASSERT(thread != CATNIP_NULL);
+
+  const catnip_i32_t oldStackRemainingCapacity = thread->stack_end - thread->stack_ptr;
+
+  if (oldStackRemainingCapacity >= extraCapacity)
+    return;
+
+  const catnip_i32_t oldStackCapacity = thread->stack_end - thread->stack_start;
+  
+  catnip_i32_t newStackCapacity = oldStackCapacity * 2;
+
+  if (newStackCapacity - oldStackRemainingCapacity < extraCapacity) {
+    newStackCapacity += extraCapacity - oldStackRemainingCapacity;
+  }
+
+  void *newStack = catnip_mem_alloc(newStackCapacity);
+
+  const catnip_i32_t oldStackLength = thread->stack_ptr - thread->stack_start;
+
+  catnip_mem_copy(newStack, thread->stack_start, oldStackLength);
+
+  thread->stack_start = newStack;
+  thread->stack_end = newStack + newStackCapacity;
+  thread->stack_ptr = newStack + oldStackLength;
 }

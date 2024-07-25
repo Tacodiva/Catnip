@@ -77,6 +77,10 @@ void CATNIP_EXPORT(catnip_blockutil_debug_log)(catnip_hstring *str) {
   catnip_blockutil_debug_log(str);
 }
 
+void CATNIP_EXPORT(catnip_thread_resize_stack)(catnip_thread *thread, catnip_ui32_t extraCapacity) {
+  catnip_thread_resize_stack(thread, extraCapacity);
+}
+
 
 // void CATNIP_EXPORT(stringify)(catnip_f64_t n) {
 //   catnip_hstring_print(catnip_numconv_stringify(n));

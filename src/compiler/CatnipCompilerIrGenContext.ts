@@ -8,7 +8,11 @@ import { createLogger, Logger } from "../log";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThreadStatus";
-import { ir_nop } from "../ir/ops/core/nop";
+import { CatnipIrValue } from './CatnipIrValue';
+import { SpiderNumberType } from "wasm-spider";
+import { ir_const } from "../ir/ops/core/const";
+import { ir_store_value } from '../ir/ops/core/store_value';
+import { ir_load_value } from '../ir/ops/core/load_value';
 
 /*
 
@@ -52,7 +56,7 @@ export class CatnipCompilerIrGenContext {
         if (this._branch.funcNullable !== null) {
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
-                if (branch.funcNullable === null)
+                if (branch !== null && branch.funcNullable === null)
                     branch.setFunction(this._branch.func);
             }
         }
@@ -63,7 +67,7 @@ export class CatnipCompilerIrGenContext {
         for (const branchName of opBranchNames) {
             const branch = op.branches[branchName];
 
-            if (op.type.doesBranchContinue(branchName, op) && branch.isYielding()) {
+            if (branch !== null && op.type.doesBranchContinue(branchName, op) && branch.isYielding()) {
                 splitAfter = true;
                 break;
             }
@@ -83,14 +87,14 @@ export class CatnipCompilerIrGenContext {
             for (const tailBranch of branchTails) {
                 tailBranch.ops.push({
                     type: ir_branch,
-                    inputs: { here: "before merge " + op.type.name + " " + JSON.stringify(op.inputs) },
+                    inputs: {},
                     branches: { branch: this._branch },
                 });
             }
 
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
-                branch.setFunction(this._branch.func);
+                branch?.setFunction(this._branch.func);
             }
         }
 
@@ -105,7 +109,7 @@ export class CatnipCompilerIrGenContext {
                 const branch = op.branches[branchName];
 
                 if (op.type.doesBranchContinue(branchName, op)) {
-                    if (branch.isYielding()) {
+                    if (branch?.isYielding()) {
                         for (const tail of branch.getTails())
                             yieldingBrachTails.add(tail);
                     } else {
@@ -133,7 +137,7 @@ export class CatnipCompilerIrGenContext {
                     for (const branchTail of yieldingBrachTails) {
                         branchTail.ops.push({
                             type: ir_branch,
-                            inputs: { here: "after split " + op.type.name + " " + JSON.stringify(op.inputs) },
+                            inputs: {},
                             branches: { branch: newBranch },
                         });
                     }
@@ -221,29 +225,49 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitJump(branch: CatnipIrBranch) {
-        // TODO what if "loop"?
         this._createBranchFunction(branch, true);
         this.emitIrCommand(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
     }
 
-    public emitBranch(commands: CatnipCommandList): CatnipIrBranch {
-        const oldBranch = this._branch;
-        let branch: CatnipIrBranch = this._branch = new CatnipIrBranch();
+    /** Creates a new, empty branch */
+    public emitBranch(): CatnipIrBranch;
+    /** Creates a new branch and emits all the commands in the command list to it. */
+    public emitBranch(commands: CatnipCommandList): CatnipIrBranch;
+    /** Creates a new branch, switches this context to emit to that branch, calls lambda then switches back to the previous context.  */
+    public emitBranch(lambda: (branch: CatnipIrBranch) => void): CatnipIrBranch;
 
-        this.emitCommands(commands);
+    public emitBranch(arg?: CatnipCommandList | ((branch: CatnipIrBranch) => void)): CatnipIrBranch {
 
-        this._branch = oldBranch;
+        let branch = new CatnipIrBranch();
+        if (arg !== undefined) {
+            const oldBranch = this._branch;
+            this._branch = branch;
+
+            if (Array.isArray(arg)) {
+                this.emitCommands(arg);
+            } else {
+                arg(branch);
+            }
+
+            this._branch = oldBranch;
+        }
+
+
         return branch;
     }
 
-    public emitComplexBranch(lambda: (branch: CatnipIrBranch) => void) {
-        const oldBranch = this._branch;
-        let branch: CatnipIrBranch = this._branch = new CatnipIrBranch();
+    public emitStoreNewValue(type: SpiderNumberType, name?: string): CatnipIrValue {
+        const value = new CatnipIrValue(type, name);
+        this.emitIrCommand(ir_store_value, { value, initialize: true }, {});
+        return value;
+    }
 
-        lambda(branch);
+    public emitStoreValue(value: CatnipIrValue) {
+        this.emitIrCommand(ir_store_value, { value, initialize: false }, {});
+    }
 
-        this._branch = oldBranch;
-        return branch;
+    public emitLoadValue(value: CatnipIrValue) {
+        this.emitIrCommand(ir_load_value, { value }, {});
     }
 
     private _getFuncName(func: CatnipIrFunction) {
@@ -271,11 +295,13 @@ export class CatnipCompilerIrGenContext {
                         string += "\n  ";
                         string += indent;
                         string += subbranchName;
-                        if (subbranch.func === branch.func && !subbranch.isFuncBody) {
-                            if (branches.has(branch)) {
+                        if (subbranch === null) {
+                            string += ": null\n";
+                        } else if (subbranch.func === branch.func && !subbranch.isFuncBody) {
+                            if (branches.has(subbranch)) {
                                 string += ": ??\n";
                             } else {
-                                branches.add(branch);
+                                branches.add(subbranch);
                                 string += ": \n";
                                 string += stringifyIr(subbranch, indent + "    ", branches);
                             }
@@ -296,8 +322,10 @@ export class CatnipCompilerIrGenContext {
 
         for (const func of this.functions) {
             string += this._getFuncName(func);
-            if (func.body.isYielding()) string += ": (yielding)\n";
-            else string += ": \n";
+            string += ":";
+            if (func.body.isYielding()) string += " (yielding)";
+            if (func.stackSize !== 0) string += ` (${func.stackSize} byte stack)`;
+            string += "\n";
 
             // string += ": \n";
             string += stringifyIr(func.body, "  ", new Set());

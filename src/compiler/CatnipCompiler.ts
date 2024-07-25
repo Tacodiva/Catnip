@@ -27,12 +27,15 @@ export class CatnipCompiler {
 
         this._allocateFunctionIndices(irGenCtx.functions);
         this.module.createFunctionsElement(irGenCtx.functions);
-
+        
+        for (const func of irGenCtx.functions)
+            func.body.analyzePreEmit(new Set());
+        
         console.log(irGenCtx.stringifyIr());
 
         for (const func of irGenCtx.functions) {
             const wasmGenCtx = new CatnipCompilerWasmGenContext(func);
-            wasmGenCtx.emitOps(func.body.ops);
+            wasmGenCtx.emitOps(func.body);
         }
 
         this.spiderModule.exportFunction("testFunction", irFunc.spiderFunction);
@@ -59,5 +62,4 @@ export class CatnipCompiler {
         }
         throw new Error();
     }
-
 }

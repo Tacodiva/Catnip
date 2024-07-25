@@ -24,13 +24,13 @@ struct catnip_thread {
   catnip_thread_fnptr function;
   catnip_thread_status status;
 
-  catnip_value *stack_ptr;
-  catnip_value *stack_start;
-  catnip_value *stack_end;
+  void *stack_ptr;
+  void *stack_end;
+  void *stack_start;
 };
 
 catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entrypoint);
 void catnip_thread_yield(catnip_thread *thread, catnip_thread_fnptr dst);
 void catnip_thread_terminate(catnip_thread *thread);
-
+void catnip_thread_resize_stack(catnip_thread *thread, catnip_ui32_t extraCapacity);
 #endif

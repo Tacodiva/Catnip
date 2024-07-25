@@ -1,10 +1,11 @@
 import { SpiderExpression, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipIrFunction } from './CatnipIrFunction';
+import { CatnipIrFunction, CatnipIrValueType } from './CatnipIrFunction';
 import { CatnipIrOp } from "../ir/CatnipIrOp";
 import { CatnipIrBranch } from "../ir/CatnipIrBranch";
 import { createLogger, Logger } from "../log";
+import { CatnipWasmStructThread } from "../wasm-interop/CatnipWasmStructThread";
 
 export class CatnipCompilerWasmGenContext {
     public static readonly logger: Logger = createLogger("CatnipCompilerWasmGenContext");
@@ -37,6 +38,31 @@ export class CatnipCompilerWasmGenContext {
         this._expressionNullable = null;
         this._expressions = [];
         this.pushExpression(this._func.spiderFunction.body);
+
+
+        if (this._func.stackSize !== 0) {
+            for (const [value, variable] of this._func.localVariables) {
+                if (variable.type !== CatnipIrValueType.STACK)
+                    continue;
+
+                this.emitWasmGetStackPtr();
+
+                switch (value.type) {
+                    case SpiderNumberType.i32:
+                        this.emitWasmConst(SpiderNumberType.i32, variable.stackOffset - this._func.stackSize);
+                        this.emitWasm(SpiderOpcodes.i32_add);
+                        this.emitWasm(SpiderOpcodes.i32_load, 2, 0);
+                        break;
+                    default:
+                        CatnipCompilerWasmGenContext.logger.assert(
+                            false,
+                            true, "Unsupported stack value type."
+                        );
+                }
+
+                this.emitWasm(SpiderOpcodes.local_set, variable.ref);
+            }
+        }
     }
 
     public pushExpression(expr?: SpiderExpression) {
@@ -63,29 +89,33 @@ export class CatnipCompilerWasmGenContext {
 
     public emitBranchInline(branch: CatnipIrBranch) {
         if (branch.isFuncBody) {
+            const targetFunc = branch.func;
+
+            this.prepareStackForCall(targetFunc, branch.isYielding());
+
             this.emitWasmGetThread();
-            this.emitWasm(SpiderOpcodes.call, branch.func.spiderFunction);
+            this.emitWasm(SpiderOpcodes.call, targetFunc.spiderFunction);
 
             if (branch.isYielding()) {
                 this.emitWasm(SpiderOpcodes.return);
             }
+
         } else {
             CatnipCompilerWasmGenContext.logger.assert(
                 branch.func === this._func,
                 true, "Branch must be a part of the current function or a function body."
             );
 
-            this.emitOps(branch.ops);
+            this.emitOps(branch);
         }
-
     }
 
-    public emitOps(ops: CatnipIrOp[]) {
-        for (const op of ops) this.emitOp(op);
+    public emitOps(branch: CatnipIrBranch) {
+        for (const op of branch.ops) this.emitOp(op, branch);
     }
 
-    public emitOp(head: CatnipIrOp) {
-        head.type.generateWasm(this, head);
+    public emitOp(op: CatnipIrOp, branch: CatnipIrBranch) {
+        op.type.generateWasm(this, op, branch);
     }
 
     // TODO This will leak memory :c
@@ -107,6 +137,73 @@ export class CatnipCompilerWasmGenContext {
 
     public emitWasmGetThread() {
         this.emitWasm(SpiderOpcodes.local_get, this.func.spiderThreadParam);
+    }
+
+    public emitWasmGetStackPtr() {
+        this.emitWasm(SpiderOpcodes.local_get, this.func.spiderThreadParam);
+        this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+    }
+
+    public emitWasmGetStackEnd() {
+        this.emitWasm(SpiderOpcodes.local_get, this.func.spiderThreadParam);
+        this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_end"));
+    }
+
+    public prepareStackForCall(targetFunc: CatnipIrFunction, tailCall: boolean) {
+        if (tailCall) {
+            if (this._func.stackSize !== 0) {
+                this.emitWasmGetThread();
+
+                this.emitWasmGetStackPtr();
+                this.emitWasmConst(SpiderNumberType.i32, this._func.stackSize);
+                this.emitWasm(SpiderOpcodes.i32_sub);
+
+                this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+            }
+        }
+        
+        if (targetFunc.stackSize !== 0) {            
+            this.emitWasmGetStackEnd();
+
+            this.emitWasmGetStackPtr();
+            this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
+            this.emitWasm(SpiderOpcodes.i32_add);
+
+            this.emitWasm(SpiderOpcodes.i32_lt_u);
+
+            this.pushExpression();
+            this.emitWasmGetThread();
+            this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
+            this.emitWasmRuntimeFunctionCall("catnip_thread_resize_stack");
+            this.emitWasm(SpiderOpcodes.if, this.popExpression());
+
+            for (const [value, variable] of targetFunc.localVariables) {
+                if (variable.type !== CatnipIrValueType.STACK)
+                    continue;
+
+                this.emitWasmGetStackPtr();
+                this.emitWasm(SpiderOpcodes.local_get, this._func.getValueVariableRef(value));
+
+                switch (value.type) {
+                    case SpiderNumberType.i32:
+                        this.emitWasm(SpiderOpcodes.i32_store, 2, variable.stackOffset);
+                        break;
+                    default:
+                        CatnipCompilerWasmGenContext.logger.assert(
+                            false,
+                            true, "Unsupported stack value type."
+                        );
+                }
+            }
+            
+            this.emitWasmGetThread();
+
+            this.emitWasmGetStackPtr();
+            this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
+            this.emitWasm(SpiderOpcodes.i32_add);
+            
+            this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+        }
     }
 
 }

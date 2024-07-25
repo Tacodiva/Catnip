@@ -59,18 +59,35 @@ async function main() {
                         //         msg: CatnipOps.core_const.create({ value: "F" })
                         //     }),
                         // ],
+                        // commands: [
+                        //     CatnipOps.core_log.create({
+                        //         msg: CatnipOps.core_const.create({ value: "Outer!" })
+                        //     }),
+                        //     CatnipOps.control_forever.create({
+                        //         loop: [
+                        //             CatnipOps.core_log.create({
+                        //                 msg: CatnipOps.core_const.create({ value: "Inner! " })
+                        //             }),
+                        //             CatnipOps.core_yield.create({}),
+                        //         ]
+                        //     })
+                        // ],
                         commands: [
                             CatnipOps.core_log.create({
                                 msg: CatnipOps.core_const.create({ value: "Outer!" })
                             }),
-                            CatnipOps.control_forever.create({
+                            CatnipOps.control_repeat.create({
+                                count: CatnipOps.core_const.create({ value: 3 }),
                                 loop: [
+                                    CatnipOps.core_yield.create({}),
                                     CatnipOps.core_log.create({
                                         msg: CatnipOps.core_const.create({ value: "Inner! " })
                                     }),
-                                    CatnipOps.core_yield.create({}),
                                 ]
-                            })
+                            }),
+                            CatnipOps.core_log.create({
+                                msg: CatnipOps.core_const.create({ value: "Done!" })
+                            }),
                         ],
                         trigger: {
                             type: "event",
@@ -85,9 +102,6 @@ async function main() {
     // const project = await runtime.initialize();
 
     await project.rewrite();
-
-    runtime.functions.main(project.runtimeInstance.ptr);
-
 }
 
 main();

@@ -30,12 +30,20 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
             true, "Yield branch function must have a function table index."
         );
 
+        const targetFunc = ir.branches.branch.func;
+
+        ctx.prepareStackForCall(targetFunc, true);
+
+        // if (ir.inputs.status === CatnipWasmEnumThreadStatus.RUNNING) {
+            // TODO use a return call insteasd
+        // }
+
         ctx.emitWasmGetThread();
         ctx.emitWasmConst(SpiderNumberType.i32, ir.inputs.status);
         ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("status"));
 
         ctx.emitWasmGetThread();
-        ctx.emitWasmConst(SpiderNumberType.i32, ir.branches.branch.func.functionTableIndex);
+        ctx.emitWasmConst(SpiderNumberType.i32, targetFunc.functionTableIndex);
         ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("function"));
 
         ctx.emitWasm(SpiderOpcodes.return);

@@ -32,7 +32,7 @@ export class CatnipIrBranch {
         for (const op of this.ops) {
             for (const branchName in op.branches) {
                 const branch = op.branches[branchName];
-                if (branch._func === oldFunc)
+                if (branch !== null && branch._func === oldFunc)
                     branch.setFunction(this._func);
             }
         }
@@ -68,11 +68,20 @@ export class CatnipIrBranch {
             if (!lastOp.type.doesBranchContinue(branchName, lastOp))
                 continue;
 
-            const branch = lastOp.branches[branchName];
-            if (visited.has(branch)) continue;
+            let branch = lastOp.branches[branchName];
 
-            if (tails.indexOf(branch) === -1)
+            if (branch === null) {
+                branch = new CatnipIrBranch(this._func ?? undefined);
+                lastOp.branches[branchName] = branch;
                 branch._appendTails(tails, visited);
+            } else {
+                if (visited.has(branch)) continue;
+
+                if (tails.indexOf(branch) === -1) // TODO Me thinks this check is not necesary
+                    branch._appendTails(tails, visited);
+            }
+
+
         }
     }
 
@@ -98,6 +107,13 @@ export class CatnipIrBranch {
 
         const lastOp = this.ops[this.ops.length - 1];
         return lastOp.type.doesContinue(lastOp);
+    }
+
+    public analyzePreEmit(visited: Set<CatnipIrBranch>) {
+        if (visited.has(this)) return;
+        visited.add(this);
+        for (const op of this.ops)
+            op.type.analyzePreEmit(op, this, visited);
     }
 
 }

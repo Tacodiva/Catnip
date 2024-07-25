@@ -14,15 +14,15 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
         ctx.emitIrCommand(
             ir_forever, {},
             {
-                loop: ctx.emitComplexBranch((loopHead) => {
+                loop: ctx.emitBranch((loopHead) => {
                     ctx.emitCommands(inputs.loop);
-                    ctx.emitIrInput(ir_const, {value: 0}, CatnipInputFormat.i32, CatnipInputFlags.BOOLEAN, {});
-                    ctx.emitIrCommand(ir_if_else, {}, {
-                        true_branch: ctx.emitComplexBranch(() => {
-                            ctx.emitJump(loopHead);
-                        }),
-                        false_branch: ctx.emitBranch([])
-                    });
+                    // ctx.emitIrInput(ir_const, { value: 0 }, CatnipInputFormat.i32, CatnipInputFlags.BOOLEAN, {});
+                    ctx.emitJump(loopHead);
+                    // ctx.emitIrCommand(ir_if_else, {}, {
+                    //     true_branch: ctx.emitComplexBranch(() => {
+                    //     }),
+                    //     false_branch: ctx.emitBranch([])
+                    // });
                 })
             }
         );
@@ -39,7 +39,6 @@ export const ir_forever = new class extends CatnipIrCommandOpType<{}, forever_ir
     }
 
     public doesBranchContinue(branch: "loop", ir: CatnipIrOpBase<{}, forever_ir_branches>): boolean {
-        // return false;
-        return true;
+        return false;
     }
 }
