@@ -25,17 +25,28 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
             true, "Yield branch must be a function body."
         );
 
+        const targetFunc = ir.branches.branch.func;
+
         CatnipCompilerWasmGenContext.logger.assert(
-            ir.branches.branch.func.needsFunctionTableIndex,
+            targetFunc.needsFunctionTableIndex,
             true, "Yield branch function must have a function table index."
         );
 
-        const targetFunc = ir.branches.branch.func;
+        CatnipCompilerWasmGenContext.logger.assert(
+            targetFunc.needsFunctionTableIndex,
+            true, "Yield branch function must have a function table index."
+        );
+
+        CatnipCompilerWasmGenContext.logger.assert(
+            targetFunc.parameters.length === 0,
+            false, "Cannot yield to a function with parameters."
+        );
+
 
         ctx.prepareStackForCall(targetFunc, true);
 
         // if (ir.inputs.status === CatnipWasmEnumThreadStatus.RUNNING) {
-            // TODO use a return call insteasd
+        // TODO use a return call insteasd
         // }
 
         ctx.emitWasmGetThread();

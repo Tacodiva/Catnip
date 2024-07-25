@@ -42,5 +42,4 @@ export class CatnipIrValue {
                 return 8;
         }
     }
-
 }

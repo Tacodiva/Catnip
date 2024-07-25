@@ -325,6 +325,7 @@ export class CatnipCompilerIrGenContext {
             string += ":";
             if (func.body.isYielding()) string += " (yielding)";
             if (func.stackSize !== 0) string += ` (${func.stackSize} byte stack)`;
+            if (func.parameters.length !== 0) string += ` (${func.parameters.length} params)`;
             string += "\n";
 
             // string += ": \n";

@@ -12,12 +12,13 @@ export enum CatnipIrValueType {
     /** It has no initial value and is initialize by this function. */
     LOCAL,
     /** It is passed into this function as an argument. */
-    ARGUMENT,
+    PARAMETER,
     /** It is stored on the thread stack. */
     STACK
 }
 
 interface CatnipLocalVariableBase {
+    value: CatnipIrValue;
     ref: SpiderLocalVariableReference;
     type: CatnipIrValueType;
 }
@@ -27,11 +28,15 @@ interface CatnipLocalVariableStack extends CatnipLocalVariableBase {
     stackOffset: number;
 }
 
-interface CatnipLocalVariableOther extends CatnipLocalVariableBase {
-    type: CatnipIrValueType.ARGUMENT | CatnipIrValueType.LOCAL;
+interface CatnipLocalVariableParameter extends CatnipLocalVariableBase {
+    type: CatnipIrValueType.PARAMETER;
 }
 
-export type CatnipLocalVariable = CatnipLocalVariableStack | CatnipLocalVariableOther;
+interface CatnipLocalVariableLocal extends CatnipLocalVariableBase {
+    type: CatnipIrValueType.LOCAL;
+}
+
+export type CatnipLocalVariable = CatnipLocalVariableStack | CatnipLocalVariableParameter | CatnipLocalVariableLocal;
 
 
 export class CatnipIrFunction {
@@ -56,6 +61,11 @@ export class CatnipIrFunction {
     private _stackSize: number;
     public get stackSize(): number { return this._stackSize; }
 
+    private _parameters: CatnipLocalVariableParameter[];
+    public get parameters(): ReadonlyArray<CatnipLocalVariableParameter> { return this._parameters; }
+
+    private _callers: Set<CatnipIrFunction>;
+
     public constructor(compiler: CatnipCompiler, needsFunctionTableIndex: boolean, branch?: CatnipIrBranch) {
         this.compiler = compiler;
         this.spiderFunction = this.spiderModule.createFunction();
@@ -77,6 +87,21 @@ export class CatnipIrFunction {
 
         this._localVariables = new Map();
         this._stackSize = 0;
+        this._parameters = [];
+
+        this._callers = new Set();
+    }
+
+    private _addLocalVariable(variable: CatnipLocalVariable) {
+        this._localVariables.set(variable.value, variable);
+
+        if (variable.type === CatnipIrValueType.PARAMETER) {
+            this._parameters.push(variable);
+
+        }
+
+        for (const caller of this._callers)
+            caller.useLocalVariable(variable.value);
     }
 
     public createLocalVariable(value: CatnipIrValue) {
@@ -85,7 +110,8 @@ export class CatnipIrFunction {
             true, "Local variable already created for value. Value may be being read or written to before it's initialized."
         );
 
-        this._localVariables.set(value, {
+        this._addLocalVariable({
+            value,
             ref: this.spiderFunction.addLocalVariable(value.type),
             type: CatnipIrValueType.LOCAL
         });
@@ -96,17 +122,19 @@ export class CatnipIrFunction {
             return;
 
         if (this.needsFunctionTableIndex) {
-            this._localVariables.set(value, {
+            this._addLocalVariable({
+                value,
                 ref: this.spiderFunction.addLocalVariable(value.type),
                 type: CatnipIrValueType.STACK,
                 stackOffset: this._stackSize
             });
-            
+
             this._stackSize += value.size;
         } else {
-            this._localVariables.set(value, {
+            this._addLocalVariable({
+                value,
                 ref: this.spiderFunction.addParameter(value.type),
-                type: CatnipIrValueType.ARGUMENT
+                type: CatnipIrValueType.PARAMETER
             });
         }
     }
@@ -118,5 +146,18 @@ export class CatnipIrFunction {
         );
 
         return this._localVariables.get(value)!.ref;
+    }
+
+    public registerCaller(caller: CatnipIrFunction) {
+        if (this._callers.has(caller))
+            return;
+
+        this._callers.add(caller);
+
+        for (const [value, variable] of this._localVariables) {
+            if (variable.type === CatnipIrValueType.LOCAL)
+                continue;
+            caller.useLocalVariable(value);
+        }
     }
 }

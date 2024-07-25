@@ -1,4 +1,4 @@
-import { SpiderModule, compileModule, createModule } from "wasm-spider";
+import { SpiderModule, compileModule, createModule, writeModule } from "wasm-spider";
 import { CatnipCompiler } from "../compiler/CatnipCompiler";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
 import { CatnipWasmStructSprite } from "../wasm-interop/CatnipWasmStructSprite";
@@ -114,6 +114,30 @@ export class CatnipProject {
         for (const script of this._recompileScripts) {
             compiler.compile(script);
         }
+
+        // const downloadURL = (data: string, fileName: string) => {
+        //     const a = document.createElement('a')
+        //     a.href = data
+        //     a.download = fileName
+        //     document.body.appendChild(a)
+        //     a.style.display = 'none'
+        //     a.click()
+        //     a.remove()
+        // }
+
+        // const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
+
+        //     const blob = new Blob([data], {
+        //         type: mimeType
+        //     })
+
+        //     const url = window.URL.createObjectURL(blob)
+
+        //     downloadURL(url, fileName)
+
+        //     setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+        // }
+        // downloadBlob(writeModule(compiler.spiderModule), "module.wasm", "application/wasm");
 
         const module = await compileModule(compiler.spiderModule);
 

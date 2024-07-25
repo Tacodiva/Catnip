@@ -62,8 +62,15 @@ export abstract class CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches
     }
 
     public analyzePreEmit(ir: CatnipIrOpBase<TInputs, TBranches>, branch: CatnipIrBranch, visited: Set<CatnipIrBranch>) {
-        for (const branchName in ir.branches) {
-            ir.branches[branchName]?.analyzePreEmit(visited);
+        for (const subbranchName in ir.branches) {
+            const subbranch = ir.branches[subbranchName];
+            if (subbranch === null) continue;
+
+            if (subbranch.func !== branch.func) {
+                subbranch.func.registerCaller(branch.func);
+            }
+
+            subbranch.analyzePreEmit(visited);
         }
     }
 }

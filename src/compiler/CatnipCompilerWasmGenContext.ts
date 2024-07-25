@@ -39,7 +39,6 @@ export class CatnipCompilerWasmGenContext {
         this._expressions = [];
         this.pushExpression(this._func.spiderFunction.body);
 
-
         if (this._func.stackSize !== 0) {
             for (const [value, variable] of this._func.localVariables) {
                 if (variable.type !== CatnipIrValueType.STACK)
@@ -94,6 +93,11 @@ export class CatnipCompilerWasmGenContext {
             this.prepareStackForCall(targetFunc, branch.isYielding());
 
             this.emitWasmGetThread();
+
+            for (const parameter of targetFunc.parameters) {
+                this.emitWasm(SpiderOpcodes.local_get, this._func.getValueVariableRef(parameter.value));
+            }
+
             this.emitWasm(SpiderOpcodes.call, targetFunc.spiderFunction);
 
             if (branch.isYielding()) {
@@ -161,8 +165,8 @@ export class CatnipCompilerWasmGenContext {
                 this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
             }
         }
-        
-        if (targetFunc.stackSize !== 0) {            
+
+        if (targetFunc.stackSize !== 0) {
             this.emitWasmGetStackEnd();
 
             this.emitWasmGetStackPtr();
@@ -195,13 +199,13 @@ export class CatnipCompilerWasmGenContext {
                         );
                 }
             }
-            
+
             this.emitWasmGetThread();
 
             this.emitWasmGetStackPtr();
             this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
             this.emitWasm(SpiderOpcodes.i32_add);
-            
+
             this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
         }
     }

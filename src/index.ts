@@ -83,6 +83,14 @@ async function main() {
                                     CatnipOps.core_log.create({
                                         msg: CatnipOps.core_const.create({ value: "Inner! " })
                                     }),
+                                    CatnipOps.control_repeat.create({
+                                        count: CatnipOps.core_const.create({ value: 2 }),
+                                        loop: [
+                                            CatnipOps.core_log.create({
+                                                msg: CatnipOps.core_const.create({ value: "Inner v2! " })
+                                            }),
+                                        ]
+                                    })
                                 ]
                             }),
                             CatnipOps.core_log.create({
