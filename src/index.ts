@@ -2,12 +2,9 @@ import { CatnipOps } from "./ir";
 import { CatnipRuntimeModule } from "./runtime/CatnipRuntimeModule";
 
 
-async function main() {
+export async function run(runtimeModule: WebAssembly.Module) {
 
-    const moduleRequest = await fetch('catnip.wasm');
-    const module = await WebAssembly.compileStreaming(moduleRequest);
-
-    const runtime = await CatnipRuntimeModule.create(module);
+    const runtime = await CatnipRuntimeModule.create(runtimeModule);
     const project = runtime.loadProject({
         sprites: [
             {
@@ -111,5 +108,3 @@ async function main() {
 
     await project.rewrite();
 }
-
-main();

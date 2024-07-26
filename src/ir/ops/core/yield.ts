@@ -33,11 +33,6 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
         );
 
         CatnipCompilerWasmGenContext.logger.assert(
-            targetFunc.needsFunctionTableIndex,
-            true, "Yield branch function must have a function table index."
-        );
-
-        CatnipCompilerWasmGenContext.logger.assert(
             targetFunc.parameters.length === 0,
             false, "Cannot yield to a function with parameters."
         );

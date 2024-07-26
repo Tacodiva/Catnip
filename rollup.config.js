@@ -1,13 +1,13 @@
-const typescript = require('@rollup/plugin-typescript');
-const terser = require('@rollup/plugin-terser');
-const livereload = require('rollup-plugin-livereload');
-const nodeResolve = require('@rollup/plugin-node-resolve');
+import typescript  from '@rollup/plugin-typescript';
+import terser  from '@rollup/plugin-terser';
+import livereload  from 'rollup-plugin-livereload';
+import nodeResolve  from '@rollup/plugin-node-resolve';
 
 const production = !process.env.ROLLUP_WATCH;
 
-module.exports = [
+export default [
     {
-        input: 'src/index.ts',
+        input: 'playground/index.ts',
 
         output: {
             sourcemap: !production,

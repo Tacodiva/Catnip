@@ -5,6 +5,16 @@
         "moduleResolution": "Node",
         "strict": true,
         "esModuleInterop": true,
-        "stripInternal": true
+        "stripInternal": true,
+
     },
+    "ts-node": {
+        "experimentalSpecifierResolution": "node",
+        "transpileOnly": true,
+        "esm": true,
+        "compilerOptions": {
+            "module": "ESNext"
+        }
+    },
+    "include": ["src"]
 }
