@@ -8,7 +8,6 @@ export type CatnipVariableID = string;
 export interface CatnipVariableDesc {
     id: CatnipVariableID;
     name: string;
-    value: number | string;
 }
 
 export class CatnipVariable {
@@ -21,8 +20,6 @@ export class CatnipVariable {
 
     public readonly structWrapper: WasmStructWrapper<typeof CatnipWasmStructVariable>;
 
-    private _value: number | string;
-
     private _dependantScripts: Set<CatnipScript>;
 
     /** @internal */
@@ -34,8 +31,6 @@ export class CatnipVariable {
 
         this._name = desc.name;
         this._rewriteName = true;
-
-        this._value = desc.value;
 
         this._dependantScripts = new Set();
 

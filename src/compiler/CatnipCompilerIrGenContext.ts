@@ -210,8 +210,8 @@ export class CatnipCompilerIrGenContext {
         return func;
     }
 
-    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipInputFormat, flags: CatnipInputFlags) {
-        op.type.generateIr(this, op.inputs, format, flags);
+    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipInputFormat, flags: CatnipInputFlags): CatnipIrInputOp<CatnipIrOpInputs, CatnipIrOpBranches> {
+        return op.type.generateIr(this, op.inputs, format, flags);
     }
 
     public emitCommand<TInputs extends CatnipOpInputs>(op: CatnipCommandOp<TInputs>) {

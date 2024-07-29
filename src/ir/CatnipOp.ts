@@ -1,4 +1,5 @@
 import { CatnipCompilerIrGenContext } from "../compiler/CatnipCompilerIrGenContext";
+import { CatnipIrCommandOp, CatnipIrInputOp, CatnipIrOpBranches, CatnipIrOpInputs } from "./CatnipIrOp";
 import { CatnipInputFlags, CatnipInputFormat } from "./types";
 
 export type CatnipCommandList = CatnipCommandOp<CatnipOpInputs>[];
@@ -27,7 +28,7 @@ export abstract class CatnipInputOpType<TInputs extends CatnipOpInputs> extends 
         return { type: this, inputs }
     }
 
-    public abstract generateIr(ctx: CatnipCompilerIrGenContext, inputs: TInputs, format: CatnipInputFormat, flags: CatnipInputFlags): void;
+    public abstract generateIr(ctx: CatnipCompilerIrGenContext, inputs: TInputs, format: CatnipInputFormat, flags: CatnipInputFlags): CatnipIrInputOp<CatnipIrOpInputs, CatnipIrOpBranches>;
 }
 
 export abstract class CatnipCommandOpType<TInputs extends CatnipOpInputs> extends CatnipOpType<TInputs> {

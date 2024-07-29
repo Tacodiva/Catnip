@@ -1,43 +1,31 @@
 
-#include "catnip_hstring.c"
-#include "catnip_list.c"
-#include "catnip_mem.c"
-#include "catnip_numconv.c"
-#include "catnip_runtime.c"
-#include "catnip_target.c"
-#include "catnip_thread.c"
-#include "catnip_unicode.c"
-#include "catnip_util.c"
-#include "catnip_blockutil.c"
+#include "./catnip.h"
 
 void CATNIP_EXPORT(main)(catnip_runtime *runtime) {
-  catnip_util_print("Enumerating sprites");
+  catnip_f64_t first;
+  catnip_f64_t second;
+  catnip_f64_t nth;
 
-  for (catnip_ui32_t spriteIdx = 0; spriteIdx < runtime->sprite_count; spriteIdx++) {
-    catnip_sprite *sprite = runtime->sprites[spriteIdx];
-    catnip_util_print("Sprite:");
+  for (catnip_ui32_t i = 0; i < 100000; i++) {
+    first = 0;
+    second = 1;
+    nth = 1;
 
-    catnip_hstring_print(sprite->name);
-    catnip_util_print("Variables:");
-
-    for (catnip_ui32_t varIdx = 0; varIdx < sprite->variable_count; varIdx++) {
-      catnip_variable *variable = sprite->variables[varIdx];
-      catnip_hstring_print(variable->name);
-
-      if (variable->default_value.flags & CATNIP_VALUE_FLAG_STRING) {
-        catnip_hstring_print(variable->default_value.val_string);
-      } else {
-        catnip_hstring *valueString = catnip_numconv_stringify(variable->default_value.val_double);
-        catnip_hstring_print(valueString);
-        catnip_hstring_deref(valueString);
-      }
+    for (catnip_ui32_t j = 0; j < 1200; j++) {
+      nth = first + second;
+      first = second;
+      second = nth;
     }
   }
+
+  catnip_hstring *str = catnip_numconv_stringify_f64(nth);
+  catnip_blockutil_debug_log(str);
 }
 
 void *CATNIP_EXPORT(catnip_mem_alloc)(catnip_ui32_t length, catnip_bool_t zero) {
-  void* ptr = catnip_mem_alloc(length);
-  if (zero) catnip_mem_zero(ptr, length);
+  void *ptr = catnip_mem_alloc(length);
+  if (zero)
+    catnip_mem_zero(ptr, length);
   return ptr;
 }
 
@@ -47,6 +35,20 @@ void CATNIP_EXPORT(catnip_mem_free)(void *ptr) {
 
 void CATNIP_EXPORT(catnip_hstring_deref)(catnip_hstring *string) {
   catnip_hstring_deref(string);
+}
+
+void CATNIP_EXPORT(catnip_hstring_ref)(catnip_hstring *string) {
+  catnip_hstring_ref(string);
+}
+
+catnip_hstring *CATNIP_EXPORT(catnip_numconv_stringify_f64)(catnip_f64_t value) {
+  return catnip_numconv_stringify_f64(value);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_numconv_parse_and_deref)(catnip_hstring *str) {
+  catnip_f64_t val = catnip_numconv_parse(str);
+  catnip_hstring_deref(str);
+  return val;
 }
 
 catnip_runtime *CATNIP_EXPORT(catnip_runtime_new)() {
@@ -69,7 +71,7 @@ void CATNIP_EXPORT(catnip_thread_yield)(catnip_thread *thread, catnip_thread_fnp
   return catnip_thread_yield(thread, fnptr);
 }
 
-void CATNIP_EXPORT(catnip_thread_terminate)(catnip_thread* thread) {
+void CATNIP_EXPORT(catnip_thread_terminate)(catnip_thread *thread) {
   return catnip_thread_terminate(thread);
 }
 
@@ -81,9 +83,8 @@ void CATNIP_EXPORT(catnip_thread_resize_stack)(catnip_thread *thread, catnip_ui3
   catnip_thread_resize_stack(thread, extraCapacity);
 }
 
-
 // void CATNIP_EXPORT(stringify)(catnip_f64_t n) {
-//   catnip_hstring_print(catnip_numconv_stringify(n));
+//   catnip_hstring_print(catnip_numconv_stringify_f64(n));
 // }
 
 // catnip_f64_t CATNIP_EXPORT(parse)(const char* string) {

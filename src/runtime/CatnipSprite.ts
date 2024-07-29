@@ -3,6 +3,7 @@ import { CatnipWasmStructSprite } from "../wasm-interop/CatnipWasmStructSprite";
 import { WasmPtr, WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipProject } from "./CatnipProject";
 import { CatnipScript, CatnipScriptDesc, CatnipScriptID } from "./CatnipScript";
+import { CatnipTarget, CatnipTargetDesc } from "./CatnipTarget";
 import { CatnipVariable, CatnipVariableDesc, CatnipVariableID } from "./CatnipVariable";
 
 export type CatnipSpriteID = string;
@@ -12,6 +13,7 @@ export interface CatnipSpriteDesc {
     name: string;
     variables: CatnipVariableDesc[];
     scripts: CatnipScriptDesc[];
+    target: CatnipTargetDesc;
 }
 
 export class CatnipSprite {
@@ -21,12 +23,15 @@ export class CatnipSprite {
     public readonly project: CatnipProject;
     public readonly structWrapper: WasmStructWrapper<typeof CatnipWasmStructSprite>;
     public get runtime() { return this.project.runtimeModule; }
+    
+    public readonly defaultTarget: CatnipTarget;
+    private _rewriteTargets: Set<CatnipTarget>;
 
     public readonly id: CatnipSpriteID;
 
     private _name: string;
     private _rewriteName: boolean;
-
+    
     private readonly _variables: Map<CatnipVariableID, CatnipVariable>;
     private _rewriteVariableList: boolean;
     private _rewriteVariables: Set<CatnipVariable>;
@@ -34,12 +39,15 @@ export class CatnipSprite {
     private readonly _scripts: Map<CatnipScriptID, CatnipScript>;
     private _rewriteScripts: boolean;
 
+    // TODO Dependant scripts
+
     /** @internal */
     constructor(project: CatnipProject, desc: CatnipSpriteDesc) {
         this.id = desc.id;
         this.project = project;
 
         this._variables = new Map();
+
         this._scripts = new Map();
 
         this.structWrapper = this.runtime.allocateStruct(CatnipWasmStructSprite);
@@ -57,6 +65,16 @@ export class CatnipSprite {
         for (const scriptDesc of desc.scripts) {
             this.createScript(scriptDesc);
         }
+        
+        this._rewriteTargets = new Set();
+
+        this._rewrite();
+
+        this.defaultTarget = new CatnipTarget(this, desc.target);
+        this._rewriteTargets.add(this.defaultTarget);
+        this.structWrapper.setMember("target_default", this.defaultTarget.structWrapper.ptr);
+
+        this._rewrite();
     }
 
     private _isValid(): boolean {
@@ -120,7 +138,7 @@ export class CatnipSprite {
     }
 
     private _markRewrite() {
-        this.project._rewriteSprite(this);
+        this.project._addRewriteSprite(this);
     }
 
     /** @internal */
@@ -151,6 +169,7 @@ export class CatnipSprite {
             this.structWrapper.setMember("variables", variablesPtr);
 
             let i = 0;
+
             for (const variable of this._variables.values()) {
                 WasmPtr.set(variablesPtr + (i * WasmPtr.size), this.runtime.memory, variable.structWrapper.ptr);
                 variable._index = i;
@@ -166,6 +185,15 @@ export class CatnipSprite {
             }
             this._rewriteVariables.clear();
         }
+
+        if (this._rewriteTargets.size !== 0) {
+            for (const rewriteTarget of this._rewriteTargets) {
+                rewriteTarget._rewrite();
+            }
+            this._rewriteTargets.clear();
+        }
+
+        this.project._removeRewriteSprite(this);
     }
 
 }

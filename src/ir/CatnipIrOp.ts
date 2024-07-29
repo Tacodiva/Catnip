@@ -5,14 +5,16 @@ import { CatnipIrBranch } from "./CatnipIrBranch";
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranches = Record<string, CatnipIrBranch | null>;
 
-export interface CatnipIrOp {
-    readonly type: CatnipIrOpType<CatnipIrOpInputs, CatnipIrOpBranches>;
-    readonly inputs: CatnipIrOpInputs;
+// export interface CatnipIrOp {
+//     readonly type: CatnipIrOpType<CatnipIrOpInputs, CatnipIrOpBranches>;
+//     readonly inputs: CatnipIrOpInputs;
 
-    readonly branches: CatnipIrOpBranches;
-}
+//     readonly branches: CatnipIrOpBranches;
+// }
 
-export interface CatnipIrOpBase<TInputs extends CatnipIrOpInputs = CatnipIrOpInputs, TBranches extends CatnipIrOpBranches = CatnipIrOpBranches> extends CatnipIrOp {
+export type CatnipIrOp = CatnipIrCommandOp<CatnipIrOpInputs, CatnipIrOpBranches> | CatnipIrInputOp<CatnipIrOpInputs, CatnipIrOpBranches>;
+
+export interface CatnipIrOpBase<TInputs extends CatnipIrOpInputs = CatnipIrOpInputs, TBranches extends CatnipIrOpBranches = CatnipIrOpBranches> {
     readonly type: CatnipIrOpType<TInputs, TBranches>;
     readonly inputs: TInputs;
     readonly branches: TBranches;
@@ -25,9 +27,9 @@ export interface CatnipIrCommandOp<TInputs extends CatnipIrOpInputs = {}, TBranc
 export interface CatnipIrInputOp<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpBase<TInputs, TBranches> {
     readonly type: CatnipIrInputOpType<TInputs, TBranches>;
     /** The format of the value this op must leave on the stack. */
-    readonly format: CatnipInputFormat;
+    format: CatnipInputFormat;
     /** The flags which the value this op leaves on the stack must satisfy.  */
-    readonly flags: CatnipInputFlags;
+    flags: CatnipInputFlags;
 }
 
 export abstract class CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranches> {
@@ -76,9 +78,13 @@ export abstract class CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches
 }
 
 export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpType<TInputs, TBranches> {
+    public abstract getOutputFormat(ir: CatnipIrInputOp<TInputs, TBranches>): CatnipInputFormat;
+
     public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<TInputs, TBranches>, branch: CatnipIrBranch): void;
 }
 
 export abstract class CatnipIrCommandOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpType<TInputs, TBranches> {
     public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrCommandOp<TInputs, TBranches>, branch: CatnipIrBranch): void;
+
+    protected empty() {} // To differentiate this from CatnipIrInputOpType
 }

@@ -17,10 +17,12 @@ struct catnip_target;
 typedef struct catnip_target catnip_target;
 
 struct catnip_target {
-    struct catnip_runtime *runtime;
+    catnip_runtime *runtime;
     catnip_sprite *sprite;
     catnip_target_flags flags;
     catnip_target *next;
+
+    catnip_value *variable_table;
 
     catnip_i32_t position_x;
     catnip_i32_t position_y;

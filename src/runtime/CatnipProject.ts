@@ -63,8 +63,13 @@ export class CatnipProject {
     }
 
     /** @internal */
-    _rewriteSprite(sprite: CatnipSprite) {
+    _addRewriteSprite(sprite: CatnipSprite) {
         this._rewriteSprites.add(sprite);
+    }
+
+    /** @internal */
+    _removeRewriteSprite(sprite: CatnipSprite) {
+        this._rewriteSprites.delete(sprite);
     }
 
     /** @internal */
@@ -78,8 +83,6 @@ export class CatnipProject {
     }
 
     private async _rewrite(): Promise<void> {
-        await this._recompile();
-
         if (this._rewriteSpritesList) {
             let spritesArray = this.runtimeInstance.getMember("sprites");
             if (spritesArray !== 0)
@@ -102,8 +105,9 @@ export class CatnipProject {
         if (this._rewriteSprites.size !== 0) {
             for (const sprite of this._rewriteSprites)
                 sprite._rewrite();
-            this._rewriteSprites.clear();
         }
+
+        await this._recompile();
     }
 
     private async _recompile(): Promise<void> {
@@ -149,11 +153,14 @@ export class CatnipProject {
             catnip: this.runtimeModule.functions
         });
 
-        const target = this.runtimeModule.functions.catnip_target_new(this.runtimeInstance.ptr, 1);
+        const sprite = this._sprites.get("sprite")!.structWrapper.ptr;
+        const target = this.runtimeModule.functions.catnip_target_new(this.runtimeInstance.ptr, sprite);
         const thread = this.runtimeModule.functions.catnip_thread_new(target, 1);
 
         console.log("1");
+        console.time("1");
         this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
+        console.timeEnd("1");
         console.log("2");
         this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
         console.log("3");

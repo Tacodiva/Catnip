@@ -10,6 +10,9 @@ struct catnip_sprite {
 
     catnip_ui32_t variable_count;
     catnip_variable **variables;
+
+    catnip_target *target_default;
+    catnip_list targets;
     
 };
 

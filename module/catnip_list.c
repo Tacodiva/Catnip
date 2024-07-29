@@ -4,7 +4,7 @@
 #define CATNIP_ASSERT_LIST_VALID(list) CATNIP_ASSERT(catnip_list_is_valid(list))
 #define CATNIP_ASSERT_LIST_INDEX_VALID(list, index) CATNIP_ASSERT(catnip_list_index_is_valid((list), (index)))
 
-inline catnip_bool_t catnip_list_is_valid(catnip_list *list) {
+catnip_bool_t catnip_list_is_valid(catnip_list *list) {
   if (list == CATNIP_NULL)
     return CATNIP_FALSE;
   if (list->length >= list->capacity)
@@ -30,7 +30,7 @@ void catnip_list_free(catnip_list *list, catnip_ui32_t item_size) {
     catnip_mem_free(list->data);
 }
 
-inline catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const void *item) {
+catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const void *item) {
   CATNIP_ASSERT_LIST_VALID(list);
   CATNIP_ASSERT(item != CATNIP_NULL);
 

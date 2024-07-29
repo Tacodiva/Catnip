@@ -29,7 +29,7 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 
     while (thread->status == CATNIP_THREAD_STATUS_RUNNING) {
       thread->function(thread);
-      if (++lc > 1000)
+      if (++lc > 100000000)
         CATNIP_ASSERT(CATNIP_FALSE);
     }
   }

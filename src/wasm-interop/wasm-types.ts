@@ -195,16 +195,22 @@ export class WasmPtr<TValue extends WasmType<any, any>> implements WasmType<numb
         return WasmUInt32.get(ptr, buffer);
     }
 
+    private _getNonNull(ptr: number, buffer: DataView): number {
+        const value = this.get(ptr, buffer);
+        if (value === 0) throw new Error(`'${this.name}' is null.`);
+        return value;
+    }
+
     public setInner(ptr: number, buffer: DataView, value: WasmTypeSetValue<TValue>) {
-        this.type.set(this.get(ptr, buffer), buffer, value);
+        this.type.set(this._getNonNull(ptr, buffer), buffer, value);
     }
 
     public getInner(ptr: number, buffer: DataView): WasmTypeValue<TValue> {
-        return this.type.get(this.get(ptr, buffer), buffer);
+        return this.type.get(this._getNonNull(ptr, buffer), buffer);
     }
 
     public getInnerWrapper(ptr: number, buffer: DataView): WasmTypeValueWrapper<TValue> {
-        return this.type.getWrapper(this.get(ptr, buffer), buffer);
+        return this.type.getWrapper(this._getNonNull(ptr, buffer), buffer);
     }
 
     public getWrapper(ptr: number, buffer: DataView): WasmPtrWrapper<TValue> {
@@ -239,9 +245,9 @@ export class WasmArray<TInnerType extends WasmType<any, any>> implements WasmTyp
     public constructor(innerType: TInnerType, length: number | null) {
         if (innerType.size === null)
             throw new Error(`Cannot create list of type '${innerType.name}' because it has an undefined size.`);
-        this.name = innerType.name + `[${length}]`;
+        this.name = innerType.name + (length === null ? "[]" : `[${length}]`);
         this.elementSize = innerType.size;
-        this.size = length == null ? null : this.elementSize * length;
+        this.size = length === null ? null : this.elementSize * length;
         this.length = length;
         this.elementType = innerType;
         this.alignment = alignOffset(this.elementSize, this.elementType.alignment);

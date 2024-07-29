@@ -4,7 +4,7 @@ import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime
 import { WasmStruct, WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { createLogger } from "../log";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
-import { CatnipWasmStructValueFlags, CatnipWasmStructValue } from "../wasm-interop/CatnipWasmStructValue";
+import { CatnipWasmEnumValueFlags, CatnipWasmStructValue } from "../wasm-interop/CatnipWasmStructValue";
 import { CatnipProject, CatnipProjectDesc } from "./CatnipProject";
 import { CatnipWasmArrayFuncEntry } from "../wasm-interop/CatnipWasmStructFuncEntry";
 import { CatnipRuntimeModuleFunctionsObject } from "./CatnipRuntimeModuleFunctions";
@@ -116,12 +116,12 @@ export class CatnipRuntimeModule {
     public setValue(ptr: WasmStructWrapper<typeof CatnipWasmStructValue>, value: number | string) {
         if (typeof value === "number") {
             ptr.set({
-                flags: CatnipWasmStructValueFlags.VAL_DOUBLE,
+                flags: CatnipWasmEnumValueFlags.VAL_DOUBLE,
                 val_double: value
             });
         } else {
             ptr.set({
-                flags: CatnipWasmStructValueFlags.VAL_STRING,
+                flags: CatnipWasmEnumValueFlags.VAL_STRING,
                 val_string: this.allocateHeapString(value)
             });
         }

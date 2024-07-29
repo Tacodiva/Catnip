@@ -668,7 +668,7 @@ recheck_exp:
   *x = CATNIP_DBLUNION_GET_DOUBLE(&u);
 }
 
-catnip_hstring *catnip_numconv_stringify(catnip_f64_t x) {
+catnip_hstring *catnip_numconv_stringify_f64(catnip_f64_t x) {
 
   catnip_i32_t radix = 10;
   catnip_i32_t digits = 0;

@@ -19,7 +19,7 @@ typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 
 struct catnip_thread {
 
-  struct catnip_runtime *runtime;
+  catnip_runtime *runtime;
   catnip_target *target;
   catnip_thread_fnptr function;
   catnip_thread_status status;

@@ -1,11 +1,19 @@
-import { SpiderExpression, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
+import { SpiderExpression, SpiderFunctionDefinition, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipIrFunction, CatnipIrValueType } from './CatnipIrFunction';
-import { CatnipIrOp } from "../ir/CatnipIrOp";
+import { CatnipIrCommandOp, CatnipIrCommandOpType, CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../ir/CatnipIrOp";
 import { CatnipIrBranch } from "../ir/CatnipIrBranch";
 import { createLogger, Logger } from "../log";
 import { CatnipWasmStructThread } from "../wasm-interop/CatnipWasmStructThread";
+import { CatnipCommandOpType, CatnipInputOpType } from "../ir";
+import { CatnipInputFormat } from "../ir/types";
+import { CatnipWasmEnumValueFlags, CatnipWasmStructValue } from "../wasm-interop/CatnipWasmStructValue";
+
+export interface CatnipCompilerWasmLocal {
+    ref: SpiderLocalVariableReference,
+    type: SpiderNumberType
+}
 
 export class CatnipCompilerWasmGenContext {
     public static readonly logger: Logger = createLogger("CatnipCompilerWasmGenContext");
@@ -32,6 +40,9 @@ export class CatnipCompilerWasmGenContext {
         return this._expressionNullable;
     }
 
+    private _locals: Map<SpiderNumberType, CatnipCompilerWasmLocal[]>;
+    private _unreleaseLocals: number;
+
     public constructor(func: CatnipIrFunction) {
         this.compiler = func.compiler;
         this._func = func;
@@ -39,7 +50,11 @@ export class CatnipCompilerWasmGenContext {
         this._expressions = [];
         this.pushExpression(this._func.spiderFunction.body);
 
+        this._locals = new Map();
+        this._unreleaseLocals = 0;
+
         if (this._func.stackSize !== 0) {
+            // TODO optimize
             for (const [value, variable] of this._func.localVariables) {
                 if (variable.type !== CatnipIrValueType.STACK)
                     continue;
@@ -119,7 +134,113 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public emitOp(op: CatnipIrOp, branch: CatnipIrBranch) {
-        op.type.generateWasm(this, op, branch);
+        const opType = op.type;
+
+        if (opType instanceof CatnipIrInputOpType) {
+            const inputOp = op as CatnipIrInputOp;
+            opType.generateWasm(this, inputOp, branch);
+
+            const srcFormat = opType.getOutputFormat(inputOp);
+            const dstFormat = inputOp.format;
+
+            if (srcFormat !== dstFormat) {
+
+                function notSupported(): never {
+                    throw new Error(`Conversion from ${srcFormat} -> ${dstFormat} not supported.`);
+                }
+
+                switch (srcFormat) {
+                    case CatnipInputFormat.VALUE_PTR: {
+                        const getF64 = () => {
+                            const local = this.createLocal(SpiderNumberType.i32);
+                            this.emitWasm(SpiderOpcodes.local_tee, local.ref);
+                            this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("flags"));
+                            this.emitWasmConst(SpiderNumberType.i32, CatnipWasmEnumValueFlags.VAL_DOUBLE);
+                            this.emitWasm(SpiderOpcodes.i32_and);
+
+                            // Executed if the VAL_DOUBLE flag is set
+                            this.pushExpression();
+                            this.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            this.emitWasm(SpiderOpcodes.f64_load, 3, CatnipWasmStructValue.getMemberOffset("val_double"));
+                            const trueExpr = this.popExpression();
+
+                            // Executed if the VAL_STRING flag not is set
+                            this.pushExpression();
+                            this.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("val_string"));
+                            this.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
+                            const falseExpr = this.popExpression();
+
+                            this.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
+                            this.releaseLocal(local);
+                        }
+
+                        const getHString = () => {
+                            const local = this.createLocal(SpiderNumberType.i32);
+                            this.emitWasm(SpiderOpcodes.local_tee, local.ref);
+                            this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("flags"));
+                            this.emitWasmConst(SpiderNumberType.i32, CatnipWasmEnumValueFlags.VAL_STRING);
+                            this.emitWasm(SpiderOpcodes.i32_and);
+
+                            // Executed if the VAL_STRING flag is set
+                            this.pushExpression();
+                            this.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("val_string"));
+                            this.emitWasm(SpiderOpcodes.local_tee, local.ref);
+                            this.emitWasmRuntimeFunctionCall("catnip_hstring_ref");
+                            this.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            const trueExpr = this.popExpression();
+
+                            // Executed if the VAL_STRING flag not is set
+                            this.pushExpression();
+                            this.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            this.emitWasm(SpiderOpcodes.f64_load, 3, CatnipWasmStructValue.getMemberOffset("val_double"));
+                            this.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
+                            const falseExpr = this.popExpression();
+
+                            this.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
+                            this.releaseLocal(local);
+                        };
+
+                        switch (dstFormat) {
+                            case CatnipInputFormat.f64: {
+                                // value* -> f64
+                                getF64();
+                                break;
+                            }
+
+                            case CatnipInputFormat.HSTRING_PTR: {
+                                // value* -> hstring*
+                                getHString();
+                                break;
+                            }
+                            default: notSupported();
+                        }
+                        break;
+                    }
+                    case CatnipInputFormat.f64: {
+                        switch (dstFormat) {
+                            case CatnipInputFormat.HSTRING_PTR: {
+                                // f64 -> hstring*
+                                this.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
+                                break;
+                            }
+                            default: notSupported();
+                        }
+                        break;
+                    }
+                    default: notSupported();
+                }
+            }
+
+        } else {
+            CatnipCompilerWasmGenContext.logger.assert(
+                opType instanceof CatnipIrCommandOpType
+            );
+            const commandOp = op as CatnipIrCommandOp;
+            opType.generateWasm(this, commandOp, branch);
+        }
+
     }
 
     // TODO This will leak memory :c
@@ -154,6 +275,7 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public prepareStackForCall(targetFunc: CatnipIrFunction, tailCall: boolean) {
+        // TODO optimize
         if (tailCall) {
             if (this._func.stackSize !== 0) {
                 this.emitWasmGetThread();
@@ -208,6 +330,31 @@ export class CatnipCompilerWasmGenContext {
 
             this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
         }
+    }
+
+    public createLocal(type: SpiderNumberType): CatnipCompilerWasmLocal {
+        ++this._unreleaseLocals;
+
+        const locals = this._locals.get(type);
+
+        if (locals === undefined || locals.length === 0) {
+            return { ref: this.func.spiderFunction.addLocalVariable(type), type };
+        } else {
+            return locals.pop()!;
+        }
+    }
+
+    public releaseLocal(local: CatnipCompilerWasmLocal) {
+        --this._unreleaseLocals;
+
+        let locals = this._locals.get(local.type);
+
+        if (locals === undefined) {
+            locals = [];
+            this._locals.set(local.type, locals);
+        }
+
+        locals.push(local);
     }
 
 }

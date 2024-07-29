@@ -9,7 +9,6 @@
 struct catnip_variable {
 
     catnip_hstring *name;
-    catnip_value default_value;
     
 };
 

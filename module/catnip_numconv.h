@@ -5,6 +5,6 @@
 #include "./catnip.h"
 
 catnip_f64_t catnip_numconv_parse(catnip_hstring *str);
-catnip_hstring *catnip_numconv_stringify(catnip_f64_t x);
+catnip_hstring *catnip_numconv_stringify_f64(catnip_f64_t x);
 
 #endif

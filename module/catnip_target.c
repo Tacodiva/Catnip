@@ -11,6 +11,9 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
 
   target->runtime = runtime;
   target->sprite = sprite;
+  
+  target->variable_table = catnip_mem_alloc(sizeof(catnip_value) * sprite->variable_count);
+  catnip_mem_zero(target->variable_table, sizeof(catnip_value) * sprite->variable_count);
 
   CATNIP_LIST_ADD(&runtime->targets, catnip_target*, target);
 

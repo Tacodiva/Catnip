@@ -8,20 +8,32 @@ export async function run(runtimeModule: WebAssembly.Module) {
     const project = runtime.loadProject({
         sprites: [
             {
-                id: "my_sprite",
+                id: "sprite",
                 name: "My Sprite",
                 variables: [
                     {
-                        id: "my_var_A",
-                        name: "my var A",
-                        value: 10
+                        id: "first",
+                        name: "first",
                     },
                     {
-                        id: "my_var_B",
-                        name: "my var B",
-                        value: "Hello, World!"
+                        id: "second",
+                        name: "second",
+                    },
+                    {
+                        id: "nth",
+                        name: "nth",
                     }
                 ],
+                target: {
+                    variables: [
+                        { id: "first", value: 0 },
+                        { id: "second", value: 1 },
+                        { id: "nth", value: 1 },
+                    ],
+
+                    x_position: 0,
+                    y_position: 0
+                },
                 scripts: [
                     {
                         id: "a",
@@ -69,29 +81,92 @@ export async function run(runtimeModule: WebAssembly.Module) {
                         //         ]
                         //     })
                         // ],
+                        // commands: [
+                        //     CatnipOps.core_log.create({
+                        //         msg: CatnipOps.core_const.create({ value: "Outer!" })
+                        //     }),
+                        //     CatnipOps.control_repeat.create({
+                        //         count: CatnipOps.core_const.create({ value: 3 }),
+                        //         loop: [
+                        //             CatnipOps.core_yield.create({}),
+                        //             CatnipOps.core_log.create({
+                        //                 msg: CatnipOps.core_const.create({ value: "Inner! " })
+                        //             }),
+                        //             CatnipOps.control_repeat.create({
+                        //                 count: CatnipOps.core_const.create({ value: 2 }),
+                        //                 loop: [
+                        //                     CatnipOps.core_log.create({
+                        //                         msg: CatnipOps.core_const.create({ value: "Inner v2! " })
+                        //                     }),
+                        //                 ]
+                        //             })
+                        //         ]
+                        //     }),
+                        //     CatnipOps.core_log.create({
+                        //         msg: CatnipOps.core_const.create({ value: "Done!" })
+                        //     }),
+                        // ],
                         commands: [
-                            CatnipOps.core_log.create({
-                                msg: CatnipOps.core_const.create({ value: "Outer!" })
-                            }),
                             CatnipOps.control_repeat.create({
-                                count: CatnipOps.core_const.create({ value: 3 }),
+                                count: CatnipOps.core_const.create({ value: 10000 }),
                                 loop: [
-                                    CatnipOps.core_yield.create({}),
-                                    CatnipOps.core_log.create({
-                                        msg: CatnipOps.core_const.create({ value: "Inner! " })
+                                    CatnipOps.data_set_var.create({
+                                        sprite: "sprite",
+                                        variable: "first",
+                                        value: CatnipOps.core_const.create({ value: 0 }),
+                                    }),
+                                    CatnipOps.data_set_var.create({
+                                        sprite: "sprite",
+                                        variable: "second",
+                                        value: CatnipOps.core_const.create({ value: 1 }),
+                                    }),
+                                    CatnipOps.data_set_var.create({
+                                        sprite: "sprite",
+                                        variable: "nth",
+                                        value: CatnipOps.core_const.create({ value: 1 }),
                                     }),
                                     CatnipOps.control_repeat.create({
-                                        count: CatnipOps.core_const.create({ value: 2 }),
+                                        count: CatnipOps.core_const.create({ value: 1200 }),
                                         loop: [
-                                            CatnipOps.core_log.create({
-                                                msg: CatnipOps.core_const.create({ value: "Inner v2! " })
+                                            CatnipOps.data_set_var.create({
+                                                sprite: "sprite",
+                                                variable: "nth",
+                                                value: CatnipOps.operators_add.create({
+                                                    left: CatnipOps.data_get_var.create({
+                                                        sprite: "sprite",
+                                                        variable: "first",
+                                                    }),
+                                                    right: CatnipOps.data_get_var.create({
+                                                        sprite: "sprite",
+                                                        variable: "second",
+                                                    }),
+                                                }),
+                                            }),
+                                            CatnipOps.data_set_var.create({
+                                                sprite: "sprite",
+                                                variable: "first",
+                                                value: CatnipOps.data_get_var.create({
+                                                    sprite: "sprite",
+                                                    variable: "second",
+                                                }),
+                                            }),
+                                            CatnipOps.data_set_var.create({
+                                                sprite: "sprite",
+                                                variable: "second",
+                                                value: CatnipOps.data_get_var.create({
+                                                    sprite: "sprite",
+                                                    variable: "nth",
+                                                }),
                                             }),
                                         ]
-                                    })
+                                    }),
                                 ]
                             }),
                             CatnipOps.core_log.create({
-                                msg: CatnipOps.core_const.create({ value: "Done!" })
+                                msg: CatnipOps.data_get_var.create({
+                                    sprite: "sprite",
+                                    variable: "nth",
+                                }),
                             }),
                         ],
                         trigger: {
@@ -107,4 +182,5 @@ export async function run(runtimeModule: WebAssembly.Module) {
     // const project = await runtime.initialize();
 
     await project.rewrite();
+
 }

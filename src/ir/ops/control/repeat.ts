@@ -20,8 +20,8 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
             {
                 loop: ctx.emitBranch((loopHead) => {
                     ctx.emitLoadValue(loopCount);
-                    ctx.emitIrCommand(ir_const, { value: 1 }, {});
-                    ctx.emitIrCommand(ir_sub, { type: SpiderNumberType.i32 }, {});
+                    ctx.emitIrInput(ir_const, { value: 1 }, CatnipInputFormat.i32, CatnipInputFlags.ANY, {});
+                    ctx.emitIrInput(ir_sub, { type: SpiderNumberType.i32 }, CatnipInputFormat.i32, CatnipInputFlags.ANY, {});
                     ctx.emitStoreValue(loopCount);
 
                     ctx.emitCommands(inputs.loop);

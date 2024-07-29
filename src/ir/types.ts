@@ -1,3 +1,4 @@
+import { SpiderNumberType } from "wasm-spider";
 
 export enum CatnipInputFlags {
     /** The value Infinity */
@@ -73,5 +74,20 @@ export enum CatnipInputFlags {
 export enum CatnipInputFormat {
     i32,
     HSTRING_PTR, // (i32)
+    VALUE_PTR, // (i32)
     f64,
+    ANY
+}
+
+export function getInputFormatSpiderType(inputFormat: CatnipInputFormat): SpiderNumberType {
+    switch (inputFormat) {
+        case CatnipInputFormat.i32:
+        case CatnipInputFormat.HSTRING_PTR:
+        case CatnipInputFormat.VALUE_PTR:
+            return SpiderNumberType.i32;
+        case CatnipInputFormat.f64:
+            return SpiderNumberType.f64;
+        case CatnipInputFormat.ANY:
+            throw new Error("Cannot convert format 'any' to a number type.");
+    }
 }

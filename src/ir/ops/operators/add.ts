@@ -5,22 +5,22 @@ import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipInputOp, CatnipInputOpType } from "../../CatnipOp";
 import { CatnipInputFormat, CatnipInputFlags } from "../../types";
 
-export type sub_inputs = { left: CatnipInputOp, right: CatnipInputOp };
+export type add_inputs = { left: CatnipInputOp, right: CatnipInputOp };
 
-export const op_sub = new class extends CatnipInputOpType<sub_inputs> {
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: sub_inputs, format: CatnipInputFormat, flags: CatnipInputFlags): CatnipIrInputOp {
+export const op_add = new class extends CatnipInputOpType<add_inputs> {
+    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: add_inputs, format: CatnipInputFormat, flags: CatnipInputFlags): CatnipIrInputOp {
         ctx.emitInput(inputs.left, CatnipInputFormat.f64, CatnipInputFlags.NUMBER);
         ctx.emitInput(inputs.right, CatnipInputFormat.f64, CatnipInputFlags.NUMBER);
-        return ctx.emitIrInput(ir_sub, { type: SpiderNumberType.f64 }, format, flags, {});
+        return ctx.emitIrInput(ir_add, { type: SpiderNumberType.f64 }, format, flags, {});
     }
 }
 
-export type sub_ir_inputs = { type: SpiderNumberType };
+export type add_ir_inputs = { type: SpiderNumberType };
 
-export const ir_sub = new class extends CatnipIrInputOpType<sub_ir_inputs> {
-    public constructor() { super("operators_sub"); }
+export const ir_add = new class extends CatnipIrInputOpType<add_ir_inputs> {
+    public constructor() { super("operators_add"); }
 
-    public getOutputFormat(ir: CatnipIrInputOp<sub_ir_inputs>): CatnipInputFormat {
+    public getOutputFormat(ir: CatnipIrInputOp<add_ir_inputs>): CatnipInputFormat {
         switch (ir.inputs.type) {
             case SpiderNumberType.f64:
                 return CatnipInputFormat.f64;
@@ -31,13 +31,13 @@ export const ir_sub = new class extends CatnipIrInputOpType<sub_ir_inputs> {
         }
     }
 
-    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<sub_ir_inputs>): void {
+    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<add_ir_inputs>): void {
         switch (ir.inputs.type) {
             case SpiderNumberType.f64:
-                ctx.emitWasm(SpiderOpcodes.f64_sub);
+                ctx.emitWasm(SpiderOpcodes.f64_add);
                 break;
             case SpiderNumberType.i32:
-                ctx.emitWasm(SpiderOpcodes.i32_sub);
+                ctx.emitWasm(SpiderOpcodes.i32_add);
                 break;
             default:
                 CatnipCompilerWasmGenContext.logger.assert(false, true, `'${ir.inputs.type}' type not supported by operation.`);

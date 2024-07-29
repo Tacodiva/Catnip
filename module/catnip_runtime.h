@@ -14,8 +14,6 @@ struct catnip_runtime {
 
 };
 
-typedef struct catnip_runtime catnip_runtime;
-
 catnip_runtime *catnip_runtime_new();
 void catnip_runtime_tick(catnip_runtime *runtime);
 
