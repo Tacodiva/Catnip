@@ -44,9 +44,11 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
         // TODO use a return call insteasd
         // }
 
-        ctx.emitWasmGetThread();
-        ctx.emitWasmConst(SpiderNumberType.i32, ir.inputs.status);
-        ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("status"));
+        if (ir.inputs.status !== CatnipWasmEnumThreadStatus.RUNNING) {
+            ctx.emitWasmGetThread();
+            ctx.emitWasmConst(SpiderNumberType.i32, ir.inputs.status);
+            ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("status"));
+        }
 
         ctx.emitWasmGetThread();
         ctx.emitWasmConst(SpiderNumberType.i32, targetFunc.functionTableIndex);

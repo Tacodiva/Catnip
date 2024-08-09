@@ -17,10 +17,14 @@ export class CatnipIrBranch {
     public get funcNullable(): CatnipIrFunction | null { return this._func; }
 
     public readonly ops: CatnipIrOp[];
+    public isLoop: boolean;
+    public blockDepth: number;
 
     public constructor(fn?: CatnipIrFunction) {
         this._func = fn ?? null;
         this.ops = [];
+        this.isLoop = false;
+        this.blockDepth = -1;
     }
 
     public setFunction(func: CatnipIrFunction) {

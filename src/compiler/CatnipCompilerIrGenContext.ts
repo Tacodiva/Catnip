@@ -10,27 +10,11 @@ import { CatnipIrFunction } from "./CatnipIrFunction";
 import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipIrValue } from './CatnipIrValue';
 import { SpiderNumberType } from "wasm-spider";
-import { ir_const } from "../ir/ops/core/const";
 import { ir_store_value } from '../ir/ops/core/store_value';
 import { ir_load_value } from '../ir/ops/core/load_value';
-
-/*
-
-Compiler Stages:
-
-Stage 1: Generate
-    -> All the operations are converted to their IR counterpart
-    -> The IR is split up into functions and linked together
-
-Stage 2: Analyse
-    -> Inlining!
-    -> Constant folding / Dead branch removal
-    -> Type analysis + Simplification
-
-Stage 3: Emit
-    -> Each section is converted into WASM
-
-*/
+import { ir_loop_jmp } from "../ir/ops/core/loop_jmp";
+import { ir_loop_jmp_if } from "../ir/ops/core/loop_jmp_if";
+import { ir_if_else } from "../ir/ops/control/if_else";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
@@ -46,9 +30,10 @@ export class CatnipCompilerIrGenContext {
         this._branch = func.body;
     }
 
-    private _emitIr<TOp extends CatnipIrOpBase<CatnipIrOpInputs, TBranches>, TBranches extends CatnipIrOpBranches>(
-        op: TOp
-    ): TOp {
+    private _emitIr<
+        TOp extends CatnipIrCommandOp<CatnipIrOpInputs, TBranches> | CatnipIrInputOp<CatnipIrOpInputs, TBranches>,
+        TBranches extends CatnipIrOpBranches
+    >(op: TOp): TOp {
         if (!this._branch.doesContinue()) return op;
 
         const opBranchNames = Object.keys(op.branches);
@@ -224,9 +209,29 @@ export class CatnipCompilerIrGenContext {
         }
     }
 
-    public emitJump(branch: CatnipIrBranch) {
-        this._createBranchFunction(branch, true);
-        this.emitIrCommand(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
+    public emitJump(branch: CatnipIrBranch, continues: boolean = true) {
+        if (this._branch.funcNullable === branch.funcNullable) {
+            branch.isLoop = true;
+            this.emitIrCommand(ir_loop_jmp, { continues }, { branch })
+        } else {
+            this._createBranchFunction(branch, true);
+            this.emitIrCommand(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
+        }
+    }
+
+    public emitConditionalJump(branch: CatnipIrBranch, continues: boolean = true) {
+        if (this._branch.funcNullable === branch.funcNullable) {
+            branch.isLoop = true;
+            this.emitIrCommand(ir_loop_jmp_if, { continues }, { branch })
+        } else {
+            this.emitIrCommand(ir_if_else, {}, {
+                true_branch: this.emitBranch(() => {
+                    this._createBranchFunction(branch, true);
+                    this.emitIrCommand(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
+                }),
+                false_branch: null,
+            });
+        }
     }
 
     /** Creates a new, empty branch */
@@ -279,8 +284,12 @@ export class CatnipCompilerIrGenContext {
 
 
         const stringifyIr = (branch: CatnipIrBranch, indent: string, branches: Set<CatnipIrBranch>) => {
-
             let string = "";
+
+            if (branch.isLoop) {
+                string += "(loop) "
+            }
+            string += "\n";
 
             for (const op of branch.ops) {
                 string += indent;
@@ -299,10 +308,12 @@ export class CatnipCompilerIrGenContext {
                             string += ": null\n";
                         } else if (subbranch.func === branch.func && !subbranch.isFuncBody) {
                             if (branches.has(subbranch)) {
-                                string += ": ??\n";
+                                if (subbranch.isLoop) {
+                                    string += ": ??\n";
+                                }
                             } else {
                                 branches.add(subbranch);
-                                string += ": \n";
+                                string += ": ";
                                 string += stringifyIr(subbranch, indent + "    ", branches);
                             }
                         } else {
@@ -322,13 +333,11 @@ export class CatnipCompilerIrGenContext {
 
         for (const func of this.functions) {
             string += this._getFuncName(func);
-            string += ":";
-            if (func.body.isYielding()) string += " (yielding)";
-            if (func.stackSize !== 0) string += ` (${func.stackSize} byte stack)`;
-            if (func.parameters.length !== 0) string += ` (${func.parameters.length} params)`;
-            string += "\n";
+            string += ": ";
+            if (func.body.isYielding()) string += "(yielding) ";
+            if (func.stackSize !== 0) string += `(${func.stackSize} byte stack) `;
+            if (func.parameters.length !== 0) string += `(${func.parameters.length} params) `;
 
-            // string += ": \n";
             string += stringifyIr(func.body, "  ", new Set());
             string += "\n";
         }

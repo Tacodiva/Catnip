@@ -1,12 +1,11 @@
 import { SpiderExpression, SpiderFunctionDefinition, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipIrFunction, CatnipIrValueType } from './CatnipIrFunction';
+import { CatnipIrFunction, CatnipIrValueType, CatnipLocalVariable } from './CatnipIrFunction';
 import { CatnipIrCommandOp, CatnipIrCommandOpType, CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../ir/CatnipIrOp";
 import { CatnipIrBranch } from "../ir/CatnipIrBranch";
 import { createLogger, Logger } from "../log";
 import { CatnipWasmStructThread } from "../wasm-interop/CatnipWasmStructThread";
-import { CatnipCommandOpType, CatnipInputOpType } from "../ir";
 import { CatnipInputFormat } from "../ir/types";
 import { CatnipWasmEnumValueFlags, CatnipWasmStructValue } from "../wasm-interop/CatnipWasmStructValue";
 
@@ -41,7 +40,10 @@ export class CatnipCompilerWasmGenContext {
     }
 
     private _locals: Map<SpiderNumberType, CatnipCompilerWasmLocal[]>;
-    private _unreleaseLocals: number;
+    private _unreleasedLocalCount: number;
+
+    private _blockDepth: number;
+    public get blockDepth() { return this._blockDepth; }
 
     public constructor(func: CatnipIrFunction) {
         this.compiler = func.compiler;
@@ -51,15 +53,26 @@ export class CatnipCompilerWasmGenContext {
         this.pushExpression(this._func.spiderFunction.body);
 
         this._locals = new Map();
-        this._unreleaseLocals = 0;
+        this._unreleasedLocalCount = 0;
+
+        this._blockDepth = 0;
 
         if (this._func.stackSize !== 0) {
-            // TODO optimize
+            const stackPtrLocal = this.createLocal(SpiderNumberType.i32);
+            let first = true;
+
             for (const [value, variable] of this._func.localVariables) {
                 if (variable.type !== CatnipIrValueType.STACK)
                     continue;
 
-                this.emitWasmGetStackPtr();
+                if (first) {
+                    this.emitWasmGetStackPtr();
+                    this.emitWasm(SpiderOpcodes.local_tee, stackPtrLocal.ref);
+
+                    first = false;
+                } else {
+                    this.emitWasm(SpiderOpcodes.local_get, stackPtrLocal.ref);
+                }
 
                 switch (value.type) {
                     case SpiderNumberType.i32:
@@ -76,6 +89,8 @@ export class CatnipCompilerWasmGenContext {
 
                 this.emitWasm(SpiderOpcodes.local_set, variable.ref);
             }
+
+            this.releaseLocal(stackPtrLocal);
         }
     }
 
@@ -86,12 +101,14 @@ export class CatnipCompilerWasmGenContext {
             CatnipCompilerWasmGenContext.logger.assert(this._expressions.length === 0);
         }
         this._expressionNullable = expr ?? new SpiderExpression();
+        ++this._blockDepth;
     }
 
     public popExpression(): SpiderExpression {
         const expression = this._expressionNullable;
         CatnipCompilerWasmGenContext.logger.assert(this._expressions.length !== 0);
         this._expressionNullable = this._expressions.pop() ?? null;
+        --this._blockDepth;
         return expression!;
     }
 
@@ -130,7 +147,14 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public emitOps(branch: CatnipIrBranch) {
-        for (const op of branch.ops) this.emitOp(op, branch);
+        branch.blockDepth = this._blockDepth;
+        if (branch.isLoop) {
+            this.pushExpression();
+            for (const op of branch.ops) this.emitOp(op, branch);
+            this.emitWasm(SpiderOpcodes.loop, this.popExpression());
+        } else {
+            for (const op of branch.ops) this.emitOp(op, branch);
+        }
     }
 
     public emitOp(op: CatnipIrOp, branch: CatnipIrBranch) {
@@ -275,7 +299,9 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public prepareStackForCall(targetFunc: CatnipIrFunction, tailCall: boolean) {
-        // TODO optimize
+
+        let baseStackPtrVar: CatnipCompilerWasmLocal | null = null;
+
         if (tailCall) {
             if (this._func.stackSize !== 0) {
                 this.emitWasmGetThread();
@@ -284,6 +310,9 @@ export class CatnipCompilerWasmGenContext {
                 this.emitWasmConst(SpiderNumberType.i32, this._func.stackSize);
                 this.emitWasm(SpiderOpcodes.i32_sub);
 
+                baseStackPtrVar = this.createLocal(SpiderNumberType.i32);
+                this.emitWasm(SpiderOpcodes.local_tee, baseStackPtrVar.ref);
+
                 this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
             }
         }
@@ -291,23 +320,49 @@ export class CatnipCompilerWasmGenContext {
         if (targetFunc.stackSize !== 0) {
             this.emitWasmGetStackEnd();
 
-            this.emitWasmGetStackPtr();
+            // Get the stack pointer
+            if (baseStackPtrVar !== null) {
+                this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
+            } else {
+                this.emitWasmGetStackPtr();
+                baseStackPtrVar = this.createLocal(SpiderNumberType.i32);
+                this.emitWasm(SpiderOpcodes.local_tee, baseStackPtrVar.ref);
+            }
+
+            // Add the stack size
             this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
             this.emitWasm(SpiderOpcodes.i32_add);
 
+            // Save the new stack pointer
+            const newStackPtrVar = this.createLocal(SpiderNumberType.i32);
+            this.emitWasm(SpiderOpcodes.local_tee, newStackPtrVar.ref);
+
+            // (stackEnd < stackPtr + targetFunc.stackSize)
             this.emitWasm(SpiderOpcodes.i32_lt_u);
 
             this.pushExpression();
+            // if {
             this.emitWasmGetThread();
             this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
             this.emitWasmRuntimeFunctionCall("catnip_thread_resize_stack");
+
+            this.emitWasmGetStackPtr();
+            // Update the old stack pointer
+            this.emitWasm(SpiderOpcodes.local_tee, baseStackPtrVar.ref);
+
+            // Update the new stack pointer
+            this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
+            this.emitWasm(SpiderOpcodes.i32_add);
+            this.emitWasm(SpiderOpcodes.local_set, newStackPtrVar.ref);
+
             this.emitWasm(SpiderOpcodes.if, this.popExpression());
+            // }
 
             for (const [value, variable] of targetFunc.localVariables) {
                 if (variable.type !== CatnipIrValueType.STACK)
                     continue;
 
-                this.emitWasmGetStackPtr();
+                this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
                 this.emitWasm(SpiderOpcodes.local_get, this._func.getValueVariableRef(value));
 
                 switch (value.type) {
@@ -324,16 +379,19 @@ export class CatnipCompilerWasmGenContext {
 
             this.emitWasmGetThread();
 
-            this.emitWasmGetStackPtr();
-            this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
-            this.emitWasm(SpiderOpcodes.i32_add);
-
+            this.emitWasm(SpiderOpcodes.local_get, newStackPtrVar.ref);
             this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+
+            this.releaseLocal(newStackPtrVar);
+        }
+
+        if (baseStackPtrVar !== null) {
+            this.releaseLocal(baseStackPtrVar);
         }
     }
 
     public createLocal(type: SpiderNumberType): CatnipCompilerWasmLocal {
-        ++this._unreleaseLocals;
+        ++this._unreleasedLocalCount;
 
         const locals = this._locals.get(type);
 
@@ -345,7 +403,7 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public releaseLocal(local: CatnipCompilerWasmLocal) {
-        --this._unreleaseLocals;
+        --this._unreleasedLocalCount;
 
         let locals = this._locals.get(local.type);
 

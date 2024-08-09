@@ -108,7 +108,7 @@ export async function run(runtimeModule: WebAssembly.Module) {
                         // ],
                         commands: [
                             CatnipOps.control_repeat.create({
-                                count: CatnipOps.core_const.create({ value: 10000 }),
+                                count: CatnipOps.core_const.create({ value: 100000 }),
                                 loop: [
                                     CatnipOps.data_set_var.create({
                                         sprite: "sprite",

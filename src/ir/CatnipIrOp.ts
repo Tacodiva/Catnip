@@ -5,13 +5,6 @@ import { CatnipIrBranch } from "./CatnipIrBranch";
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranches = Record<string, CatnipIrBranch | null>;
 
-// export interface CatnipIrOp {
-//     readonly type: CatnipIrOpType<CatnipIrOpInputs, CatnipIrOpBranches>;
-//     readonly inputs: CatnipIrOpInputs;
-
-//     readonly branches: CatnipIrOpBranches;
-// }
-
 export type CatnipIrOp = CatnipIrCommandOp<CatnipIrOpInputs, CatnipIrOpBranches> | CatnipIrInputOp<CatnipIrOpInputs, CatnipIrOpBranches>;
 
 export interface CatnipIrOpBase<TInputs extends CatnipIrOpInputs = CatnipIrOpInputs, TBranches extends CatnipIrOpBranches = CatnipIrOpBranches> {
