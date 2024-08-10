@@ -14,6 +14,9 @@ export interface CatnipIrOpBase<TInputs extends CatnipIrOpInputs = CatnipIrOpInp
     readonly branches: TBranches;
 
     operands: CatnipCompilerStackElement[];
+
+    next: CatnipIrOp | null;
+    prev: CatnipIrOp | null;
 }
 
 export interface CatnipIrCommandOp<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpBase<TInputs, TBranches> {

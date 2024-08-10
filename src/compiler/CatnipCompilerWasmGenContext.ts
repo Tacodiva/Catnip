@@ -158,10 +158,18 @@ export class CatnipCompilerWasmGenContext {
         branch.blockDepth = this._blockDepth;
         if (branch.isLoop) {
             this.pushExpression();
-            for (const op of branch.ops) this.emitOp(op, branch);
+            let op = branch.head;
+            while (op !== null) {
+                this.emitOp(op, branch);
+                op = op.next;
+            }
             this.emitWasm(SpiderOpcodes.loop, this.popExpression());
         } else {
-            for (const op of branch.ops) this.emitOp(op, branch);
+            let op = branch.head;
+            while (op !== null) {
+                this.emitOp(op, branch);
+                op = op.next;
+            }
         }
     }
 

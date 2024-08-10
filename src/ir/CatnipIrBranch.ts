@@ -17,7 +17,9 @@ export class CatnipIrBranch {
     }
     public get funcNullable(): CatnipIrFunction | null { return this._func; }
 
-    public readonly ops: CatnipIrOp[];
+    public head: CatnipIrOp | null;
+    public tail: CatnipIrOp | null;
+
     public isLoop: boolean;
     public blockDepth: number;
 
@@ -25,7 +27,8 @@ export class CatnipIrBranch {
 
     public constructor(fn?: CatnipIrFunction) {
         this._func = fn ?? null;
-        this.ops = [];
+        this.head = null;
+        this.tail = null;
         this.isLoop = false;
         this.blockDepth = -1;
         this.stack = new CatnipCompilerStack();
@@ -37,12 +40,14 @@ export class CatnipIrBranch {
         const oldFunc = this._func;
         this._func = func;
 
-        for (const op of this.ops) {
+        let op = this.head;
+        while (op !== null) {
             for (const branchName in op.branches) {
                 const branch = op.branches[branchName];
                 if (branch !== null && branch._func === oldFunc)
                     branch.setFunction(this._func);
             }
+            op = op.next;
         }
     }
 
@@ -59,12 +64,12 @@ export class CatnipIrBranch {
     private _appendTails(tails: CatnipIrBranch[], visited: Set<CatnipIrBranch>) {
         visited.add(this);
 
-        if (this.ops.length === 0) {
+        if (this.head === null) {
             tails.push(this);
             return;
         }
 
-        const lastOp = this.ops[this.ops.length - 1];
+        const lastOp = this.tail!;
         const lastOpBranchNames = Object.keys(lastOp.branches);
 
         if (lastOpBranchNames.length === 0 && lastOp.type.doesContinue(lastOp)) {
@@ -88,8 +93,6 @@ export class CatnipIrBranch {
                 if (tails.indexOf(branch) === -1) // TODO Me thinks this check is not necesary
                     branch._appendTails(tails, visited);
             }
-
-
         }
     }
 
@@ -102,26 +105,47 @@ export class CatnipIrBranch {
 
         visited.add(this);
 
-        for (const op of this.ops) {
+        let op = this.head;
+        while (op !== null) {
             if (op.type.isYielding(op, visited))
                 return true;
+            op = op.next;
         }
 
         return false;
     }
 
     public doesContinue(): boolean {
-        if (this.ops.length === 0) return true;
+        if (this.head === null) return true;
 
-        const lastOp = this.ops[this.ops.length - 1];
+        const lastOp = this.tail!;
         return lastOp.type.doesContinue(lastOp);
     }
 
     public analyzePreEmit(visited: Set<CatnipIrBranch>) {
         if (visited.has(this)) return;
         visited.add(this);
-        for (const op of this.ops)
+        let op = this.head;
+        while (op !== null) {
             op.type.analyzePreEmit(op, this, visited);
+            op = op.next;
+        }
+    }
+
+    public pushOp(op: CatnipIrOp) {
+        CatnipCompilerLogger.assert(op.next === null && op.prev === null);
+        CatnipCompilerLogger.assert(this.tail === null || this.tail.next === null);
+
+        if (this.head === null)
+            this.head = op;
+
+        op.prev = this.tail;
+        op.next = null; // should be unecessary
+        
+        if (this.tail !== null)
+            this.tail.next = op;
+
+        this.tail = op;
     }
 
 }

@@ -20,7 +20,6 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
     }
 
     private _getFormat(inputs: const_ir_inputs): CatnipValueFormat {
-        console.log(inputs.format);
         if (inputs.format === CatnipValueFormat.ANY) {
             if (""+(+inputs.value) === inputs.value) {
                 return CatnipValueFormat.f64;
