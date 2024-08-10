@@ -3,15 +3,16 @@ import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGe
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipInputOp, CatnipInputOpType } from "../../CatnipOp";
-import { CatnipInputFormat, CatnipInputFlags } from "../../types";
+import { CatnipValueFormat, CatnipValueFlags } from "../../types";
+import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
 
 export type add_inputs = { left: CatnipInputOp, right: CatnipInputOp };
 
 export const op_add = new class extends CatnipInputOpType<add_inputs> {
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: add_inputs, format: CatnipInputFormat, flags: CatnipInputFlags): CatnipIrInputOp {
-        ctx.emitInput(inputs.left, CatnipInputFormat.f64, CatnipInputFlags.NUMBER);
-        ctx.emitInput(inputs.right, CatnipInputFormat.f64, CatnipInputFlags.NUMBER);
-        return ctx.emitIrInput(ir_add, { type: SpiderNumberType.f64 }, format, flags, {});
+    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: add_inputs) {
+        ctx.emitInput(inputs.left, CatnipValueFormat.f64, CatnipValueFlags.NUMBER);
+        ctx.emitInput(inputs.right, CatnipValueFormat.f64, CatnipValueFlags.NUMBER);
+        ctx.emitIr(ir_add, { type: SpiderNumberType.f64 }, {});
     }
 }
 
@@ -20,14 +21,18 @@ export type add_ir_inputs = { type: SpiderNumberType };
 export const ir_add = new class extends CatnipIrInputOpType<add_ir_inputs> {
     public constructor() { super("operators_add"); }
 
-    public getOutputFormat(ir: CatnipIrInputOp<add_ir_inputs>): CatnipInputFormat {
-        switch (ir.inputs.type) {
+    public getOperandCount(inputs: add_ir_inputs, branches: {}): number {
+        return 2;
+    }
+
+    public getResult(inputs: add_ir_inputs): CatnipCompilerValue {
+        switch (inputs.type) {
             case SpiderNumberType.f64:
-                return CatnipInputFormat.f64;
+                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.f64, flags: CatnipValueFlags.ANY };
             case SpiderNumberType.i32:
-                return CatnipInputFormat.i32;
+                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.i32, flags: CatnipValueFlags.ANY };
             default:
-                CatnipCompilerWasmGenContext.logger.assert(false, true, `'${ir.inputs.type}' type not supported by operation.`);
+                CatnipCompilerWasmGenContext.logger.assert(false, true, `'${inputs.type}' type not supported by operation.`);
         }
     }
 

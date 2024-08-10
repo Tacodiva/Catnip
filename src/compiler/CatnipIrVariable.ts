@@ -1,7 +1,5 @@
 import { SpiderNumberType } from "wasm-spider";
-import { CatnipIrOp } from "../ir/CatnipIrOp";
-import { CatnipIrFunction } from "./CatnipIrFunction";
-import { NumericLiteral } from "typescript";
+import { CatnipValueFormat, getValueFormatSpiderType } from "../ir/types";
 
 /**
  * Functions will need to store:
@@ -22,14 +20,18 @@ import { NumericLiteral } from "typescript";
  * 
  */
 
-export class CatnipIrValue {
+export class CatnipIrVariable {
 
     public readonly name: string | null;
-    public readonly type: SpiderNumberType;
+    public readonly format: CatnipValueFormat;
 
-    public constructor(type: SpiderNumberType, name?: string) {
-        this.type = type;
+    public constructor(type: CatnipValueFormat, name?: string) {
+        this.format = type;
         this.name = name ?? null;
+    }
+
+    public get type(): SpiderNumberType {
+        return getValueFormatSpiderType(this.format);
     }
 
     public get size(): number {

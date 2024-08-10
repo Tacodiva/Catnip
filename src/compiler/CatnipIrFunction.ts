@@ -3,7 +3,7 @@ import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrBranch } from "../ir/CatnipIrBranch";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { NumericLiteral } from "typescript";
-import { CatnipIrValue } from "./CatnipIrValue";
+import { CatnipIrVariable } from "./CatnipIrVariable";
 import { ir_load_value, ir_load_value_inputs } from "../ir/ops/core/load_value";
 import { ir_store_value, ir_store_value_inputs } from "../ir/ops/core/store_value";
 
@@ -18,7 +18,7 @@ export enum CatnipIrValueType {
 }
 
 interface CatnipLocalVariableBase {
-    value: CatnipIrValue;
+    value: CatnipIrVariable;
     ref: SpiderLocalVariableReference;
     type: CatnipIrValueType;
 }
@@ -52,9 +52,9 @@ export class CatnipIrFunction {
     public needsFunctionTableIndex: boolean;
     public functionTableIndex: number;
 
-    private _localVariables: Map<CatnipIrValue, CatnipLocalVariable>;
+    private _localVariables: Map<CatnipIrVariable, CatnipLocalVariable>;
 
-    public get localVariables(): IterableIterator<[CatnipIrValue, CatnipLocalVariable]> {
+    public get localVariables(): IterableIterator<[CatnipIrVariable, CatnipLocalVariable]> {
         return this._localVariables.entries();
     }
 
@@ -104,7 +104,7 @@ export class CatnipIrFunction {
             caller.useLocalVariable(variable.value);
     }
 
-    public createLocalVariable(value: CatnipIrValue) {
+    public createLocalVariable(value: CatnipIrVariable) {
         CatnipCompilerLogger.assert(
             !this._localVariables.has(value),
             true, "Local variable already created for value. Value may be being read or written to before it's initialized."
@@ -117,7 +117,7 @@ export class CatnipIrFunction {
         });
     }
 
-    public useLocalVariable(value: CatnipIrValue) {
+    public useLocalVariable(value: CatnipIrVariable) {
         if (this._localVariables.has(value))
             return;
 
@@ -139,7 +139,7 @@ export class CatnipIrFunction {
         }
     }
 
-    public getValueVariableRef(value: CatnipIrValue): SpiderLocalVariableReference {
+    public getValueVariableRef(value: CatnipIrVariable): SpiderLocalVariableReference {
         CatnipCompilerLogger.assert(
             this._localVariables.has(value),
             true, "Value not marked as used by function."

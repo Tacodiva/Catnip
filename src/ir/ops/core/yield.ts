@@ -19,6 +19,8 @@ type yield_ir_branches = { branch: CatnipIrBranch };
 export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus, yield_ir_branches> {
     public constructor() { super("core_yield"); }
 
+    public getOperandCount(): number { return 0; }
+
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrCommandOp<yield_ir_inptus, yield_ir_branches>): void {
         CatnipCompilerWasmGenContext.logger.assert(
             ir.branches.branch.isFuncBody,

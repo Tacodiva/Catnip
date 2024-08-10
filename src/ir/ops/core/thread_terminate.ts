@@ -8,12 +8,14 @@ import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructTh
 
 export const op_thread_terminate = new class extends CatnipCommandOpType<{}> {
     public generateIr(ctx: CatnipCompilerIrGenContext): void {
-        ctx.emitIrCommand(ir_thread_terminate, {}, {});
+        ctx.emitIr(ir_thread_terminate, {}, {});
     }
 }
 
 export const ir_thread_terminate = new class extends CatnipIrCommandOpType<{}> {
     public constructor() { super("core_thread_terminate"); }
+
+    public getOperandCount(): number { return 0; }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrCommandOp<{}, {}>): void {
         ctx.emitWasmGetThread();

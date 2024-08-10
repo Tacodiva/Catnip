@@ -1,6 +1,6 @@
 import { SpiderNumberType } from "wasm-spider";
 
-export enum CatnipInputFlags {
+export enum CatnipValueFlags {
     /** The value Infinity */
     NUMBER_POS_INF = 0x001,
     /** Any natural number */
@@ -71,7 +71,7 @@ export enum CatnipInputFlags {
     ANY = NUMBER_OR_NAN | STRING | BOOLEAN
 };
 
-export enum CatnipInputFormat {
+export enum CatnipValueFormat {
     i32,
     HSTRING_PTR, // (i32)
     VALUE_PTR, // (i32)
@@ -79,15 +79,15 @@ export enum CatnipInputFormat {
     ANY
 }
 
-export function getInputFormatSpiderType(inputFormat: CatnipInputFormat): SpiderNumberType {
+export function getValueFormatSpiderType(inputFormat: CatnipValueFormat): SpiderNumberType {
     switch (inputFormat) {
-        case CatnipInputFormat.i32:
-        case CatnipInputFormat.HSTRING_PTR:
-        case CatnipInputFormat.VALUE_PTR:
+        case CatnipValueFormat.i32:
+        case CatnipValueFormat.HSTRING_PTR:
+        case CatnipValueFormat.VALUE_PTR:
             return SpiderNumberType.i32;
-        case CatnipInputFormat.f64:
+        case CatnipValueFormat.f64:
             return SpiderNumberType.f64;
-        case CatnipInputFormat.ANY:
+        case CatnipValueFormat.ANY:
             throw new Error("Cannot convert format 'any' to a number type.");
     }
 }

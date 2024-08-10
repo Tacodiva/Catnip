@@ -24,12 +24,10 @@ export class CatnipCompiler {
         const irGenCtx = new CatnipCompilerIrGenContext(this, irFunc);
 
         irGenCtx.emitCommands(script.commands);
-        irGenCtx.emitIrCommand(ir_thread_terminate, {}, {});
+        irGenCtx.emitIr(ir_thread_terminate, {}, {});
 
         this._allocateFunctionIndices(irGenCtx.functions);
         this.module.createFunctionsElement(irGenCtx.functions);
-        
-        // console.log(irGenCtx.stringifyIr());
 
         const preEmitVisied: Set<CatnipIrBranch> = new Set();
         for (const func of irGenCtx.functions)

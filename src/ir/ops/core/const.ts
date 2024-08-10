@@ -3,46 +3,68 @@ import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGe
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipInputOpType } from "../../CatnipOp";
-import { CatnipInputFormat, CatnipInputFlags } from "../../types";
+import { CatnipValueFormat, CatnipValueFlags } from "../../types";
 import { CatnipCompilerLogger } from "../../../compiler/CatnipCompilerLogger";
+import { CatnipIrVariable } from "../../../compiler/CatnipIrVariable";
+import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
 
-type const_inputs = { value: string | number };
+type const_ir_inputs = { value: string, format: CatnipValueFormat, flags: CatnipValueFlags };
 
-export const ir_const = new class extends CatnipIrInputOpType<const_inputs> {
+export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
     public constructor() { super("core_const"); }
 
-    public getOutputFormat(ir: CatnipIrInputOp<const_inputs>): CatnipInputFormat {
-        if (typeof ir.inputs.value === "string") {
-            return CatnipInputFormat.HSTRING_PTR;
-        } else {
-            if (ir.format === CatnipInputFormat.i32) {
-                return CatnipInputFormat.i32;
-            } else if (ir.format === CatnipInputFormat.ANY) {
-                return CatnipInputFormat.f64;
-            } else {
-                CatnipCompilerLogger.assert(ir.format === CatnipInputFormat.f64);
-                return CatnipInputFormat.f64;
+    public getOperandCount(): number { return 0; }
+
+    public getResult(inputs: const_ir_inputs): CatnipCompilerValue {
+        return { type: CatnipCompilerValueType.CONSTANT, value: inputs.value, format: this._getFormat(inputs) };
+    }
+
+    private _getFormat(inputs: const_ir_inputs): CatnipValueFormat {
+        console.log(inputs.format);
+        if (inputs.format === CatnipValueFormat.ANY) {
+            if (""+(+inputs.value) === inputs.value) {
+                return CatnipValueFormat.f64;
             }
+    
+            return CatnipValueFormat.HSTRING_PTR;
+        } else {
+            return inputs.format;
         }
     }
 
-    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<const_inputs>): void {
+    public tryCast(ir: CatnipIrInputOp<const_ir_inputs, {}>, format: CatnipValueFormat, flags: CatnipValueFlags): boolean {
+        ir.inputs.format = format;
+        ir.inputs.flags = flags;
+        return true;
+    }
+
+    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<const_ir_inputs>): void {
         const value = ir.inputs.value;
-        if (typeof value === "string") {
-            ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString(value));
-        } else {
-            if (ir.format === CatnipInputFormat.i32) {
-                ctx.emitWasmConst(SpiderNumberType.i32, value);
-            } else {
-                ctx.emitWasmConst(SpiderNumberType.f64, value);
-            }
+        switch (this._getFormat(ir.inputs)) {
+            case CatnipValueFormat.HSTRING_PTR:
+                ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString(value));
+                break;
+            case CatnipValueFormat.i32:
+                ctx.emitWasmConst(SpiderNumberType.i32, +value);
+                break;
+            case CatnipValueFormat.f64:
+                ctx.emitWasmConst(SpiderNumberType.f64, +value);
+                break;
+            default:
+                throw new Error(`Unsupported input format ${ir.inputs.format}`);
         }
     }
 }
 
 
+type const_inputs = { value: string | number };
+
 export const op_const = new class extends CatnipInputOpType<const_inputs> {
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: { value: string | number; }, format: CatnipInputFormat, flags: CatnipInputFlags): CatnipIrInputOp {
-        return ctx.emitIrInput(ir_const, inputs, format, flags, {});
+    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: const_inputs) {
+        ctx.emitIr(ir_const, {
+            value: "" + inputs.value,
+            format: CatnipValueFormat.ANY,
+            flags: CatnipValueFlags.ANY
+        }, {});
     }
 }

@@ -1,3 +1,4 @@
+import { CatnipCompilerStack } from "../compiler/CatnipCompilerStack";
 import { CatnipCompilerLogger } from "../compiler/CatnipCompilerLogger";
 import { CatnipIrFunction } from "../compiler/CatnipIrFunction";
 import { CatnipIrOp } from "./CatnipIrOp";
@@ -20,11 +21,14 @@ export class CatnipIrBranch {
     public isLoop: boolean;
     public blockDepth: number;
 
+    public stack: CatnipCompilerStack;
+
     public constructor(fn?: CatnipIrFunction) {
         this._func = fn ?? null;
         this.ops = [];
         this.isLoop = false;
         this.blockDepth = -1;
+        this.stack = new CatnipCompilerStack();
     }
 
     public setFunction(func: CatnipIrFunction) {

@@ -10,6 +10,8 @@ export const ir_loop_jmp = new class extends CatnipIrCommandOpType<loop_jmp_ir_i
 
     public constructor() { super("core_loop_jmp"); }
     
+    public getOperandCount(): number { return 0; }
+
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrCommandOp<loop_jmp_ir_inputs, loop_jmp_ir_branches>): void {
         CatnipCompilerWasmGenContext.logger.assert(ir.branches.branch.func === ctx.func);
         CatnipCompilerWasmGenContext.logger.assert(ir.branches.branch.blockDepth !== -1);

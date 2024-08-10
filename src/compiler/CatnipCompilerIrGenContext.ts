@@ -1,28 +1,35 @@
-import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList } from "../ir";
-import { CatnipIrOpBranches, CatnipIrCommandOpType, CatnipIrCommandOp, CatnipIrInputOpType, CatnipIrInputOp, CatnipIrOpInputs, CatnipIrOpBase } from "../ir/CatnipIrOp";
+import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList, CatnipInputOpType } from "../ir";
+import { CatnipIrOpBranches, CatnipIrCommandOpType, CatnipIrCommandOp, CatnipIrInputOpType, CatnipIrInputOp, CatnipIrOpInputs } from "../ir/CatnipIrOp";
 import { CatnipIrBranch } from "../ir/CatnipIrBranch";
 import { ir_branch } from "../ir/ops/core/branch";
 import { ir_yield } from "../ir/ops/core/yield";
-import { CatnipInputFormat, CatnipInputFlags } from "../ir/types";
+import { CatnipValueFormat, CatnipValueFlags } from "../ir/types";
 import { createLogger, Logger } from "../log";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThreadStatus";
-import { CatnipIrValue } from './CatnipIrValue';
-import { SpiderNumberType } from "wasm-spider";
+import { CatnipIrVariable } from './CatnipIrVariable';
 import { ir_store_value } from '../ir/ops/core/store_value';
 import { ir_load_value } from '../ir/ops/core/load_value';
 import { ir_loop_jmp } from "../ir/ops/core/loop_jmp";
 import { ir_loop_jmp_if } from "../ir/ops/core/loop_jmp_if";
 import { ir_if_else } from "../ir/ops/control/if_else";
+import { CatnipVariable } from "../runtime/CatnipVariable";
+import { CatnipTarget } from "../runtime/CatnipTarget";
+import { ir_cast } from "../ir/ops/core/cast";
+import { CatnipCompilerReadonlyStack } from "./CatnipCompilerStack";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
     public readonly compiler: CatnipCompiler;
 
+    public get project() { return this.compiler.project; }
+
     public functions: CatnipIrFunction[];
 
     private _branch: CatnipIrBranch;
+
+    public get stack(): CatnipCompilerReadonlyStack { return this._branch.stack; }
 
     public constructor(compiler: CatnipCompiler, func: CatnipIrFunction) {
         this.compiler = compiler;
@@ -74,6 +81,7 @@ export class CatnipCompilerIrGenContext {
                     type: ir_branch,
                     inputs: {},
                     branches: { branch: this._branch },
+                    operands: []
                 });
             }
 
@@ -84,6 +92,14 @@ export class CatnipCompilerIrGenContext {
         }
 
         this._branch.ops.push(op);
+
+        if (op.type instanceof CatnipIrInputOpType) {
+            const inputOp = op as CatnipIrInputOp;
+            this._branch.stack.push({
+                ...inputOp.type.getResult(op.inputs, op.branches, op.operands),
+                source: inputOp
+            });
+        }
 
         if (splitAfter) {
 
@@ -117,6 +133,7 @@ export class CatnipCompilerIrGenContext {
                         type: ir_branch,
                         inputs: {},
                         branches: { branch: newBranch },
+                        operands: []
                     });
                 } else {
                     for (const branchTail of yieldingBrachTails) {
@@ -124,6 +141,7 @@ export class CatnipCompilerIrGenContext {
                             type: ir_branch,
                             inputs: {},
                             branches: { branch: newBranch },
+                            operands: []
                         });
                     }
                 }
@@ -135,32 +153,42 @@ export class CatnipCompilerIrGenContext {
         return op;
     }
 
-    public emitIrCommand<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
+    public emitIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
+        op: CatnipIrInputOpType<TInputs, TBranches>,
+        inputs: TInputs,
+        branches: TBranches
+    ): CatnipIrInputOp<TInputs, TBranches>;
+
+    public emitIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
         op: CatnipIrCommandOpType<TInputs, TBranches>,
         inputs: TInputs,
         branches: TBranches
-    ): CatnipIrCommandOp<TInputs, TBranches> {
-        return this._emitIr<CatnipIrCommandOp<TInputs, TBranches>, TBranches>({
-            type: op,
-            inputs,
-            branches
-        });
-    }
+    ): CatnipIrCommandOp<TInputs, TBranches>;
 
-    public emitIrInput<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
-        op: CatnipIrInputOpType<TInputs, TBranches>,
+    public emitIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
+        op: CatnipIrCommandOpType<TInputs, TBranches> | CatnipIrInputOpType<TInputs, TBranches>,
         inputs: TInputs,
-        format: CatnipInputFormat,
-        flags: CatnipInputFlags,
-        branches: TBranches,
-    ): CatnipIrInputOp<TInputs, TBranches> {
-        return this._emitIr<CatnipIrInputOp<TInputs, TBranches>, TBranches>({
-            type: op,
-            inputs,
-            format,
-            flags,
-            branches
-        });
+        branches: TBranches
+    ): CatnipIrCommandOp<TInputs, TBranches> | CatnipIrInputOp<TInputs, TBranches> {
+
+        const operandCount = op.getOperandCount(inputs, branches);
+        const operands = this._branch.stack.pop(operandCount);
+
+        if (op instanceof CatnipIrCommandOpType) {
+            return this._emitIr<CatnipIrCommandOp<TInputs, TBranches>, TBranches>({
+                type: op,
+                inputs,
+                branches,
+                operands
+            });
+        } else {
+            return this._emitIr<CatnipIrInputOp<TInputs, TBranches>, TBranches>({
+                type: op,
+                inputs,
+                branches,
+                operands
+            });
+        }
     }
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, branch?: CatnipIrBranch) {
@@ -170,7 +198,7 @@ export class CatnipCompilerIrGenContext {
         } else {
             this._createBranchFunction(branch, true);
         }
-        this.emitIrCommand(ir_yield, { status }, { branch });
+        this.emitIr(ir_yield, { status }, { branch });
         this._switchToBranch(branch);
     }
 
@@ -195,8 +223,13 @@ export class CatnipCompilerIrGenContext {
         return func;
     }
 
-    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipInputFormat, flags: CatnipInputFlags): CatnipIrInputOp<CatnipIrOpInputs, CatnipIrOpBranches> {
-        return op.type.generateIr(this, op.inputs, format, flags);
+    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>): void;
+    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipValueFormat, flags: CatnipValueFlags): void;
+
+    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format?: CatnipValueFormat, flags?: CatnipValueFlags) {
+        op.type.generateIr(this, op.inputs);
+        if (format !== undefined)
+            this.emitCast(format, flags ?? CatnipValueFlags.ANY);
     }
 
     public emitCommand<TInputs extends CatnipOpInputs>(op: CatnipCommandOp<TInputs>) {
@@ -209,25 +242,35 @@ export class CatnipCompilerIrGenContext {
         }
     }
 
+    public emitCast(format: CatnipValueFormat, flags: CatnipValueFlags) {
+        const operand = this.stack.peek();
+
+        if (operand.format !== format) {
+            if (!operand.source.type.tryCast(operand.source, format, flags)) {
+                this.emitIr(ir_cast, { format, flags }, {});
+            }
+        }
+    }
+
     public emitJump(branch: CatnipIrBranch, continues: boolean = true) {
         if (this._branch.funcNullable === branch.funcNullable) {
             branch.isLoop = true;
-            this.emitIrCommand(ir_loop_jmp, { continues }, { branch })
+            this.emitIr(ir_loop_jmp, { continues }, { branch })
         } else {
             this._createBranchFunction(branch, true);
-            this.emitIrCommand(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
+            this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
         }
     }
 
     public emitConditionalJump(branch: CatnipIrBranch, continues: boolean = true) {
         if (this._branch.funcNullable === branch.funcNullable) {
             branch.isLoop = true;
-            this.emitIrCommand(ir_loop_jmp_if, { continues }, { branch })
+            this.emitIr(ir_loop_jmp_if, { continues }, { branch })
         } else {
-            this.emitIrCommand(ir_if_else, {}, {
+            this.emitIr(ir_if_else, {}, {
                 true_branch: this.emitBranch(() => {
                     this._createBranchFunction(branch, true);
-                    this.emitIrCommand(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
+                    this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING, continue: false }, { branch });
                 }),
                 false_branch: null,
             });
@@ -261,18 +304,18 @@ export class CatnipCompilerIrGenContext {
         return branch;
     }
 
-    public emitStoreNewValue(type: SpiderNumberType, name?: string): CatnipIrValue {
-        const value = new CatnipIrValue(type, name);
-        this.emitIrCommand(ir_store_value, { value, initialize: true }, {});
+    public emitStoreNewVariable(format: CatnipValueFormat, name?: string): CatnipIrVariable {
+        const value = new CatnipIrVariable(format, name);
+        this.emitIr(ir_store_value, { value, initialize: true }, {});
         return value;
     }
 
-    public emitStoreValue(value: CatnipIrValue) {
-        this.emitIrCommand(ir_store_value, { value, initialize: false }, {});
+    public emitStoreVariable(value: CatnipIrVariable) {
+        this.emitIr(ir_store_value, { value, initialize: false }, {});
     }
 
-    public emitLoadValue(value: CatnipIrValue) {
-        this.emitIrCommand(ir_load_value, { value }, {});
+    public emitLoadVariable(value: CatnipIrVariable) {
+        this.emitIr(ir_load_value, { value }, {});
     }
 
     private _getFuncName(func: CatnipIrFunction) {
@@ -284,6 +327,7 @@ export class CatnipCompilerIrGenContext {
 
 
         const stringifyIr = (branch: CatnipIrBranch, indent: string, branches: Set<CatnipIrBranch>) => {
+            branches.add(branch);
             let string = "";
 
             if (branch.isLoop) {
@@ -296,7 +340,14 @@ export class CatnipCompilerIrGenContext {
                 string += op.type.name;
                 if (Object.keys(op.inputs).length !== 0) {
                     string += " ";
-                    string += JSON.stringify(op.inputs);
+                    string += JSON.stringify(op.inputs, (key: string, value: any) => {
+                        if (value instanceof CatnipVariable) {
+                            return `[VARIABLE '${value.id}']`;
+                        } else if (value instanceof CatnipTarget) {
+                            return `[TARGET '${value.sprite.id}']`;
+                        }
+                        return value;
+                    });
                 }
                 if (Object.keys(op.branches).length !== 0) {
                     for (const subbranchName in op.branches) {
@@ -308,11 +359,8 @@ export class CatnipCompilerIrGenContext {
                             string += ": null\n";
                         } else if (subbranch.func === branch.func && !subbranch.isFuncBody) {
                             if (branches.has(subbranch)) {
-                                if (subbranch.isLoop) {
-                                    string += ": ??\n";
-                                }
+                                string += ": ??\n";
                             } else {
-                                branches.add(subbranch);
                                 string += ": ";
                                 string += stringifyIr(subbranch, indent + "    ", branches);
                             }

@@ -1,6 +1,7 @@
 import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenContext";
-import { CatnipInputFlags, CatnipInputFormat } from "./types";
+import { CatnipValueFlags, CatnipValueFormat } from "./types";
 import { CatnipIrBranch } from "./CatnipIrBranch";
+import { CatnipCompilerStackElement, CatnipCompilerValue } from "../compiler/CatnipCompilerStack";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranches = Record<string, CatnipIrBranch | null>;
@@ -11,18 +12,28 @@ export interface CatnipIrOpBase<TInputs extends CatnipIrOpInputs = CatnipIrOpInp
     readonly type: CatnipIrOpType<TInputs, TBranches>;
     readonly inputs: TInputs;
     readonly branches: TBranches;
+
+    operands: CatnipCompilerStackElement[];
 }
 
 export interface CatnipIrCommandOp<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpBase<TInputs, TBranches> {
     readonly type: CatnipIrCommandOpType<TInputs, TBranches>;
 }
 
+/*
+
+We need a mechanism to take a value and "ask" it to in a specific specific format / flags.
+This will need to modify the inputs of the operation to change its output to that type.
+
+If that fails, we will need to add a new operation to convert from the old format / flags to
+    the requested ones.
+
+*/
+
 export interface CatnipIrInputOp<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpBase<TInputs, TBranches> {
     readonly type: CatnipIrInputOpType<TInputs, TBranches>;
-    /** The format of the value this op must leave on the stack. */
-    format: CatnipInputFormat;
-    /** The flags which the value this op leaves on the stack must satisfy.  */
-    flags: CatnipInputFlags;
+    /** A */
+    // result: CatnipCompilerValue;
 }
 
 export abstract class CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranches> {
@@ -31,6 +42,8 @@ export abstract class CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches
     public constructor(name: string) {
         this.name = name;
     }
+
+    public abstract getOperandCount(inputs: TInputs, branches: TBranches): number;
 
     public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOpBase<TInputs, TBranches>, branch: CatnipIrBranch): void;
 
@@ -71,7 +84,11 @@ export abstract class CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches
 }
 
 export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpType<TInputs, TBranches> {
-    public abstract getOutputFormat(ir: CatnipIrInputOp<TInputs, TBranches>): CatnipInputFormat;
+    public abstract getResult(inputs: TInputs, branches: TBranches, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue;
+
+    public tryCast(ir: CatnipIrInputOp<TInputs, TBranches>, format: CatnipValueFormat, flags: CatnipValueFlags): boolean {
+        return false;
+    }
 
     public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<TInputs, TBranches>, branch: CatnipIrBranch): void;
 }
