@@ -1,5 +1,5 @@
 
-import { CatnipCommandList } from '../ir/CatnipOp';
+import { CatnipCommandList } from '../ops/CatnipOp';
 import { CatnipSprite } from './CatnipSprite';
 
 

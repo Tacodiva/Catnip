@@ -1,23 +1,22 @@
-import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList, CatnipInputOpType } from "../ir";
-import { CatnipIrOpBranches, CatnipIrCommandOpType, CatnipIrCommandOp, CatnipIrInputOpType, CatnipIrInputOp, CatnipIrOpInputs } from "../ir/CatnipIrOp";
-import { CatnipIrBranch } from "../ir/CatnipIrBranch";
-import { ir_branch } from "../ir/ops/core/branch";
-import { ir_yield } from "../ir/ops/core/yield";
-import { CatnipValueFormat, CatnipValueFlags } from "../ir/types";
+import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList } from "../ops";
+import { CatnipValueFormat, CatnipValueFlags } from "./types";
 import { createLogger, Logger } from "../log";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThreadStatus";
-import { CatnipIrVariable } from './CatnipIrVariable';
-import { ir_store_value } from '../ir/ops/core/store_value';
-import { ir_load_value } from '../ir/ops/core/load_value';
-import { ir_loop_jmp } from "../ir/ops/core/loop_jmp";
-import { ir_loop_jmp_if } from "../ir/ops/core/loop_jmp_if";
-import { ir_if_else } from "../ir/ops/control/if_else";
+import { CatnipIrTransientVariable } from './CatnipIrTransientVariable';
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipTarget } from "../runtime/CatnipTarget";
-import { ir_cast } from "../ir/ops/core/cast";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStackElement } from "./CatnipCompilerStack";
+import { CatnipIrBranch } from "./CatnipIrBranch";
+import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpInputs, CatnipIrOpType } from "./CatnipIrOp";
+import { ir_branch } from "./ir/core/branch";
+import { ir_yield } from "./ir/core/yield";
+import { ir_cast } from "./ir/core/cast";
+import { ir_loop_jmp } from "./ir/core/loop_jmp";
+import { ir_loop_jmp_if } from "./ir/core/loop_jmp_if";
+import { ir_if_else } from "./ir/control/if_else";
+import { ir_transient_create } from "./ir/core/transient_create";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
@@ -38,8 +37,10 @@ export class CatnipCompilerIrGenContext {
     }
 
     private _emitIr<
-        TOp extends CatnipIrCommandOp<CatnipIrOpInputs, TBranches> | CatnipIrInputOp<CatnipIrOpInputs, TBranches>,
-        TBranches extends CatnipIrOpBranches
+        TInputs extends CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches>,
+        TOp extends CatnipIrOp<TInputs, TBranches, TOpType>
     >(op: TOp): TOp {
         if (!this._branch.doesContinue()) return op;
 
@@ -90,11 +91,10 @@ export class CatnipCompilerIrGenContext {
 
         this._branch.pushOp(op);
 
-        if (op.type instanceof CatnipIrInputOpType) {
-            const inputOp = op as CatnipIrInputOp;
+        if (op.type.isInput) {
             this._branch.stack.push({
-                ...inputOp.type.getResult(op.inputs, op.branches, op.operands),
-                source: inputOp
+                ...op.type.getResult(op.inputs, op.branches, op.operands),
+                source: op as CatnipIrInputOp<TInputs, TBranches>
             });
         }
 
@@ -127,12 +127,12 @@ export class CatnipCompilerIrGenContext {
 
                 if (hasNonYieldingBranch) {
                     this._branch.pushOp(this._createIr(
-                        ir_branch, {}, { branch: newBranch}, []
+                        ir_branch, {}, { branch: newBranch }, []
                     ));
                 } else {
                     for (const branchTail of yieldingBrachTails) {
                         branchTail.pushOp(this._createIr(
-                            ir_branch, {}, { branch: newBranch}, []
+                            ir_branch, {}, { branch: newBranch }, []
                         ));
                     }
                 }
@@ -144,89 +144,50 @@ export class CatnipCompilerIrGenContext {
         return op;
     }
 
-    public emitIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
-        type: CatnipIrInputOpType<TInputs, TBranches>,
+    public emitIr<
+        TInputs extends CatnipOpInputs,
+        TBranches extends CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches>
+    >(
+        type: TOpType,
         inputs: TInputs,
         branches: TBranches
-    ): CatnipIrInputOp<TInputs, TBranches>;
-
-    public emitIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
-        type: CatnipIrCommandOpType<TInputs, TBranches>,
-        inputs: TInputs,
-        branches: TBranches
-    ): CatnipIrCommandOp<TInputs, TBranches>;
-
-    public emitIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
-        type: CatnipIrCommandOpType<TInputs, TBranches> | CatnipIrInputOpType<TInputs, TBranches>,
-        inputs: TInputs,
-        branches: TBranches
-    ): CatnipIrCommandOp<TInputs, TBranches> | CatnipIrInputOp<TInputs, TBranches> {
+    ): CatnipIrOp<TInputs, TBranches, TOpType> {
 
         const operandCount = type.getOperandCount(inputs, branches);
         const operands = this._branch.stack.pop(operandCount);
 
-        if (type instanceof CatnipIrCommandOpType) {
-            return this._emitIr<CatnipIrCommandOp<TInputs, TBranches>, TBranches>(this._createIr(
-                type,
-                inputs,
-                branches,
-                operands
-            ));
-        } else {
-            return this._emitIr<CatnipIrInputOp<TInputs, TBranches>, TBranches>(this._createIr(
-                type,
-                inputs,
-                branches,
-                operands
-            ));
-        }
+        return this._emitIr(this._createIr(
+            type,
+            inputs,
+            branches,
+            operands
+        ));
     }
 
-    public _createIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
-        type: CatnipIrCommandOpType<TInputs, TBranches>,
+    public _createIr<
+        TInputs extends CatnipOpInputs,
+        TBranches extends CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches>
+    >(
+        type: TOpType,
         inputs: TInputs,
         branches: TBranches,
         operands: CatnipCompilerStackElement[]
-    ): CatnipIrCommandOp<TInputs, TBranches>;
-
-    public _createIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
-        type: CatnipIrInputOpType<TInputs, TBranches>,
-        inputs: TInputs,
-        branches: TBranches,
-        operands: CatnipCompilerStackElement[]
-    ): CatnipIrInputOp<TInputs, TBranches>;
-
-    public _createIr<TInputs extends CatnipOpInputs, TBranches extends CatnipIrOpBranches>(
-        type: CatnipIrCommandOpType<TInputs, TBranches> | CatnipIrInputOpType<TInputs, TBranches>,
-        inputs: TInputs,
-        branches: TBranches,
-        operands: CatnipCompilerStackElement[]
-    ): CatnipIrCommandOp<TInputs, TBranches> | CatnipIrInputOp<TInputs, TBranches> {
-        if (type instanceof CatnipIrCommandOpType) {
-            return {
-                type,
-                inputs,
-                branches,
-                operands,
-                next: null,
-                prev: null
-            };
-        } else {
-            return {
-                type,
-                inputs,
-                branches,
-                operands,
-                next: null,
-                prev: null
-            };
-        }
+    ): CatnipIrOp<TInputs, TBranches, TOpType> {
+        return {
+            type,
+            inputs,
+            branches,
+            operands,
+            next: null,
+            prev: null
+        };
     }
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, branch?: CatnipIrBranch) {
         if (branch === undefined) {
             branch = this._createFunction(true).body;
-
         } else {
             this._createBranchFunction(branch, true);
         }
@@ -336,18 +297,10 @@ export class CatnipCompilerIrGenContext {
         return branch;
     }
 
-    public emitStoreNewVariable(format: CatnipValueFormat, name?: string): CatnipIrVariable {
-        const value = new CatnipIrVariable(format, name);
-        this.emitIr(ir_store_value, { value, initialize: true }, {});
-        return value;
-    }
-
-    public emitStoreVariable(value: CatnipIrVariable) {
-        this.emitIr(ir_store_value, { value, initialize: false }, {});
-    }
-
-    public emitLoadVariable(value: CatnipIrVariable) {
-        this.emitIr(ir_load_value, { value }, {});
+    public emitTransientCreate(format: CatnipValueFormat, name?: string): CatnipIrTransientVariable {
+        const variable = new CatnipIrTransientVariable(format, name);
+        this.emitIr(ir_transient_create, { variable }, {});
+        return variable;
     }
 
     private _getFuncName(func: CatnipIrFunction) {

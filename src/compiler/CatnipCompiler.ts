@@ -4,8 +4,8 @@ import { CatnipProjectModule } from "./CatnipProjectModule";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipIrFunction } from "./CatnipIrFunction";
-import { ir_thread_terminate } from "../ir/ops/core/thread_terminate";
-import { CatnipIrBranch } from "../ir/CatnipIrBranch";
+import { ir_thread_terminate } from "./ir/core/thread_terminate";
+import { CatnipIrBranch } from "./CatnipIrBranch";
 
 export class CatnipCompiler {
     public readonly project: CatnipProject;

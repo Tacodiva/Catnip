@@ -1,12 +1,13 @@
 import { SpiderExpression, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipIrFunction, CatnipIrValueType } from './CatnipIrFunction';
-import { CatnipIrCommandOp, CatnipIrCommandOpType, CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../ir/CatnipIrOp";
-import { CatnipIrBranch } from "../ir/CatnipIrBranch";
+import { CatnipIrFunction, CatnipIrTransientVariableType } from './CatnipIrFunction';
 import { createLogger, Logger } from "../log";
 import { CatnipWasmStructThread } from "../wasm-interop/CatnipWasmStructThread";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStack } from "./CatnipCompilerStack";
+import { CatnipOpInputs } from "../ops";
+import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpType } from "./CatnipIrOp";
+import { CatnipIrBranch } from "./CatnipIrBranch";
 
 export interface CatnipCompilerWasmLocal {
     ref: SpiderLocalVariableReference,
@@ -65,8 +66,8 @@ export class CatnipCompilerWasmGenContext {
             const stackPtrLocal = this.createLocal(SpiderNumberType.i32);
             let first = true;
 
-            for (const [value, variable] of this._func.localVariables) {
-                if (variable.type !== CatnipIrValueType.STACK)
+            for (const [value, variable] of this._func.transientVariables) {
+                if (variable.type !== CatnipIrTransientVariableType.STACK)
                     continue;
 
                 if (first) {
@@ -135,7 +136,7 @@ export class CatnipCompilerWasmGenContext {
             this.emitWasmGetThread();
 
             for (const parameter of targetFunc.parameters) {
-                this.emitWasm(SpiderOpcodes.local_get, this._func.getValueVariableRef(parameter.value));
+                this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.variable));
             }
 
             this.emitWasm(SpiderOpcodes.call, targetFunc.spiderFunction);
@@ -173,24 +174,20 @@ export class CatnipCompilerWasmGenContext {
         }
     }
 
-    public emitOp(op: CatnipIrOp, branch: CatnipIrBranch) {
-        const opType = op.type;
+    public emitOp<
+        TInputs extends CatnipOpInputs,
+        TBranches extends CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches>
+    >(op: CatnipIrOp<TInputs, TBranches, TOpType>, branch: CatnipIrBranch) {
+        op.type.generateWasm(this, op, branch);
 
-        if (opType instanceof CatnipIrInputOpType) {
-            const inputOp = op as CatnipIrInputOp;
-            opType.generateWasm(this, inputOp, branch);
-            this._stack.pop(inputOp.operands.length);
+        const operands = this._stack.pop(op.type.getOperandCount(op.inputs, op.branches));
+
+        if (op.type.isInput) {
             this._stack.push({
-                ...inputOp.type.getResult(op.inputs, op.branches, op.operands),
-                source: inputOp
+                ...op.type.getResult(op.inputs, op.branches, operands),
+                source: op as CatnipIrInputOp<TInputs, TBranches>
             });
-        } else {
-            CatnipCompilerWasmGenContext.logger.assert(
-                opType instanceof CatnipIrCommandOpType
-            );
-            const commandOp = op as CatnipIrCommandOp;
-            opType.generateWasm(this, commandOp, branch);
-            this._stack.pop(commandOp.operands.length);
         }
     }
 
@@ -285,12 +282,12 @@ export class CatnipCompilerWasmGenContext {
             this.emitWasm(SpiderOpcodes.if, this.popExpression());
             // }
 
-            for (const [value, variable] of targetFunc.localVariables) {
-                if (variable.type !== CatnipIrValueType.STACK)
+            for (const [value, variable] of targetFunc.transientVariables) {
+                if (variable.type !== CatnipIrTransientVariableType.STACK)
                     continue;
 
                 this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
-                this.emitWasm(SpiderOpcodes.local_get, this._func.getValueVariableRef(value));
+                this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(value));
 
                 switch (value.type) {
                     case SpiderNumberType.i32:

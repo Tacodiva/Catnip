@@ -1,5 +1,5 @@
-import { CatnipIrInputOp } from "../ir/CatnipIrOp";
-import { CatnipValueFlags, CatnipValueFormat } from "../ir/types";
+import { CatnipIrInputOp } from "./CatnipIrOp";
+import { CatnipValueFlags, CatnipValueFormat } from "./types";
 
 export enum CatnipCompilerValueType {
     DYNAMIC,

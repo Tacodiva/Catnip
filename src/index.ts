@@ -1,4 +1,4 @@
-import { CatnipOps } from "./ir";
+import { CatnipOps } from "./ops";
 import { CatnipRuntimeModule } from "./runtime/CatnipRuntimeModule";
 
 
