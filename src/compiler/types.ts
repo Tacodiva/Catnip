@@ -74,7 +74,7 @@ export enum CatnipValueFlags {
 export enum CatnipValueFormat {
     i32,
     HSTRING_PTR, // (i32)
-    VALUE_PTR, // (i32)
+    VALUE_BOXED, // (i64)
     f64,
     ANY
 }
@@ -83,10 +83,11 @@ export function getValueFormatSpiderType(inputFormat: CatnipValueFormat): Spider
     switch (inputFormat) {
         case CatnipValueFormat.i32:
         case CatnipValueFormat.HSTRING_PTR:
-        case CatnipValueFormat.VALUE_PTR:
             return SpiderNumberType.i32;
         case CatnipValueFormat.f64:
             return SpiderNumberType.f64;
+        case CatnipValueFormat.VALUE_BOXED:
+            return SpiderNumberType.i64;
         case CatnipValueFormat.ANY:
             throw new Error("Cannot convert format 'any' to a number type.");
     }

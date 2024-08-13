@@ -10,13 +10,20 @@ typedef catnip_ui32_t catnip_value_flags;
 #define CATNIP_VALUE_FLAG_STRING CATNIP_VALUE_FLAG(0)
 #define CATNIP_VALUE_FLAG_DOUBLE CATNIP_VALUE_FLAG(1)
 
-struct catnip_value {
-    catnip_value_flags flags;
-    catnip_hstring *val_string;
-    catnip_f64_t val_double;
+struct catnip_value_parts
+{
+    catnip_i32_t upper;
+    catnip_i32_t lower;
 };
 
-typedef struct catnip_value catnip_value;
+typedef struct catnip_value_parts catnip_value_parts;
+
+union catnip_value {
+    catnip_f64_t val_double;
+    struct catnip_value_parts parts;
+};
+
+typedef union catnip_value catnip_value;
 
 
 #endif

@@ -6,9 +6,10 @@ import { CatnipSpriteID } from "../../../runtime/CatnipSprite";
 import { CatnipVariable, CatnipVariableID } from "../../../runtime/CatnipVariable";
 import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
-import { CatnipWasmEnumValueFlags, CatnipWasmStructValue } from "../../../wasm-interop/CatnipWasmStructValue";
+import { CatnipWasmUnionValue, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipTarget } from "../../../runtime/CatnipTarget";
 import { CatnipValueFormat, getValueFormatSpiderType } from "../../types";
+import { CatnipRuntimeModule } from "../../../runtime/CatnipRuntimeModule";
 
 export type set_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable, format: CatnipValueFormat };
 
@@ -31,58 +32,48 @@ export const ir_set_var = new class extends CatnipIrCommandOpType<set_var_ir_inp
 
         const target = ir.inputs.target;
         const variable = ir.inputs.variable;
-        const variableOffset = variable._index * CatnipWasmStructValue.size;
+        const variableOffset = variable._index * CatnipWasmUnionValue.size;
 
         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("variable_table"));
 
-        const variableAddressLocal = ctx.createLocal(SpiderNumberType.i32);
-        ctx.emitWasm(SpiderOpcodes.local_tee, variableAddressLocal.ref);
-
         switch (ir.inputs.format) {
             case CatnipValueFormat.i32:
-            case CatnipValueFormat.f64:
-                // valuePtr->flags = CatnipWasmEnumValueFlags.VAL_DOUBLE
-                ctx.emitWasmConst(SpiderNumberType.i32, CatnipWasmEnumValueFlags.VAL_DOUBLE);
-                ctx.emitWasm(SpiderOpcodes.i32_store, 2, variableOffset + CatnipWasmStructValue.getMemberOffset("flags"));
-
-                // valuePtr->val_double = (f64) value
-                ctx.emitWasm(SpiderOpcodes.local_get, variableAddressLocal.ref);
+            case CatnipValueFormat.f64: {
                 ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
 
                 if (ir.inputs.format === CatnipValueFormat.i32)
                     ctx.emitWasm(SpiderOpcodes.f64_convert_i32_s);
 
-                ctx.emitWasm(SpiderOpcodes.f64_store, 3, variableOffset + CatnipWasmStructValue.getMemberOffset("val_double"));
+                ctx.emitWasm(SpiderOpcodes.f64_store, 3, variableOffset);
                 break;
-            case CatnipValueFormat.HSTRING_PTR:
-                // valuePtr->flags = CatnipWasmEnumValueFlags.VAL_STRING
-                ctx.emitWasmConst(SpiderNumberType.i32, CatnipWasmEnumValueFlags.VAL_STRING);
-                ctx.emitWasm(SpiderOpcodes.i32_store, 2, variableOffset + CatnipWasmStructValue.getMemberOffset("flags"));
+            }
+            case CatnipValueFormat.HSTRING_PTR: {
+                ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
+                ctx.emitWasm(SpiderOpcodes.i32_store, 2, variableOffset + 4);
+                
+                ctx.emitWasm(SpiderOpcodes.i32_const, VALUE_STRING_UPPER);
+                ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
+                ctx.emitWasm(SpiderOpcodes.i32_store, 2, variableOffset);
 
-                // valuePtr->val_string = value
-                ctx.emitWasm(SpiderOpcodes.local_get, variableAddressLocal.ref);
+                // TODO Do this instead maybe
+                //  Can't right now becuase spider can't have i64 consts big enough
+                // ctx.emitWasmConst(SpiderNumberType.i64, CatnipRuntimeModule.VALUE_STRING_UPPER << 32);
+                // ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
+                // ctx.emitWasm(SpiderOpcodes.i64_extend_i32_u);
+                // ctx.emitWasm(SpiderOpcodes.i64_or);
+                // ctx.emitWasm(SpiderOpcodes.i64_store, 3, variableOffset);                break;
+            }
+
+            case CatnipValueFormat.VALUE_BOXED: {
+                CatnipCompilerWasmGenContext.logger.assert(CatnipWasmUnionValue.size === 8);
+
                 ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
-                ctx.emitWasm(SpiderOpcodes.i32_store, 2, variableOffset + CatnipWasmStructValue.getMemberOffset("val_string"));
-                break;
-            
-            case CatnipValueFormat.VALUE_PTR:
-                // *valuePtr = *value
-                CatnipCompilerWasmGenContext.logger.assert(CatnipWasmStructValue.size === 16);
-                // copy first 8 bytes
-                ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
-                ctx.emitWasm(SpiderOpcodes.i64_load, 3, 0);
                 ctx.emitWasm(SpiderOpcodes.i64_store, 3, variableOffset + 0);
-
-                // copy second 8 bytes
-                ctx.emitWasm(SpiderOpcodes.local_get, variableAddressLocal.ref);
-                ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
-                ctx.emitWasm(SpiderOpcodes.i64_load, 3, 8);
-                ctx.emitWasm(SpiderOpcodes.i64_store, 3, variableOffset + 8);
                 break;
+            }
         }
 
-        ctx.releaseLocal(variableAddressLocal);
         ctx.releaseLocal(valueLocal);
     }
 }

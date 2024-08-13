@@ -415,3 +415,92 @@ export class WasmStruct<TMembers extends WasmStructMembersDefinition> implements
         return string + "}";
     }
 }
+
+export type WasmUnionDefinition = WasmType<any, any>[];
+
+export interface WasmUnionValue<TMembers extends WasmUnionDefinition, TIndex extends number> {
+    index: TIndex,
+    value: WasmTypeSetValue<TMembers[TIndex]>
+}
+
+export class WasmUnionWrapper<
+    TUnion extends WasmUnion<TMembers>,
+    TMembers extends WasmUnionDefinition =
+    TUnion extends WasmUnion<infer DefaultMembers> ? DefaultMembers : never
+> extends WasmValueWrapper<WasmUnion<TMembers>> {
+
+    public set<TIndex extends number>(value: WasmUnionValue<TMembers, TIndex>) {
+        this.type.set(this.ptr, this.buffer, value);
+    }
+
+    public get(): WasmTypeValue<WasmUnion<TMembers>>;
+    public get<TIndex extends number>(index: TIndex): TMembers[TIndex];
+
+    public get<TIndex extends number>(index?: TIndex): WasmTypeValue<WasmUnion<TMembers>> | TMembers[TIndex] {
+        if (index === undefined) {
+            return this.type.get(this.ptr, this.buffer);
+        } else {
+            return this.type.get(this.ptr, this.buffer, index);
+        }
+    }
+
+    public getMemberWrapper<TIndex extends number>(index: number): WasmTypeValueWrapper<TMembers[TIndex]> {
+        return this.type.getMemberWrapper(this.ptr, this.buffer, index);
+    }
+}
+
+export class WasmUnion<TMembers extends WasmUnionDefinition> implements WasmType<TMembers[0], WasmUnionWrapper<WasmUnion<TMembers>>, WasmUnionValue<TMembers, number>> {
+
+    public readonly name: string;
+    public readonly size: TMembers[number]["size"];
+    public readonly alignment: number;
+
+    public readonly members: TMembers;
+
+    public constructor(name: string, memberDefinition: TMembers) {
+        this.name = name;
+
+        let alignment = 0;
+        let size: number | null = 0;
+
+        if (memberDefinition.length === 0)
+            throw new Error("Union must have at least one member.");
+
+        for (const member of memberDefinition) {
+            if (size !== null) {
+                if (member.size === null) {
+                    size = null;
+                } else if (size < member.size) {
+                    size = member.size;
+                }
+            }
+
+            if (alignment < member.alignment) {
+                alignment = member.alignment;
+            }
+        }
+
+        this.size = size;
+        this.alignment = alignment;
+        this.members = memberDefinition;
+    }
+
+    public set<TIndex extends number>(ptr: number, buffer: DataView, value: WasmUnionValue<TMembers, TIndex>): void {
+        this.members[value.index].set(ptr, buffer, value.value);
+    }
+
+    public get(ptr: number, buffer: DataView): TMembers[0];
+    public get<TIndex extends number>(ptr: number, buffer: DataView, index: TIndex): TMembers[TIndex];
+
+    public get<TIndex extends number>(ptr: number, buffer: DataView, index?: TIndex): TMembers[0] | TMembers[TIndex] {
+        return this.members[index ?? 0].get(ptr, buffer);
+    }
+
+    public getWrapper<TIndex extends number>(ptr: number, buffer: DataView): WasmUnionWrapper<WasmUnion<TMembers>> {
+        return new WasmUnionWrapper(ptr, buffer, this);
+    }
+
+    public getMemberWrapper<TIndex extends number>(ptr: number, buffer: DataView, index: TIndex): WasmTypeValueWrapper<TMembers[TIndex]> {
+        return this.members[index].getWrapper(ptr, buffer);
+    }
+}

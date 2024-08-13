@@ -19,17 +19,17 @@ export class CatnipCompilerState {
         let value = this._variables.get(variable);
 
         if (value === undefined) {
-            value = { type: CatnipCompilerValueType.DYNAMIC, flags: CatnipValueFlags.ANY, format: CatnipValueFormat.VALUE_PTR }
+            value = { type: CatnipCompilerValueType.DYNAMIC, flags: CatnipValueFlags.ANY, format: CatnipValueFormat.VALUE_BOXED }
         }
 
         return value;
     }
 
     public setVariableValue(variable: CatnipVariable, value: CatnipCompilerValue) {
-        if (value.format !== CatnipValueFormat.VALUE_PTR) {
+        if (value.format !== CatnipValueFormat.VALUE_BOXED) {
             value = {
                 ...value,
-                format: CatnipValueFormat.VALUE_PTR
+                format: CatnipValueFormat.VALUE_BOXED
             };
         }
 

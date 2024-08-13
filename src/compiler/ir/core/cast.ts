@@ -2,8 +2,9 @@ import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipWasmEnumValueFlags, CatnipWasmStructValue } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipValueFlags, CatnipValueFormat } from "../../types";
+import { CatnipRuntimeModule } from "../../../runtime/CatnipRuntimeModule";
+import { VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 
 export type cast_ir_inputs = {
     format: CatnipValueFormat,
@@ -35,56 +36,63 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         }
 
         switch (srcFormat) {
-            case CatnipValueFormat.VALUE_PTR: {
+            case CatnipValueFormat.VALUE_BOXED: {
                 const getF64 = () => {
-                    const local = ctx.createLocal(SpiderNumberType.i32);
-                    ctx.emitWasm(SpiderOpcodes.local_tee, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("flags"));
-                    ctx.emitWasmConst(SpiderNumberType.i32, CatnipWasmEnumValueFlags.VAL_DOUBLE);
-                    ctx.emitWasm(SpiderOpcodes.i32_and);
+                    const value = ctx.createLocal(SpiderNumberType.i64);
+                    ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
 
-                    // Executed if the VAL_DOUBLE flag is set
+                    // TODO Probably faster to just & with CatnipRuntimeModule.VALUE_STRING << 32 
+                    ctx.emitWasm(SpiderOpcodes.i64_const, 32);
+                    ctx.emitWasm(SpiderOpcodes.i64_shr_u);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                    ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
+                    ctx.emitWasm(SpiderOpcodes.i32_eq);
+                    
+
+                    // Executed if the value is a string
                     ctx.pushExpression();
-                    ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.f64_load, 3, CatnipWasmStructValue.getMemberOffset("val_double"));
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                    ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
                     const trueExpr = ctx.popExpression();
 
-                    // Executed if the VAL_STRING flag not is set
+                    // Executed if the value is a double already
                     ctx.pushExpression();
-                    ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("val_string"));
-                    ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
                     const falseExpr = ctx.popExpression();
 
                     ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
-                    ctx.releaseLocal(local);
+                    ctx.releaseLocal(value);
                 }
 
                 const getHString = () => {
-                    const local = ctx.createLocal(SpiderNumberType.i32);
-                    ctx.emitWasm(SpiderOpcodes.local_tee, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("flags"));
-                    ctx.emitWasmConst(SpiderNumberType.i32, CatnipWasmEnumValueFlags.VAL_STRING);
-                    ctx.emitWasm(SpiderOpcodes.i32_and);
-
-                    // Executed if the VAL_STRING flag is set
+                    const value = ctx.createLocal(SpiderNumberType.i64);
+                    ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
+                    
+                    // TODO Probably faster to just & with CatnipRuntimeModule.VALUE_STRING << 32 
+                    ctx.emitWasm(SpiderOpcodes.i64_const, 32);
+                    ctx.emitWasm(SpiderOpcodes.i64_shr_u);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                    ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
+                    ctx.emitWasm(SpiderOpcodes.i32_eq);
+                    
+                    
+                    // Executed if the value is a string
                     ctx.pushExpression();
-                    ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructValue.getMemberOffset("val_string"));
-                    ctx.emitWasm(SpiderOpcodes.local_tee, local.ref);
-                    ctx.emitWasmRuntimeFunctionCall("catnip_hstring_ref");
-                    ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
                     const trueExpr = ctx.popExpression();
 
-                    // Executed if the VAL_STRING flag not is set
+                    // Executed if the value is a double already
                     ctx.pushExpression();
-                    ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.f64_load, 3, CatnipWasmStructValue.getMemberOffset("val_double"));
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
                     ctx.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
                     const falseExpr = ctx.popExpression();
 
                     ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
-                    ctx.releaseLocal(local);
+                    ctx.releaseLocal(value);
                 };
 
                 switch (dstFormat) {

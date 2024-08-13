@@ -1,10 +1,10 @@
 
 import { CatnipRuntimeModuleImports } from "./CatnipRuntimeModuleImports";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
-import { WasmStruct, WasmStructWrapper } from "../wasm-interop/wasm-types";
+import { WasmStruct, WasmStructWrapper, WasmUnionWrapper } from "../wasm-interop/wasm-types";
 import { createLogger } from "../log";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
-import { CatnipWasmEnumValueFlags, CatnipWasmStructValue } from "../wasm-interop/CatnipWasmStructValue";
+import { CatnipWasmUnionValue, VALUE_CANNON_NAN_UPPER, VALUE_STRING_UPPER } from "../wasm-interop/CatnipWasmStructValue";
 import { CatnipProject, CatnipProjectDesc } from "./CatnipProject";
 import { CatnipWasmArrayFuncEntry } from "../wasm-interop/CatnipWasmStructFuncEntry";
 import { CatnipRuntimeModuleFunctionsObject } from "./CatnipRuntimeModuleFunctions";
@@ -113,16 +113,30 @@ export class CatnipRuntimeModule {
         return new WasmStructWrapper(this.allocateMemory(struct.size, zero), this.memory, struct);
     }
 
-    public setValue(ptr: WasmStructWrapper<typeof CatnipWasmStructValue>, value: number | string) {
+    public setValue(ptr: WasmUnionWrapper<typeof CatnipWasmUnionValue>, value: number | string) {
         if (typeof value === "number") {
-            ptr.set({
-                flags: CatnipWasmEnumValueFlags.VAL_DOUBLE,
-                val_double: value
-            });
+            if (Number.isNaN(value)) {
+                // TODO This is probably not necessary
+                ptr.set({
+                    index: 1,
+                    value: {
+                        upper: VALUE_CANNON_NAN_UPPER,
+                        lower: 0
+                    }
+                });
+            } else {
+                ptr.set({
+                    index: 0,
+                    value
+                });
+            }
         } else {
             ptr.set({
-                flags: CatnipWasmEnumValueFlags.VAL_STRING,
-                val_string: this.allocateHeapString(value)
+                index: 1,
+                value: {
+                    upper: VALUE_STRING_UPPER,
+                    lower: this.allocateHeapString(value)
+                }
             });
         }
     }
