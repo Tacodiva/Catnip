@@ -113,35 +113,39 @@ export class CatnipProject {
     private async _recompile(): Promise<void> {
         if (this._recompileScripts.size === 0) return;
 
-        const compiler = new CatnipCompiler(this);
+        const compiler = new CatnipCompiler(this, {
+            enable_tail_call: true
+        });
 
         for (const script of this._recompileScripts) {
             compiler.compile(script);
         }
 
-        // const downloadURL = (data: string, fileName: string) => {
-        //     const a = document.createElement('a')
-        //     a.href = data
-        //     a.download = fileName
-        //     document.body.appendChild(a)
-        //     a.style.display = 'none'
-        //     a.click()
-        //     a.remove()
-        // }
+        if (globalThis.document) {
+            const downloadURL = (data: string, fileName: string) => {
+                const a = document.createElement('a')
+                a.href = data
+                a.download = fileName
+                document.body.appendChild(a)
+                a.style.display = 'none'
+                a.click()
+                a.remove()
+            }
 
-        // const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
+            const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
 
-        //     const blob = new Blob([data], {
-        //         type: mimeType
-        //     })
+                const blob = new Blob([data], {
+                    type: mimeType
+                })
 
-        //     const url = window.URL.createObjectURL(blob)
+                const url = window.URL.createObjectURL(blob)
 
-        //     downloadURL(url, fileName)
+                downloadURL(url, fileName)
 
-        //     setTimeout(() => window.URL.revokeObjectURL(url), 1000)
-        // }
-        // downloadBlob(writeModule(compiler.spiderModule), "module.wasm", "application/wasm");
+                setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+            }
+            downloadBlob(writeModule(compiler.spiderModule), "module.wasm", "application/wasm");
+        }
 
         const module = await compileModule(compiler.spiderModule);
 

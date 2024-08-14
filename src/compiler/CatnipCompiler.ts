@@ -6,15 +6,18 @@ import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 import { ir_thread_terminate } from "./ir/core/thread_terminate";
 import { CatnipIrBranch } from "./CatnipIrBranch";
+import { CatnipCompilerConfig } from "./CatnipCompilerConfig";
 
 export class CatnipCompiler {
     public readonly project: CatnipProject;
     public readonly module: CatnipProjectModule;
+    public readonly config: CatnipCompilerConfig;
 
     public get spiderModule() { return this.module.spiderModule; }
 
-    constructor(project: CatnipProject) {
+    constructor(project: CatnipProject, config: CatnipCompilerConfig) {
         this.project = project;
+        this.config = config;
         this.module = new CatnipProjectModule(this.project.runtimeModule);
     }
 

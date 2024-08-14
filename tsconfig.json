@@ -6,7 +6,7 @@
         "strict": true,
         "esModuleInterop": true,
         "stripInternal": true,
-
+        "skipLibCheck": true
     },
     "ts-node": {
         "experimentalSpecifierResolution": "node",

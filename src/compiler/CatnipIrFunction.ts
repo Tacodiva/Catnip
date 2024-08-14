@@ -1,4 +1,4 @@
-import { SpiderFunctionDefinition, SpiderLocalVariableReference, SpiderNumberType } from "wasm-spider";
+import { SpiderFunctionDefinition, SpiderLocalReference, SpiderNumberType } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
@@ -16,7 +16,7 @@ export enum CatnipIrTransientVariableType {
 
 interface TransientVariableInfoBase {
     variable: CatnipIrTransientVariable;
-    ref: SpiderLocalVariableReference;
+    ref: SpiderLocalReference;
     type: CatnipIrTransientVariableType;
 }
 
@@ -42,7 +42,7 @@ export class CatnipIrFunction {
     public get spiderModule() { return this.compiler.spiderModule; }
 
     public readonly spiderFunction: SpiderFunctionDefinition;
-    public readonly spiderThreadParam: SpiderLocalVariableReference;
+    public readonly spiderThreadParam: SpiderLocalReference;
 
     public readonly body: CatnipIrBranch;
 
@@ -139,7 +139,7 @@ export class CatnipIrFunction {
         }
     }
 
-    public getTransientVariableRef(variable: CatnipIrTransientVariable): SpiderLocalVariableReference {
+    public getTransientVariableRef(variable: CatnipIrTransientVariable): SpiderLocalReference {
         CatnipCompilerLogger.assert(
             this._transientVariables.has(variable),
             true, "Value not marked as used by function."

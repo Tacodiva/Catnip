@@ -1,4 +1,4 @@
-import { SpiderExpression, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
+import { SpiderExpression, SpiderLocalReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipIrFunction, CatnipIrTransientVariableType } from './CatnipIrFunction';
@@ -10,7 +10,7 @@ import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpType } from 
 import { CatnipIrBranch } from "./CatnipIrBranch";
 
 export interface CatnipCompilerWasmLocal {
-    ref: SpiderLocalVariableReference,
+    ref: SpiderLocalReference,
     type: SpiderNumberType
 }
 
@@ -139,12 +139,17 @@ export class CatnipCompilerWasmGenContext {
                 this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.variable));
             }
 
-            this.emitWasm(SpiderOpcodes.call, targetFunc.spiderFunction);
+            const isYielding = branch.isYielding();
 
-            if (branch.isYielding()) {
-                this.emitWasm(SpiderOpcodes.return);
+            if (isYielding && this.compiler.config.enable_tail_call) {
+                this.emitWasm(SpiderOpcodes.return_call, targetFunc.spiderFunction);
+            } else {
+                this.emitWasm(SpiderOpcodes.call, targetFunc.spiderFunction);
+    
+                if (isYielding) {
+                    this.emitWasm(SpiderOpcodes.return);
+                }
             }
-
         } else {
             CatnipCompilerWasmGenContext.logger.assert(
                 branch.func === this._func,
