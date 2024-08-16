@@ -6,7 +6,7 @@ import { CatnipSpriteID } from "../../../runtime/CatnipSprite";
 import { CatnipVariable, CatnipVariableID } from "../../../runtime/CatnipVariable";
 import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
-import { CatnipWasmUnionValue, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
+import { CatnipWasmUnionValue, VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipTarget } from "../../../runtime/CatnipTarget";
 import { CatnipValueFormat, getValueFormatSpiderType } from "../../types";
 import { CatnipRuntimeModule } from "../../../runtime/CatnipRuntimeModule";
@@ -55,21 +55,12 @@ export const ir_set_var = new class extends CatnipIrCommandOpType<set_var_ir_inp
                 ctx.emitWasm(SpiderOpcodes.i32_const, VALUE_STRING_UPPER);
                 ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
                 ctx.emitWasm(SpiderOpcodes.i32_store, 2, variableOffset);
-
-                // TODO Do this instead maybe
-                //  Can't right now becuase spider can't have i64 consts big enough
-                // ctx.emitWasmConst(SpiderNumberType.i64, CatnipRuntimeModule.VALUE_STRING_UPPER << 32);
-                // ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
-                // ctx.emitWasm(SpiderOpcodes.i64_extend_i32_u);
-                // ctx.emitWasm(SpiderOpcodes.i64_or);
-                // ctx.emitWasm(SpiderOpcodes.i64_store, 3, variableOffset);                break;
+                break;
             }
 
             case CatnipValueFormat.VALUE_BOXED: {
-                CatnipCompilerWasmGenContext.logger.assert(CatnipWasmUnionValue.size === 8);
-
                 ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
-                ctx.emitWasm(SpiderOpcodes.i64_store, 3, variableOffset + 0);
+                ctx.emitWasm(SpiderOpcodes.i64_store, 3, variableOffset);
                 break;
             }
         }

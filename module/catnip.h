@@ -31,6 +31,9 @@ typedef int catnip_bool_t;
 #define CATNIP_F64_ISINFINITE(x) __builtin_isinf(x)
 #define CATNIP_F64_SIGNBIT(x) __builtin_signbit(x)
 
+#define CATNIP_F32_SQRT(x) __builtin_sqrt(x)
+#define CATNIP_F64_SQRT(x) __builtin_sqrt(x)
+
 typedef catnip_i32_t catnip_codepoint_t;
 
 typedef char catnip_char_t;

@@ -1,8 +1,9 @@
 import { createModule, SpiderElementFuncIdxActive, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderReferenceType } from "wasm-spider";
 import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipIrFunction } from "./CatnipIrFunction";
+import { CatnipIrFunction, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { createLogger, Logger } from "../log";
+import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 
 export class CatnipProjectModule {
     private static readonly _logger: Logger = createLogger("CatnipProjectModule");
@@ -45,7 +46,7 @@ export class CatnipProjectModule {
         return func;
     }
 
-    public createFunctionsElement(functions: CatnipIrFunction[]) {
+    public createFunctionsElement(functions: ReadonlyArray<CatnipReadonlyIrFunction>) {
         CatnipProjectModule._logger.assert(this._spiderFunctionElement === null, false, "Functions element created twice!");
 
         const spiderFns: SpiderFunctionDefinition[] = [];
@@ -54,7 +55,8 @@ export class CatnipProjectModule {
 
         for (const fn of functions) {
             if (fn.needsFunctionTableIndex) {
-                fn.functionTableIndex = idx++;
+                CatnipCompilerLogger.assert(fn.functionTableIndex === idx);
+                idx++;
                 spiderFns.push(fn.spiderFunction);
             }
         }

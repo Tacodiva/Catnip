@@ -4,7 +4,7 @@ import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWa
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipValueFlags, CatnipValueFormat } from "../../types";
 import { CatnipRuntimeModule } from "../../../runtime/CatnipRuntimeModule";
-import { VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
+import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 
 export type cast_ir_inputs = {
     format: CatnipValueFormat,
@@ -41,13 +41,11 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     const value = ctx.createLocal(SpiderNumberType.i64);
                     ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
 
-                    // TODO Probably faster to just & with CatnipRuntimeModule.VALUE_STRING << 32 
                     ctx.emitWasm(SpiderOpcodes.i64_const, 32);
                     ctx.emitWasm(SpiderOpcodes.i64_shr_u);
                     ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
                     ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
-                    ctx.emitWasm(SpiderOpcodes.i32_eq);
-                    
+                    ctx.emitWasm(SpiderOpcodes.i32_eq);                    
 
                     // Executed if the value is a string
                     ctx.pushExpression();
@@ -70,13 +68,11 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     const value = ctx.createLocal(SpiderNumberType.i64);
                     ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
                     
-                    // TODO Probably faster to just & with CatnipRuntimeModule.VALUE_STRING << 32 
                     ctx.emitWasm(SpiderOpcodes.i64_const, 32);
                     ctx.emitWasm(SpiderOpcodes.i64_shr_u);
                     ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
                     ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
-                    ctx.emitWasm(SpiderOpcodes.i32_eq);
-                    
+                    ctx.emitWasm(SpiderOpcodes.i32_eq);                    
                     
                     // Executed if the value is a string
                     ctx.pushExpression();

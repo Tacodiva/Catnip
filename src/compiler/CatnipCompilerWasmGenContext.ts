@@ -201,7 +201,7 @@ export class CatnipCompilerWasmGenContext {
         return this.runtimeModule.allocateHeapString(str);
     }
 
-    public emitWasmConst(type: SpiderNumberType, value: number): void {
+    public emitWasmConst(type: SpiderNumberType, value: number | bigint): void {
         this._expression.emitConstant(type, value);
     }
 

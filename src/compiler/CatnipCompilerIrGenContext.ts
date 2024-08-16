@@ -17,23 +17,22 @@ import { ir_loop_jmp } from "./ir/core/loop_jmp";
 import { ir_loop_jmp_if } from "./ir/core/loop_jmp_if";
 import { ir_if_else } from "./ir/control/if_else";
 import { ir_transient_create } from "./ir/core/transient_create";
+import { CatnipIr } from "./CatnipIr";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
-    public readonly compiler: CatnipCompiler;
 
+    public readonly ir: CatnipIr;
+    public get compiler() { return this.ir.compiler; }
     public get project() { return this.compiler.project; }
-
-    public functions: CatnipIrFunction[];
 
     private _branch: CatnipIrBranch;
 
     public get stack(): CatnipCompilerReadonlyStack { return this._branch.stack; }
 
-    public constructor(compiler: CatnipCompiler, func: CatnipIrFunction) {
-        this.compiler = compiler;
-        this.functions = [func];
-        this._branch = func.body;
+    public constructor(ir: CatnipIr) {
+        this.ir = ir;
+        this._branch = ir.entrypoint.body;
     }
 
     private _emitIr<
@@ -75,11 +74,11 @@ export class CatnipCompilerIrGenContext {
         }
 
         if (mergeBefore) {
-            this._switchToBranch(this._createFunction(false).body);
+            this._switchToBranch(this.ir.createFunction(false).body);
 
             for (const tailBranch of branchTails) {
                 tailBranch.pushOp(this._createIr(
-                    ir_branch, {}, { branch: this._branch }, []
+                    ir_branch, {}, { branch: this._branch }, [], tailBranch
                 ));
             }
 
@@ -89,6 +88,7 @@ export class CatnipCompilerIrGenContext {
             }
         }
 
+        op.branch = this._branch;
         this._branch.pushOp(op);
 
         if (op.type.isInput) {
@@ -123,7 +123,7 @@ export class CatnipCompilerIrGenContext {
                     break;
                 }
             } else {
-                const newBranch = this._createFunction(false).body;
+                const newBranch = this.ir.createFunction(false).body;
 
                 if (hasNonYieldingBranch) {
                     this._branch.pushOp(this._createIr(
@@ -173,7 +173,8 @@ export class CatnipCompilerIrGenContext {
         type: TOpType,
         inputs: TInputs,
         branches: TBranches,
-        operands: CatnipCompilerStackElement[]
+        operands: CatnipCompilerStackElement[],
+        branch?: CatnipIrBranch
     ): CatnipIrOp<TInputs, TBranches, TOpType> {
         return {
             type,
@@ -181,24 +182,19 @@ export class CatnipCompilerIrGenContext {
             branches,
             operands,
             next: null,
-            prev: null
+            prev: null,
+            branch: branch ?? this._branch
         };
     }
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, branch?: CatnipIrBranch) {
         if (branch === undefined) {
-            branch = this._createFunction(true).body;
+            branch = this.ir.createFunction(true).body;
         } else {
             this._createBranchFunction(branch, true);
         }
         this.emitIr(ir_yield, { status }, { branch });
         this._switchToBranch(branch);
-    }
-
-    private _createFunction(needsFunctionTableIndex: boolean): CatnipIrFunction {
-        const func = new CatnipIrFunction(this.compiler, needsFunctionTableIndex);
-        this.functions.push(func);
-        return func;
     }
 
     private _switchToBranch(branch: CatnipIrBranch) {
@@ -211,9 +207,7 @@ export class CatnipCompilerIrGenContext {
             return branch.func;
         }
 
-        const func = new CatnipIrFunction(this.compiler, needsFunctionTableIndex, branch);
-        this.functions.push(func);
-        return func;
+        return this.ir.createFunction(needsFunctionTableIndex, branch);
     }
 
     public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>): void;
@@ -301,84 +295,6 @@ export class CatnipCompilerIrGenContext {
         const variable = new CatnipIrTransientVariable(format, name);
         this.emitIr(ir_transient_create, { variable }, {});
         return variable;
-    }
-
-    private _getFuncName(func: CatnipIrFunction) {
-        return "Func" + this.functions.indexOf(func);
-    }
-
-    public stringifyIr(): string {
-        let string = "";
-
-
-        const stringifyIr = (branch: CatnipIrBranch, indent: string, branches: Set<CatnipIrBranch>) => {
-            branches.add(branch);
-            let string = "";
-
-            if (branch.isLoop) {
-                string += "(loop) "
-            }
-            string += "\n";
-
-            let op = branch.head;
-            while (op !== null) {
-                string += indent;
-                string += op.type.name;
-                if (Object.keys(op.inputs).length !== 0) {
-                    string += " ";
-                    string += JSON.stringify(op.inputs, (key: string, value: any) => {
-                        if (value instanceof CatnipVariable) {
-                            return `[VARIABLE '${value.id}']`;
-                        } else if (value instanceof CatnipTarget) {
-                            return `[TARGET '${value.sprite.id}']`;
-                        }
-                        return value;
-                    });
-                }
-                if (Object.keys(op.branches).length !== 0) {
-                    for (const subbranchName in op.branches) {
-                        const subbranch = op.branches[subbranchName];
-                        string += "\n  ";
-                        string += indent;
-                        string += subbranchName;
-                        if (subbranch === null) {
-                            string += ": null\n";
-                        } else if (subbranch.func === branch.func && !subbranch.isFuncBody) {
-                            if (branches.has(subbranch)) {
-                                string += ": ??\n";
-                            } else {
-                                string += ": ";
-                                string += stringifyIr(subbranch, indent + "    ", branches);
-                            }
-                        } else {
-                            string += " -> ";
-                            if (!subbranch.isFuncBody) string += "[INVALID] ";
-                            string += this._getFuncName(subbranch.func);
-                            string += "\n";
-                        }
-                    }
-                } else {
-                    string += "\n";
-                }
-
-                op = op.next;
-            }
-
-            return string;
-        }
-
-        for (const func of this.functions) {
-            string += this._getFuncName(func);
-            string += ": ";
-            if (func.body.isYielding()) string += "(yielding) ";
-            if (func.stackSize !== 0) string += `(${func.stackSize} byte stack) `;
-            if (func.parameters.length !== 0) string += `(${func.parameters.length} params) `;
-
-            string += stringifyIr(func.body, "  ", new Set());
-            string += "\n";
-        }
-
-        return string;
     }
 
 }

@@ -11,8 +11,4 @@ export const ir_transient_create = new class extends CatnipIrCommandOpType<ir_tr
     public getOperandCount(): number { return 0; }
 
     public generateWasm(): void { }
-
-    public analyzePreEmit(ir: CatnipIrOp<ir_transient_create>, branch: CatnipIrBranch): void {
-        branch.func.createTransientVariable(ir.inputs.variable);
-    }
 }

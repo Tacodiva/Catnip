@@ -1,8 +1,9 @@
-import { SpiderFunctionDefinition, SpiderLocalReference, SpiderNumberType } from "wasm-spider";
+import { SpiderFunction, SpiderFunctionDefinition, SpiderLocalReference, SpiderModule, SpiderNumberType } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
-import { CatnipIrBranch } from "./CatnipIrBranch";
+import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
+import { CatnipIr as CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 
 /** How does a CatnipIrTransientValue get its value at the begining of a function */
 export enum CatnipIrTransientVariableType {
@@ -35,10 +36,29 @@ interface TransientVariableLocalInfo extends TransientVariableInfoBase {
 
 type TransientVariableInfo = TransientVariableStackInfo | TransientVariableParameterInfo | TransientVariableLocalInfo;
 
+export interface CatnipReadonlyIrFunction {
+    readonly ir: CatnipReadonlyIr;
+    readonly compiler: CatnipCompiler;
+    readonly spiderModule: SpiderModule;
+    readonly spiderFunction: SpiderFunctionDefinition;
+    readonly spiderThreadParam: SpiderLocalReference;
+    
+    readonly body: CatnipReadonlyIrBranch;
+
+    readonly needsFunctionTableIndex: boolean;
+    readonly functionTableIndex: number;
+    
+    registerCaller(caller: CatnipReadonlyIrFunction): void;
+    setFunctionTableIndex(index: number): void;
+
+    createTransientVariable(variable: CatnipIrTransientVariable): void;
+    useTransientVariable(variable: CatnipIrTransientVariable): void;
+}
 
 export class CatnipIrFunction {
 
-    public readonly compiler: CatnipCompiler;
+    public readonly ir: CatnipIr;
+    public get compiler(): CatnipCompiler { return this.ir.compiler; }
     public get spiderModule() { return this.compiler.spiderModule; }
 
     public readonly spiderFunction: SpiderFunctionDefinition;
@@ -47,7 +67,13 @@ export class CatnipIrFunction {
     public readonly body: CatnipIrBranch;
 
     public needsFunctionTableIndex: boolean;
-    public functionTableIndex: number;
+
+    private _functionTableIndex: number;
+    public get functionTableIndex(): number {
+        if (this._functionTableIndex === -1)
+            throw new Error("No function table index assigned.");
+        return this._functionTableIndex;
+    }
 
     private _transientVariables: Map<CatnipIrTransientVariable, TransientVariableInfo>;
 
@@ -66,8 +92,9 @@ export class CatnipIrFunction {
 
     private _callers: Set<CatnipIrFunction>;
 
-    public constructor(compiler: CatnipCompiler, needsFunctionTableIndex: boolean, branch?: CatnipIrBranch) {
-        this.compiler = compiler;
+    /** @internal */
+    constructor(ir: CatnipIr, needsFunctionTableIndex: boolean, branch?: CatnipIrBranch) {
+        this.ir = ir;
         this.spiderFunction = this.spiderModule.createFunction();
         this.spiderThreadParam = this.spiderFunction.addParameter(SpiderNumberType.i32);
 
@@ -83,7 +110,7 @@ export class CatnipIrFunction {
         }
 
         this.needsFunctionTableIndex = needsFunctionTableIndex;
-        this.functionTableIndex = 0;
+        this._functionTableIndex = -1;
 
         this._transientVariables = new Map();
         this._stackSize = 0;
@@ -159,5 +186,11 @@ export class CatnipIrFunction {
                 continue;
             caller.useTransientVariable(value);
         }
+    }
+
+    public setFunctionTableIndex(index: number) {
+        if (this._functionTableIndex !== -1)
+            CatnipCompilerLogger.warn("Set function table index twice.");
+        this._functionTableIndex = index;
     }
 }

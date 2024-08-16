@@ -3,7 +3,6 @@ import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrTransientVariable } from "../../../compiler/CatnipIrTransientVariable";
 import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
-import { CatnipIrBranch } from "../../CatnipIrBranch";
 
 export type ir_transient_store_inputs = { variable: CatnipIrTransientVariable };
 
@@ -14,9 +13,5 @@ export const ir_transient_store = new class extends CatnipIrCommandOpType<ir_tra
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<ir_transient_store_inputs, {}>): void {
         ctx.emitWasm(SpiderOpcodes.local_set, ctx.func.getTransientVariableRef(ir.inputs.variable));
-    }
-
-    public analyzePreEmit(ir: CatnipIrOp<ir_transient_store_inputs>, branch: CatnipIrBranch): void {
-        branch.func.useTransientVariable(ir.inputs.variable);
     }
 }

@@ -161,16 +161,10 @@ export class CatnipProject {
         const target = this.runtimeModule.functions.catnip_target_new(this.runtimeInstance.ptr, sprite);
         const thread = this.runtimeModule.functions.catnip_thread_new(target, 1);
 
-        console.log("1");
-        console.time("1");
-        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-        console.timeEnd("1");
-        console.log("2");
-        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-        console.log("3");
-        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-        console.log("4");
-        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-
+        for (let tick = 1; tick <= 10; tick++) {
+            console.time(""+tick);
+            this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
+            console.timeEnd(""+tick);
+        }
     }
 }

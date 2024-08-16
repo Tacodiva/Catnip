@@ -1,10 +1,18 @@
 import { CatnipCompilerStack } from "../compiler/CatnipCompilerStack";
 import { CatnipCompilerLogger } from "../compiler/CatnipCompilerLogger";
-import { CatnipIrFunction } from "../compiler/CatnipIrFunction";
-import { CatnipIrOp } from "./CatnipIrOp";
+import { CatnipIrFunction, CatnipReadonlyIrFunction } from "../compiler/CatnipIrFunction";
+import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 
+export interface CatnipReadonlyIrBranch {
+    readonly isLoop: boolean;
+    readonly head: CatnipReadonlyIrOp | null;
+    readonly tail: CatnipReadonlyIrOp | null;
+    readonly func: CatnipReadonlyIrFunction;
 
-export class CatnipIrBranch {
+    isYielding(visited?: Set<CatnipIrBranch>): boolean;
+}
+
+export class CatnipIrBranch implements CatnipReadonlyIrBranch {
 
     private _func: CatnipIrFunction | null;
 
@@ -122,19 +130,10 @@ export class CatnipIrBranch {
         return lastOp.type.doesContinue(lastOp);
     }
 
-    public analyzePreEmit(visited: Set<CatnipIrBranch>) {
-        if (visited.has(this)) return;
-        visited.add(this);
-        let op = this.head;
-        while (op !== null) {
-            op.type.analyzePreEmit(op, this, visited);
-            op = op.next;
-        }
-    }
-
     public pushOp(op: CatnipIrOp) {
         CatnipCompilerLogger.assert(op.next === null && op.prev === null);
         CatnipCompilerLogger.assert(this.tail === null || this.tail.next === null);
+        CatnipCompilerLogger.assert(op.branch === this);
 
         if (this.head === null)
             this.head = op;

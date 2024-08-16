@@ -7,11 +7,21 @@ import { CatnipIrFunction } from "./CatnipIrFunction";
 import { ir_thread_terminate } from "./ir/core/thread_terminate";
 import { CatnipIrBranch } from "./CatnipIrBranch";
 import { CatnipCompilerConfig } from "./CatnipCompilerConfig";
+import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
+import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
+import { LoopPassVariableInlining } from "./passes/LoopPassVariableInlining";
+import { PostLoopPassFunctionIndexAllocation } from "./passes/PostLoopPassFunctionIndexAllocation";
+import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
+import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreLoopPassAnalyzeFunctionCallers";
+import { CatnipCompilerState } from './CatnipCompilerState';
+import { PostLoopPassTransientVariablePropagation } from "./passes/PostLoopPassTransientVariablePropagation";
 
 export class CatnipCompiler {
     public readonly project: CatnipProject;
     public readonly module: CatnipProjectModule;
     public readonly config: CatnipCompilerConfig;
+
+    private readonly _passes: Map<CatnipCompilerPassStage, CatnipCompilerPass[]>;
 
     public get spiderModule() { return this.module.spiderModule; }
 
@@ -19,52 +29,53 @@ export class CatnipCompiler {
         this.project = project;
         this.config = config;
         this.module = new CatnipProjectModule(this.project.runtimeModule);
+        this._passes = new Map();
+
+        this.addPass(PreLoopPassAnalyzeFunctionCallers);
+
+        this.addPass(LoopPassVariableInlining);
+        
+        this.addPass(PostLoopPassTransientVariablePropagation);
+        this.addPass(PostLoopPassFunctionIndexAllocation);
+    }
+
+    public addPass(pass: CatnipCompilerPass) {
+        const stage = pass.stage;
+        let passes = this._passes.get(stage);
+
+        if (passes === undefined) {
+            passes = [];
+            this._passes.set(stage, passes);
+        }
+
+        passes.push(pass);
+        passes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+    }
+
+    private _runPass(ir: CatnipReadonlyIr, stage: CatnipCompilerPassStage) {
+        for (const pass of this._passes.get(stage) ?? []) {
+            pass.run(ir);
+        }
     }
 
     public compile(script: CatnipScript) {
-
-        const irFunc = new CatnipIrFunction(this, true);
-        const irGenCtx = new CatnipCompilerIrGenContext(this, irFunc);
+        const ir = new CatnipIr(this);
+        const irGenCtx = new CatnipCompilerIrGenContext(ir);
 
         irGenCtx.emitCommands(script.commands);
         irGenCtx.emitIr(ir_thread_terminate, {}, {});
 
-        this._allocateFunctionIndices(irGenCtx.functions);
-        this.module.createFunctionsElement(irGenCtx.functions);
-
-        const preEmitVisied: Set<CatnipIrBranch> = new Set();
-        for (const func of irGenCtx.functions)
-            func.body.analyzePreEmit(preEmitVisied);
+        this._runPass(ir, CatnipCompilerStage.PASS_PRE_ANALYSIS_LOOP);
+        this._runPass(ir, CatnipCompilerStage.PASS_ANALYSIS_LOOP);
+        this._runPass(ir, CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP);
         
-        console.log(irGenCtx.stringifyIr());
+        console.log(""+ir);
 
-        for (const func of irGenCtx.functions) {
+        for (const func of irGenCtx.ir.functions) {
             const wasmGenCtx = new CatnipCompilerWasmGenContext(func);
             wasmGenCtx.emitOps(func.body);
         }
 
-        this.spiderModule.exportFunction("testFunction", irFunc.spiderFunction);
-    }
-
-    private _allocateFunctionIndices(functions: CatnipIrFunction[]) {
-        const needsFunctionIndices = functions.filter(fn => fn.needsFunctionTableIndex);
-        let index = 1;
-
-        for (const fn of needsFunctionIndices) {
-            fn.functionTableIndex = index++;
-        } 
-    }
-
-    // TODO This is a temporary crapy solution
-    private takenIndices: Set<number> = new Set();
-    private _allocateFunctionTableIndex(): number {
-        for (let i = 1; i < 99999; i++) {
-            if (!this.takenIndices.has(i) &&
-                !this.module.runtimeModule.indirectFunctionTable.get(i)) {
-                this.takenIndices.add(i);
-                return i;
-            }
-        }
-        throw new Error();
+        this.spiderModule.exportFunction("testFunction", ir.entrypoint.spiderFunction);
     }
 }

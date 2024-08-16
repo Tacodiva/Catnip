@@ -2,10 +2,9 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrTransientVariable } from "../../../compiler/CatnipIrTransientVariable";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
 import { CatnipValueFlags } from "../../types";
-import { CatnipIrBranch } from "../../CatnipIrBranch";
 
 export type ir_transient_load_inputs = { variable: CatnipIrTransientVariable };
 
@@ -20,9 +19,5 @@ export const ir_transient_load = new class extends CatnipIrInputOpType<ir_transi
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<ir_transient_load_inputs>): void {
         ctx.emitWasm(SpiderOpcodes.local_get, ctx.func.getTransientVariableRef(ir.inputs.variable));
-    }
-
-    public analyzePreEmit(ir: CatnipIrOp<ir_transient_load_inputs>, branch: CatnipIrBranch): void {
-        branch.func.useTransientVariable(ir.inputs.variable);
     }
 }
