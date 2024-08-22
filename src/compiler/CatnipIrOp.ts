@@ -6,7 +6,7 @@ import { CatnipValueFlags, CatnipValueFormat } from "./types";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranches = Record<string, CatnipIrBranch | null>;
-export type CatnipReadonlyIrOpBranches<TBranches extends CatnipIrOpBranches> = {
+export type CatnipReadonlyIrOpBranches<TBranches extends CatnipIrOpBranches = CatnipIrOpBranches> = {
     [K in keyof TBranches]: CatnipReadonlyIrBranch | null;
 }
 
@@ -24,6 +24,7 @@ export interface CatnipReadonlyIrOp<
 
     readonly next: CatnipReadonlyIrOp | null;
     readonly prev: CatnipReadonlyIrOp | null;
+    readonly removed?: boolean;
 }
 
 export interface CatnipIrOp<
@@ -34,12 +35,14 @@ export interface CatnipIrOp<
     readonly type: TOpType;
     readonly inputs: TInputs;
     readonly branches: TBranches;
-    branch: CatnipReadonlyIrBranch;
+    branch: CatnipIrBranch;
 
     operands: CatnipCompilerStackElement[];
 
     next: CatnipIrOp | null;
     prev: CatnipIrOp | null;
+    
+    removed?: boolean;
 }
 
 export type CatnipIrInputOp<
@@ -79,14 +82,11 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         const branchNames = Object.keys(ir.branches);
         if (branchNames.length === 0) return true;
         for (const branchName of branchNames) {
-            if (this.doesBranchContinue(branchName, ir))
+            const branch = ir.branches[branchName];
+            if (branch === null || branch.doesContinue())
                 return true;
         }
         return false;
-    }
-
-    public doesBranchContinue(branch: keyof TBranches, ir: CatnipIrOp<TInputs, TBranches>): boolean {
-        return true;
     }
 
     public applyState(ir: CatnipIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }

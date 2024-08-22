@@ -4,7 +4,7 @@ import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
 export const PostLoopPassFunctionIndexAllocation: CatnipCompilerPass = {
 
-    stage: CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP,
+    stage: CatnipCompilerStage.PASS_PRE_WASM_GEN,
 
     run(ir: CatnipReadonlyIr): void {
         const needsFunctionIndices = ir.functions.filter(fn => fn.needsFunctionTableIndex);

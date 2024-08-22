@@ -14,19 +14,19 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: repeat_inputs): void {
         const loopCount = ctx.emitTransientCreate(CatnipValueFormat.i32, "Loop Count");
         ctx.emitInput(inputs.count, CatnipValueFormat.i32, CatnipValueFlags.NUMBER);
-        ctx.emitIr(ir_transient_store, { variable: loopCount }, {});
+        ctx.emitIr(ir_transient_store, { transient: loopCount }, {});
         ctx.emitIr(
             ir_branch, {},
             {
                 branch: ctx.emitBranch((loopHead) => {
-                    ctx.emitIr(ir_transient_load, { variable: loopCount }, {});
+                    ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
                     ctx.emitIr(ir_const, { value: "1", format: CatnipValueFormat.i32, flags: CatnipValueFlags.ANY }, {});
                     ctx.emitIr(ir_sub, { type: SpiderNumberType.i32 }, {});
-                    ctx.emitIr(ir_transient_store, { variable: loopCount }, {});
+                    ctx.emitIr(ir_transient_store, { transient: loopCount }, {});
 
                     ctx.emitCommands(inputs.loop);
 
-                    ctx.emitIr(ir_transient_load, { variable: loopCount }, {});
+                    ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
                     ctx.emitConditionalJump(loopHead);
                 })
             }

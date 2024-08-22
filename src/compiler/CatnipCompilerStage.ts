@@ -1,13 +1,15 @@
 
 export enum CatnipCompilerStage {
-    IR_GENERATION,
+    IR_GEN,
     PASS_PRE_ANALYSIS_LOOP,
     PASS_ANALYSIS_LOOP,
     PASS_POST_ANALYSIS_LOOP,
-    WASM_GENERATION,
+    PASS_PRE_WASM_GEN,
+    WASM_GEN,
 }
 
 export type CatnipCompilerPassStage = 
     CatnipCompilerStage.PASS_PRE_ANALYSIS_LOOP |
     CatnipCompilerStage.PASS_ANALYSIS_LOOP |
-    CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP;
+    CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP |
+    CatnipCompilerStage.PASS_PRE_WASM_GEN;

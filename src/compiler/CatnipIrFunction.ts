@@ -44,6 +44,7 @@ export interface CatnipReadonlyIrFunction {
     readonly spiderThreadParam: SpiderLocalReference;
     
     readonly body: CatnipReadonlyIrBranch;
+    readonly name: string;
 
     readonly needsFunctionTableIndex: boolean;
     readonly functionTableIndex: number;
@@ -55,7 +56,7 @@ export interface CatnipReadonlyIrFunction {
     useTransientVariable(variable: CatnipIrTransientVariable): void;
 }
 
-export class CatnipIrFunction {
+export class CatnipIrFunction implements CatnipReadonlyIrFunction {
 
     public readonly ir: CatnipIr;
     public get compiler(): CatnipCompiler { return this.ir.compiler; }
@@ -64,6 +65,7 @@ export class CatnipIrFunction {
     public readonly spiderFunction: SpiderFunctionDefinition;
     public readonly spiderThreadParam: SpiderLocalReference;
 
+    public name: string;
     public readonly body: CatnipIrBranch;
 
     public needsFunctionTableIndex: boolean;
@@ -93,10 +95,12 @@ export class CatnipIrFunction {
     private _callers: Set<CatnipIrFunction>;
 
     /** @internal */
-    constructor(ir: CatnipIr, needsFunctionTableIndex: boolean, branch?: CatnipIrBranch) {
+    constructor(ir: CatnipIr, needsFunctionTableIndex: boolean, name: string, branch?: CatnipIrBranch) {
         this.ir = ir;
         this.spiderFunction = this.spiderModule.createFunction();
         this.spiderThreadParam = this.spiderFunction.addParameter(SpiderNumberType.i32);
+
+        this.name = name;
 
         if (branch === undefined) {
             this.body = new CatnipIrBranch(this);
@@ -124,7 +128,6 @@ export class CatnipIrFunction {
 
         if (variable.type === CatnipIrTransientVariableType.PARAMETER) {
             this._parameters.push(variable);
-
         }
 
         for (const caller of this._callers)

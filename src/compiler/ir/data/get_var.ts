@@ -29,7 +29,7 @@ export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_input
 
         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("variable_table"));
-        ctx.emitWasm(SpiderOpcodes.i64_load, 3, variableOffset);
+        ctx.emitWasm(SpiderOpcodes.f64_load, 3, variableOffset);
     }
 }
 

@@ -127,7 +127,10 @@ export class CatnipCompilerWasmGenContext {
         return this.popExpression();
     }
 
-    public emitBranchInline(branch: CatnipIrBranch) {
+    public emitBranchInline(branch: CatnipIrBranch | null) {
+        if (branch === null) 
+            return;
+        
         if (branch.isFuncBody) {
             const targetFunc = branch.func;
 

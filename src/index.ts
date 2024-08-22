@@ -42,7 +42,7 @@ export async function run(runtimeModule: WebAssembly.Module) {
                         //         msg: CatnipOps.core_const.create({ value: "A" })
                         //     }),
                         //     CatnipOps.control_if_else.create({
-                        //         condition: CatnipOps.core_const.create({ value: 1 }),
+                        //         condition: CatnipOps.core_const.create({ value: 0 }),
                         //         true_branch: [
                         //             CatnipOps.core_yield.create({}),
                         //             CatnipOps.core_log.create({

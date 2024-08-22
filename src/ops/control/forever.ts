@@ -11,7 +11,7 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
             {
                 branch: ctx.emitBranch((loopHead) => {
                     ctx.emitCommands(inputs.loop);
-                    ctx.emitJump(loopHead, false);
+                    ctx.emitJump(loopHead);
                 })
             }
         );

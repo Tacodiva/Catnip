@@ -21,14 +21,18 @@ export class CatnipIr implements CatnipReadonlyIr {
     private readonly _functions: CatnipIrFunction[];
     public get functions(): ReadonlyArray<CatnipIrFunction> { return this._functions; }
 
-    public constructor(compiler: CatnipCompiler) {
+    public constructor(compiler: CatnipCompiler, funcName: string) {
         this.compiler = compiler;
-        this.entrypoint = new CatnipIrFunction(this, true);
+        this.entrypoint = new CatnipIrFunction(this, true, funcName);
         this._functions = [this.entrypoint];
     }
 
     public createFunction(needsFunctionTableIndex: boolean, branch?: CatnipIrBranch): CatnipIrFunction {
-        const func = new CatnipIrFunction(this, needsFunctionTableIndex, branch);
+        const func = new CatnipIrFunction(
+            this, needsFunctionTableIndex,
+            `${this.entrypoint.name}_func${this._functions.length}`,
+            branch
+        );
         this._functions.push(func);
         return func;
     }
@@ -58,10 +62,6 @@ export class CatnipIr implements CatnipReadonlyIr {
 
             op = op.next;
         }
-    }
-
-    private _getFuncName(func: CatnipIrFunction) {
-        return "Func" + this.functions.indexOf(func);
     }
 
     public toString(): string {
@@ -109,7 +109,7 @@ export class CatnipIr implements CatnipReadonlyIr {
                         } else {
                             string += " -> ";
                             if (!subbranch.isFuncBody) string += "[INVALID] ";
-                            string += this._getFuncName(subbranch.func);
+                            string += subbranch.func.name;
                             string += "\n";
                         }
                     }
@@ -124,7 +124,7 @@ export class CatnipIr implements CatnipReadonlyIr {
         }
 
         for (const func of this.functions) {
-            string += this._getFuncName(func);
+            string += func.name;
             string += ": ";
             if (func.body.isYielding()) string += "(yielding) ";
             if (func.stackSize !== 0) string += `(${func.stackSize} byte stack) `;

@@ -3,9 +3,7 @@ import { CatnipScript } from "../runtime/CatnipScript";
 import { CatnipProjectModule } from "./CatnipProjectModule";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
-import { CatnipIrFunction } from "./CatnipIrFunction";
 import { ir_thread_terminate } from "./ir/core/thread_terminate";
-import { CatnipIrBranch } from "./CatnipIrBranch";
 import { CatnipCompilerConfig } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
@@ -13,7 +11,6 @@ import { LoopPassVariableInlining } from "./passes/LoopPassVariableInlining";
 import { PostLoopPassFunctionIndexAllocation } from "./passes/PostLoopPassFunctionIndexAllocation";
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreLoopPassAnalyzeFunctionCallers";
-import { CatnipCompilerState } from './CatnipCompilerState';
 import { PostLoopPassTransientVariablePropagation } from "./passes/PostLoopPassTransientVariablePropagation";
 
 export class CatnipCompiler {
@@ -59,7 +56,7 @@ export class CatnipCompiler {
     }
 
     public compile(script: CatnipScript) {
-        const ir = new CatnipIr(this);
+        const ir = new CatnipIr(this, "main");
         const irGenCtx = new CatnipCompilerIrGenContext(ir);
 
         irGenCtx.emitCommands(script.commands);
@@ -68,6 +65,7 @@ export class CatnipCompiler {
         this._runPass(ir, CatnipCompilerStage.PASS_PRE_ANALYSIS_LOOP);
         this._runPass(ir, CatnipCompilerStage.PASS_ANALYSIS_LOOP);
         this._runPass(ir, CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP);
+        this._runPass(ir, CatnipCompilerStage.PASS_PRE_WASM_GEN);
         
         console.log(""+ir);
 

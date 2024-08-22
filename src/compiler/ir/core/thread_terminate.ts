@@ -1,6 +1,6 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType } from "../../CatnipIrOp";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 
@@ -15,5 +15,9 @@ export const ir_thread_terminate = new class extends CatnipIrCommandOpType<{}> {
         ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("status"));
 
         ctx.emitWasm(SpiderOpcodes.return);
+    }
+
+    public doesContinue(ir: CatnipIrOp<{}, {}, CatnipIrOpType<{}, {}>>): boolean {
+        return false;
     }
 }

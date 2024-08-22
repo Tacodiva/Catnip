@@ -15,10 +15,18 @@ export const ir_if_else = new class extends CatnipIrCommandOpType<{}, if_else_ir
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<{}, if_else_ir_branches>): void {
         if (ir.branches.false_branch !== null) {
-            ctx.emitWasm(SpiderOpcodes.if,
-                ctx.emitBranch(ir.branches.true_branch),
-                ctx.emitBranch(ir.branches.false_branch)
-            );
+
+            if (ir.branches.true_branch.doesContinue()) {
+                ctx.emitWasm(SpiderOpcodes.if,
+                    ctx.emitBranch(ir.branches.true_branch),
+                    ctx.emitBranch(ir.branches.false_branch)
+                );
+            } else {
+                ctx.emitWasm(SpiderOpcodes.if,
+                    ctx.emitBranch(ir.branches.true_branch),
+                );
+                ctx.emitBranchInline(ir.branches.false_branch);
+            }
         } else {
             ctx.emitWasm(SpiderOpcodes.if,
                 ctx.emitBranch(ir.branches.true_branch)

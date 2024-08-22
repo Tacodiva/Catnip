@@ -36,6 +36,8 @@ export class CatnipCompilerStack implements CatnipCompilerReadonlyStack {
 
     private readonly _stack: CatnipCompilerStackElement[];
 
+    public get length() { return this._stack.length; }
+
     public constructor() {
         this._stack = [];
     }

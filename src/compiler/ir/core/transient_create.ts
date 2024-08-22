@@ -3,7 +3,7 @@ import { CatnipIrTransientVariable } from "../../../compiler/CatnipIrTransientVa
 import { CatnipIrBranch } from "../../CatnipIrBranch";
 import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 
-export type ir_transient_create = { variable: CatnipIrTransientVariable };
+export type ir_transient_create = { transient: CatnipIrTransientVariable };
 
 export const ir_transient_create = new class extends CatnipIrCommandOpType<ir_transient_create> {
     public constructor() { super("core_transient_create"); }

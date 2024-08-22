@@ -60,7 +60,7 @@ export const ir_set_var = new class extends CatnipIrCommandOpType<set_var_ir_inp
 
             case CatnipValueFormat.VALUE_BOXED: {
                 ctx.emitWasm(SpiderOpcodes.local_get, valueLocal.ref);
-                ctx.emitWasm(SpiderOpcodes.i64_store, 3, variableOffset);
+                ctx.emitWasm(SpiderOpcodes.f64_store, 3, variableOffset);
                 break;
             }
         }

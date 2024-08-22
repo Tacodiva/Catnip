@@ -1,11 +1,11 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType } from "../../CatnipIrOp";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 import { CatnipIrBranch } from "../../CatnipIrBranch";
 
-type yield_ir_inptus = { status: CatnipWasmEnumThreadStatus, continue?: boolean };
+type yield_ir_inptus = { status: CatnipWasmEnumThreadStatus };
 type yield_ir_branches = { branch: CatnipIrBranch };
 
 export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus, yield_ir_branches> {
@@ -31,12 +31,11 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
             false, "Cannot yield to a function with parameters."
         );
 
+        if (ir.inputs.status === CatnipWasmEnumThreadStatus.RUNNING && ctx.compiler.config.enable_tail_call) {
+            ctx.emitBranchInline(ir.branches.branch);
+        }
 
         ctx.prepareStackForCall(targetFunc, true);
-
-        // if (ir.inputs.status === CatnipWasmEnumThreadStatus.RUNNING) {
-        // TODO use a return call insteasd
-        // }
 
         if (ir.inputs.status !== CatnipWasmEnumThreadStatus.RUNNING) {
             ctx.emitWasmGetThread();
@@ -54,9 +53,8 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
     public isYielding(): boolean {
         return true;
     }
-
-    public doesBranchContinue(branch: "branch", ir: CatnipIrOp<yield_ir_inptus, yield_ir_branches>): boolean {
-        if (ir.inputs.continue === undefined) return true;
-        return ir.inputs.continue;
+    
+    public doesContinue(ir: CatnipIrOp<yield_ir_inptus, yield_ir_branches, CatnipIrOpType<yield_ir_inptus, yield_ir_branches>>): boolean {
+        return false;
     }
 }

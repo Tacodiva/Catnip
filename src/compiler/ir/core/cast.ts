@@ -38,9 +38,10 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         switch (srcFormat) {
             case CatnipValueFormat.VALUE_BOXED: {
                 const getF64 = () => {
-                    const value = ctx.createLocal(SpiderNumberType.i64);
+                    const value = ctx.createLocal(SpiderNumberType.f64);
                     ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
 
+                    ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
                     ctx.emitWasm(SpiderOpcodes.i64_const, 32);
                     ctx.emitWasm(SpiderOpcodes.i64_shr_u);
                     ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
@@ -50,6 +51,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     // Executed if the value is a string
                     ctx.pushExpression();
                     ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
                     ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
                     ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
                     const trueExpr = ctx.popExpression();
@@ -57,7 +59,6 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     // Executed if the value is a double already
                     ctx.pushExpression();
                     ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
-                    ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
                     const falseExpr = ctx.popExpression();
 
                     ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
@@ -66,6 +67,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
                 const getHString = () => {
                     const value = ctx.createLocal(SpiderNumberType.i64);
+                    ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
                     ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
                     
                     ctx.emitWasm(SpiderOpcodes.i64_const, 32);

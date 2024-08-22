@@ -1,7 +1,7 @@
 import { CatnipCompilerStack } from "../compiler/CatnipCompilerStack";
 import { CatnipCompilerLogger } from "../compiler/CatnipCompilerLogger";
 import { CatnipIrFunction, CatnipReadonlyIrFunction } from "../compiler/CatnipIrFunction";
-import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
+import { CatnipIrOp, CatnipIrOpBranches, CatnipIrOpInputs, CatnipIrOpType, CatnipReadonlyIrOp } from "./CatnipIrOp";
 
 export interface CatnipReadonlyIrBranch {
     readonly isLoop: boolean;
@@ -10,6 +10,38 @@ export interface CatnipReadonlyIrBranch {
     readonly func: CatnipReadonlyIrFunction;
 
     isYielding(visited?: Set<CatnipIrBranch>): boolean;
+
+    insertOpFirst<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(type: TOpType, inputs: TInputs, branches: TBranches): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
+
+    insertOpLast<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(type: TOpType, inputs: TInputs, branches: TBranches): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
+
+    replaceOp<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(op: CatnipReadonlyIrOp, type: TOpType, inputs: TInputs, branches: TBranches): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
+
+    insertOpBefore<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(type: TOpType, inputs: TInputs, branches: TBranches, after: CatnipReadonlyIrOp): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
+
+    insertOpAfter<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(before: CatnipReadonlyIrOp, type: TOpType, inputs: TInputs, branches: TBranches): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
+
+    removeOp(op: CatnipReadonlyIrOp): void;
 }
 
 export class CatnipIrBranch implements CatnipReadonlyIrBranch {
@@ -86,9 +118,6 @@ export class CatnipIrBranch implements CatnipReadonlyIrBranch {
         }
 
         for (const branchName of lastOpBranchNames) {
-            if (!lastOp.type.doesBranchContinue(branchName, lastOp))
-                continue;
-
             let branch = lastOp.branches[branchName];
 
             if (branch === null) {
@@ -140,11 +169,174 @@ export class CatnipIrBranch implements CatnipReadonlyIrBranch {
 
         op.prev = this.tail;
         op.next = null; // should be unecessary
-        
+
         if (this.tail !== null)
             this.tail.next = op;
 
         this.tail = op;
+    }
+
+    public insertOpFirst<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(type: TOpType, inputs: TInputs, branches: TBranches): CatnipIrOp<TInputs, TBranches, TOpType> {
+        const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
+            type, inputs, branches,
+
+            branch: this,
+            next: this.head,
+            prev: null,
+
+            operands: [],
+
+            removed: false
+        };
+
+        if (this.head === null) {
+            this.tail = op;
+        } else {
+            this.head.prev = op;
+        }
+        
+        this.head = op;
+
+        return op;
+    }
+
+    public insertOpLast<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(type: TOpType, inputs: TInputs, branches: TBranches): CatnipIrOp<TInputs, TBranches, TOpType> {
+
+        const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
+            type, inputs, branches,
+
+            branch: this,
+            next: null,
+            prev: this.tail,
+
+            operands: [],
+
+            removed: false
+        };
+
+        if (this.tail === null) {
+            this.head = op;
+        } else {
+            this.tail.next = op;
+        }
+        
+        this.tail = op;
+
+        return op;
+    }
+
+    public replaceOp<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(op: CatnipIrOp, type: TOpType, inputs: TInputs, branches: TBranches): CatnipIrOp<TInputs, TBranches, TOpType> {
+        const newOp = this.insertOpAfter(op, type, inputs, branches);
+        this.removeOp(op);
+        return newOp;
+    }
+
+    public insertOpBefore<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(type: TOpType, inputs: TInputs, branches: TBranches, after: CatnipIrOp): CatnipIrOp<TInputs, TBranches, TOpType> {
+
+        CatnipCompilerLogger.assert(after.branch === this, false);
+        if (after.branch !== this) {
+            return after.branch.insertOpBefore(type, inputs, branches, after);
+        }
+
+        const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
+            type, inputs, branches,
+
+            branch: this,
+            next: after,
+            prev: after.prev,
+
+            operands: [],
+
+            removed: false
+        };
+
+        if (after.prev === null) {
+            CatnipCompilerLogger.assert(after === this.head);
+            this.head = op;
+        } else {
+            after.prev.next = op;
+        }
+
+        after.prev = op;
+
+        return op;
+    }
+
+    public insertOpAfter<
+        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
+        TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
+        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
+    >(before: CatnipIrOp, type: TOpType, inputs: TInputs, branches: TBranches): CatnipIrOp<TInputs, TBranches, TOpType> {
+
+        CatnipCompilerLogger.assert(before.branch === this, false);
+        if (before.branch !== this) {
+            return before.branch.insertOpAfter(before, type, inputs, branches);
+        }
+
+        const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
+            type, inputs, branches,
+
+            branch: this,
+            next: before.next,
+            prev: before,
+
+            operands: [],
+
+            removed: false
+        };
+
+        if (before.next === null) {
+            CatnipCompilerLogger.assert(before === this.tail);
+            this.tail = op;
+        } else {
+            before.next.prev = op;
+        }
+
+        before.next = op;
+
+        return op;
+    }
+
+    public removeOp(op: CatnipIrOp): void {
+
+        CatnipCompilerLogger.assert(op.branch === this, false);
+        if (op.branch !== this) {
+            return op.branch.removeOp(op);
+        }
+
+        if (op.prev === null) {
+            CatnipCompilerLogger.assert(op === this.head);
+            this.head = op.next;
+        } else {
+            op.prev.next = op.next;
+        }
+
+        if (op.next === null) {
+            CatnipCompilerLogger.assert(op === this.tail);
+            this.tail = op.prev;
+        } else {
+            op.next.prev = op.prev;
+        }
+
+        op.removed = true;
+        op.next = null;
+        op.prev = null;
     }
 
 }
