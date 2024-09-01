@@ -54,7 +54,7 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
         return true;
     }
     
-    public doesContinue(ir: CatnipIrOp<yield_ir_inptus, yield_ir_branches, CatnipIrOpType<yield_ir_inptus, yield_ir_branches>>): boolean {
+    public doesContinue(): boolean {
         return false;
     }
 }

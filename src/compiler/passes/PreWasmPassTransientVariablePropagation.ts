@@ -6,7 +6,7 @@ import { ir_transient_store } from "../ir/core/transient_store";
 import { ir_transient_tee } from "../ir/core/transient_tee";
 import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
-export const PostLoopPassTransientVariablePropagation: CatnipCompilerPass = {
+export const PreWasmPassTransientVariablePropagation: CatnipCompilerPass = {
 
     stage: CatnipCompilerStage.PASS_PRE_WASM_GEN,
 

@@ -10,7 +10,6 @@ export const PreLoopPassAnalyzeFunctionCallers: CatnipCompilerPass = {
         ir.forEachOp(op => {
             for (const subbranchName in op.branches) {
                 const subbranch = op.branches[subbranchName];
-                if (subbranch === null) continue;
 
                 if (op.branch.func !== subbranch.func) {
                     subbranch.func.registerCaller(op.branch.func);

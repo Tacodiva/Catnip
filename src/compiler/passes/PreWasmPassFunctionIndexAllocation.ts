@@ -2,7 +2,7 @@ import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipReadonlyIr } from "../CatnipIr";
 import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
-export const PostLoopPassFunctionIndexAllocation: CatnipCompilerPass = {
+export const PreWasmPassFunctionIndexAllocation: CatnipCompilerPass = {
 
     stage: CatnipCompilerStage.PASS_PRE_WASM_GEN,
 

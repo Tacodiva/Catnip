@@ -6,6 +6,8 @@ import { WasmPtr, WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipRuntimeModule } from "./CatnipRuntimeModule";
 import { CatnipScript } from "./CatnipScript";
 import { CatnipSprite, CatnipSpriteDesc, CatnipSpriteID } from "./CatnipSprite";
+import { CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
+import { CatnipWasmUnionValue } from "../wasm-interop/CatnipWasmStructValue";
 
 export interface CatnipProjectDesc {
     sprites: CatnipSpriteDesc[];
@@ -114,7 +116,8 @@ export class CatnipProject {
         if (this._recompileScripts.size === 0) return;
 
         const compiler = new CatnipCompiler(this, {
-            enable_tail_call: true
+            enable_tail_call: true,
+            enable_optimization_variable_inlining: true
         });
 
         for (const script of this._recompileScripts) {
@@ -157,14 +160,14 @@ export class CatnipProject {
             catnip: this.runtimeModule.functions
         });
 
-        const sprite = this._sprites.get("sprite")!.structWrapper.ptr;
-        const target = this.runtimeModule.functions.catnip_target_new(this.runtimeInstance.ptr, sprite);
-        const thread = this.runtimeModule.functions.catnip_thread_new(target, 1);
+        const sprite = this._sprites.get("sprite")!;
+        const thread = this.runtimeModule.functions.catnip_thread_new(sprite.defaultTarget.structWrapper.ptr, 1);
 
         for (let tick = 1; tick <= 10; tick++) {
             console.time(""+tick);
             this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
             console.timeEnd(""+tick);
+            console.log("nth = " + sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(this.getSprite("sprite")!.getVariable("nth")!._index).getMemberWrapper(0).get());
         }
     }
 }

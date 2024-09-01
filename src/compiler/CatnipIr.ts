@@ -55,7 +55,6 @@ export class CatnipIr implements CatnipReadonlyIr {
 
             for (const subbranchName in op.branches) {
                 const subbranch = op.branches[subbranchName];
-                if (subbranch === null) continue;
                 if (subbranch.func !== branch.func) continue;
                 this._forEachOpInBranch(lambda, subbranch, visited);
             }
@@ -97,9 +96,7 @@ export class CatnipIr implements CatnipReadonlyIr {
                         string += "\n  ";
                         string += indent;
                         string += subbranchName;
-                        if (subbranch === null) {
-                            string += ": null\n";
-                        } else if (subbranch.func === branch.func && !subbranch.isFuncBody) {
+                        if (subbranch.func === branch.func && !subbranch.isFuncBody) {
                             if (branches.has(subbranch)) {
                                 string += ": ??\n";
                             } else {

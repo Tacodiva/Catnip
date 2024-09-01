@@ -11,7 +11,7 @@ export type ir_transient_tee_inputs = { transient: CatnipIrTransientVariable };
 export const ir_transient_tee = new class extends CatnipIrInputOpType<ir_transient_tee_inputs> {
     public constructor() { super("core_transient_tee"); }
 
-    public getOperandCount(): number { return 0; }
+    public getOperandCount(): number { return 1; }
 
     public getResult(inputs: ir_transient_tee_inputs, branches: {}, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue {
         return operands[0];

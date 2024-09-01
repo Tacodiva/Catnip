@@ -10,6 +10,7 @@ export interface CatnipReadonlyIrBranch {
     readonly func: CatnipReadonlyIrFunction;
 
     isYielding(visited?: Set<CatnipIrBranch>): boolean;
+    doesContinue(): boolean;
 
     insertOpFirst<
         TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
@@ -120,16 +121,10 @@ export class CatnipIrBranch implements CatnipReadonlyIrBranch {
         for (const branchName of lastOpBranchNames) {
             let branch = lastOp.branches[branchName];
 
-            if (branch === null) {
-                branch = new CatnipIrBranch(this._func ?? undefined);
-                lastOp.branches[branchName] = branch;
-                branch._appendTails(tails, visited);
-            } else {
-                if (visited.has(branch)) continue;
+            if (visited.has(branch)) continue;
 
-                if (tails.indexOf(branch) === -1) // TODO Me thinks this check is not necesary
-                    branch._appendTails(tails, visited);
-            }
+            if (tails.indexOf(branch) === -1) // TODO Me thinks this check is not necesary
+                branch._appendTails(tails, visited);
         }
     }
 
@@ -198,7 +193,7 @@ export class CatnipIrBranch implements CatnipReadonlyIrBranch {
         } else {
             this.head.prev = op;
         }
-        
+
         this.head = op;
 
         return op;
@@ -227,7 +222,7 @@ export class CatnipIrBranch implements CatnipReadonlyIrBranch {
         } else {
             this.tail.next = op;
         }
-        
+
         this.tail = op;
 
         return op;

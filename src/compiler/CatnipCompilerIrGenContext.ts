@@ -259,21 +259,21 @@ export class CatnipCompilerIrGenContext {
                     this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch });
                 }
             }),
-            false_branch: null,
+            false_branch: this.emitBranch(),
         });
     }
 
     /** Creates a new, empty branch */
     public emitBranch(): CatnipIrBranch;
     /** Creates a new branch and emits all the commands in the command list to it. */
-    public emitBranch(commands: CatnipCommandList): CatnipIrBranch;
+    public emitBranch(commands: CatnipCommandList | null): CatnipIrBranch;
     /** Creates a new branch, switches this context to emit to that branch, calls lambda then switches back to the previous context.  */
     public emitBranch(lambda: (branch: CatnipIrBranch) => void): CatnipIrBranch;
 
-    public emitBranch(arg?: CatnipCommandList | ((branch: CatnipIrBranch) => void)): CatnipIrBranch {
+    public emitBranch(arg?: null | CatnipCommandList | ((branch: CatnipIrBranch) => void)): CatnipIrBranch {
 
         let branch = new CatnipIrBranch();
-        if (arg !== undefined) {
+        if (arg !== undefined && arg !== null) {
             const oldBranch = this._branch;
             this._branch = branch;
 

@@ -5,14 +5,19 @@ import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
 import { CatnipValueFlags, CatnipValueFormat } from "./types";
 
 export type CatnipIrOpInputs = Record<string, any>;
-export type CatnipIrOpBranches = Record<string, CatnipIrBranch | null>;
-export type CatnipReadonlyIrOpBranches<TBranches extends CatnipIrOpBranches = CatnipIrOpBranches> = {
-    [K in keyof TBranches]: CatnipReadonlyIrBranch | null;
+export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
+
+export type CatnipIrOpBranches<TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition> = {
+    [K in keyof TBranches]: CatnipIrBranch;
+}
+
+export type CatnipReadonlyIrOpBranches<TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition> = {
+    [K in keyof TBranches]: CatnipReadonlyIrBranch;
 }
 
 export interface CatnipReadonlyIrOp<
     TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-    TBranches extends CatnipIrOpBranches = CatnipIrOpBranches, 
+    TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition, 
     TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
 > {
     readonly type: TOpType;
@@ -29,12 +34,12 @@ export interface CatnipReadonlyIrOp<
 
 export interface CatnipIrOp<
     TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-    TBranches extends CatnipIrOpBranches = CatnipIrOpBranches, 
+    TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition, 
     TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
 > extends CatnipReadonlyIrOp<TInputs, TBranches, TOpType> {
     readonly type: TOpType;
     readonly inputs: TInputs;
-    readonly branches: TBranches;
+    readonly branches: CatnipIrOpBranches<TBranches>;
     branch: CatnipIrBranch;
 
     operands: CatnipCompilerStackElement[];
@@ -58,7 +63,7 @@ export type CatnipReadonlyIrInputOp<
 > = CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
 
 
-export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranches> {
+export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranchesDefinition> {
     public readonly name: string;
     public readonly abstract isInput: boolean;
 
@@ -73,17 +78,17 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
     public isYielding(ir: CatnipIrOp<TInputs, TBranches>, visited: Set<CatnipIrBranch>): boolean {
         for (const branchName in ir.branches) {
             const branch = ir.branches[branchName];
-            if (branch === null || branch.isYielding(visited)) return true;
+            if (branch.isYielding(visited)) return true;
         }
         return false;
     }
 
-    public doesContinue(ir: CatnipIrOp<TInputs, TBranches>) {
+    public doesContinue(ir: CatnipReadonlyIrOp<TInputs, TBranches>) {
         const branchNames = Object.keys(ir.branches);
         if (branchNames.length === 0) return true;
         for (const branchName of branchNames) {
             const branch = ir.branches[branchName];
-            if (branch === null || branch.doesContinue())
+            if (branch.doesContinue())
                 return true;
         }
         return false;
@@ -92,7 +97,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
     public applyState(ir: CatnipIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
 }
 
-export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {
+export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranchesDefinition = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {
 
     public readonly isInput: true = true;
 
@@ -103,10 +108,10 @@ export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {},
     }
 }
 
-export abstract class CatnipIrCommandOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranches = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {
+export abstract class CatnipIrCommandOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranchesDefinition = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {
     public readonly isInput: false = false;
 
     protected empty() {} // To differentiate this from CatnipIrInputOpType
 }
 
-export type CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranches> = CatnipIrInputOpType<TInputs, TBranches> | CatnipIrCommandOpType<TInputs, TBranches>;
+export type CatnipIrOpType<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranchesDefinition> = CatnipIrInputOpType<TInputs, CatnipIrOpBranchesDefinition> | CatnipIrCommandOpType<TInputs, CatnipIrOpBranchesDefinition>;

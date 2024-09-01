@@ -12,7 +12,7 @@ export const op_if_else = new class extends CatnipCommandOpType<if_else_inputs> 
             ir_if_else, {},
             {
                 true_branch: ctx.emitBranch(inputs.true_branch),
-                false_branch: inputs.false_branch ? ctx.emitBranch(inputs.false_branch) : null
+                false_branch: ctx.emitBranch(inputs.false_branch ? inputs.false_branch : null)
             }
         );
     }

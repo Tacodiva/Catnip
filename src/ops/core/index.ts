@@ -1,3 +1,4 @@
+import { op_barrier } from "./barrier";
 import { op_const } from "./const";
 import { op_log } from "./log";
 import { op_nop } from "./nop";
@@ -10,4 +11,5 @@ export default {
     core_log: op_log,
     core_yield: op_yield,
     core_thread_terminate: op_thread_terminate,
+    core_barrier: op_barrier
 };

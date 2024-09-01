@@ -7,11 +7,12 @@ import { ir_thread_terminate } from "./ir/core/thread_terminate";
 import { CatnipCompilerConfig } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
-import { LoopPassVariableInlining } from "./passes/LoopPassVariableInlining";
-import { PostLoopPassFunctionIndexAllocation } from "./passes/PostLoopPassFunctionIndexAllocation";
+import { LoopPassVariableInlining } from "./passes/PostLoopPassVariableInlining";
+import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunctionIndexAllocation";
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreLoopPassAnalyzeFunctionCallers";
-import { PostLoopPassTransientVariablePropagation } from "./passes/PostLoopPassTransientVariablePropagation";
+import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
+import { ir_barrier } from "./ir/core/barrier";
 
 export class CatnipCompiler {
     public readonly project: CatnipProject;
@@ -30,10 +31,10 @@ export class CatnipCompiler {
 
         this.addPass(PreLoopPassAnalyzeFunctionCallers);
 
-        this.addPass(LoopPassVariableInlining);
+        if (this.config.enable_optimization_variable_inlining) this.addPass(LoopPassVariableInlining);
         
-        this.addPass(PostLoopPassTransientVariablePropagation);
-        this.addPass(PostLoopPassFunctionIndexAllocation);
+        this.addPass(PreWasmPassTransientVariablePropagation);
+        this.addPass(PreWasmPassFunctionIndexAllocation);
     }
 
     public addPass(pass: CatnipCompilerPass) {
@@ -60,6 +61,7 @@ export class CatnipCompiler {
         const irGenCtx = new CatnipCompilerIrGenContext(ir);
 
         irGenCtx.emitCommands(script.commands);
+        irGenCtx.emitIr(ir_barrier, {}, {});
         irGenCtx.emitIr(ir_thread_terminate, {}, {});
 
         this._runPass(ir, CatnipCompilerStage.PASS_PRE_ANALYSIS_LOOP);
