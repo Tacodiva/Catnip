@@ -14,7 +14,7 @@ export const ir_if_else = new class extends CatnipIrCommandOpType<{}, if_else_ir
     public getOperandCount(): number { return 1; }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<{}, if_else_ir_branches>): void {
-        if (ir.branches.false_branch !== null) {
+        if (ir.branches.false_branch.head !== null) {
 
             if (ir.branches.true_branch.doesContinue()) {
                 ctx.emitWasm(SpiderOpcodes.if,

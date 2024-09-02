@@ -9,6 +9,8 @@ export interface CatnipReadonlyIrBranch {
     readonly tail: CatnipReadonlyIrOp | null;
     readonly func: CatnipReadonlyIrFunction;
 
+    readonly isFuncBody: boolean;
+
     isYielding(visited?: Set<CatnipIrBranch>): boolean;
     doesContinue(): boolean;
 
@@ -85,7 +87,7 @@ export class CatnipIrBranch implements CatnipReadonlyIrBranch {
         while (op !== null) {
             for (const branchName in op.branches) {
                 const branch = op.branches[branchName];
-                if (branch !== null && branch._func === oldFunc)
+                if (branch._func === oldFunc)
                     branch.setFunction(this._func);
             }
             op = op.next;
@@ -119,7 +121,7 @@ export class CatnipIrBranch implements CatnipReadonlyIrBranch {
         }
 
         for (const branchName of lastOpBranchNames) {
-            let branch = lastOp.branches[branchName];
+            const branch = lastOp.branches[branchName];
 
             if (visited.has(branch)) continue;
 

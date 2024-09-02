@@ -2,8 +2,9 @@ import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrBranch } from "./CatnipIrBranch";
-import { CatnipIrFunction, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
+import { CatnipIrFunction, CatnipIrTransientVariableType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
+import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 
 export interface CatnipReadonlyIr {
     readonly compiler: CatnipCompiler;
@@ -11,6 +12,7 @@ export interface CatnipReadonlyIr {
     readonly functions: ReadonlyArray<CatnipReadonlyIrFunction>;
 
     forEachOp(lambda: (op: CatnipReadonlyIrOp) => void): void;
+    getUniqueTransientVariableName(name: string): string;
 }
 
 export class CatnipIr implements CatnipReadonlyIr {
@@ -21,10 +23,13 @@ export class CatnipIr implements CatnipReadonlyIr {
     private readonly _functions: CatnipIrFunction[];
     public get functions(): ReadonlyArray<CatnipIrFunction> { return this._functions; }
 
+    private _transientVariableNames: Set<string>; 
+
     public constructor(compiler: CatnipCompiler, funcName: string) {
         this.compiler = compiler;
         this.entrypoint = new CatnipIrFunction(this, true, funcName);
         this._functions = [this.entrypoint];
+        this._transientVariableNames = new Set();
     }
 
     public createFunction(needsFunctionTableIndex: boolean, branch?: CatnipIrBranch): CatnipIrFunction {
@@ -55,11 +60,26 @@ export class CatnipIr implements CatnipReadonlyIr {
 
             for (const subbranchName in op.branches) {
                 const subbranch = op.branches[subbranchName];
-                if (subbranch.func !== branch.func) continue;
                 this._forEachOpInBranch(lambda, subbranch, visited);
             }
 
             op = op.next;
+        }
+    }
+
+    public getUniqueTransientVariableName(name: string): string {
+        if (!this._transientVariableNames.has(name)) {
+            this._transientVariableNames.add(name);
+            return name;
+        }
+
+        let i = 2;
+        while (true) {
+            const possibleName = name + " #"+i;
+            if (!this._transientVariableNames.has(possibleName)) {
+                this._transientVariableNames.add(possibleName);
+                return possibleName;
+            }
         }
     }
 
@@ -86,6 +106,8 @@ export class CatnipIr implements CatnipReadonlyIr {
                             return `[VARIABLE '${value.id}']`;
                         } else if (value instanceof CatnipTarget) {
                             return `[TARGET '${value.sprite.id}']`;
+                        } else if (value instanceof CatnipIrTransientVariable) {
+                            return `[TRANSIENT '${value.name}']`;
                         }
                         return value;
                     });
@@ -126,6 +148,27 @@ export class CatnipIr implements CatnipReadonlyIr {
             if (func.body.isYielding()) string += "(yielding) ";
             if (func.stackSize !== 0) string += `(${func.stackSize} byte stack) `;
             if (func.parameters.length !== 0) string += `(${func.parameters.length} params) `;
+
+            let hasTransients = false;
+            for (const [variable, info] of func.transientVariables) {
+                hasTransients = true;
+                string += "\n  ['";
+                string += variable.name;
+                string += "' ";
+                switch (info.type) {
+                    case CatnipIrTransientVariableType.LOCAL:
+                        string += "LOCAL";
+                        break;
+                    case CatnipIrTransientVariableType.PARAMETER:
+                        string += "PARAMETER";
+                        break;
+                    case CatnipIrTransientVariableType.STACK:
+                        string += "STACK";
+                        break;
+                }
+                string += "]";
+            }
+            if (hasTransients) string += "\n";
 
             string += stringifyIr(func.body, "  ", new Set());
             string += "\n";

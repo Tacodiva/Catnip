@@ -18,7 +18,8 @@ import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
 enum VariableOperationType {
     GET,
-    SET
+    SET,
+    SYNC
 }
 
 enum VariableOperationInlineStatus {
@@ -34,6 +35,11 @@ interface VariableOperation {
     status?: VariableOperationInlineStatus;
 }
 
+interface VariableSyncOperation {
+    variable: CatnipVariable;
+    type: VariableOperationType.SYNC,
+}
+
 interface VariableSync {
     op: CatnipReadonlyIrOp | null;
 }
@@ -44,8 +50,10 @@ class VariableCfgNode {
     public prev: VariableCfgNode[];
     public next: VariableCfgNode[];
 
-    public variables: Map<CatnipVariable, VariableOperation[]>;
+    public variables: Map<CatnipVariable, (VariableOperation | VariableSyncOperation)[]>;
     public sync: VariableSync | null;
+
+    public entryState: FunctionState | null;
 
     public constructor(branch: CatnipReadonlyIrBranch) {
         this.branch = branch;
@@ -53,6 +61,7 @@ class VariableCfgNode {
         this.next = [];
         this.variables = new Map();
         this.sync = null;
+        this.entryState = null;
     }
 
     public pushBranch(branch: CatnipReadonlyIrBranch): VariableCfgNode {
@@ -66,7 +75,7 @@ class VariableCfgNode {
         node.prev.push(this);
     }
 
-    public pushOperation(op: VariableOperation) {
+    public pushOperation(op: VariableOperation | VariableSyncOperation) {
         let opList = this.variables.get(op.variable);
 
         if (opList === undefined) {
@@ -90,9 +99,10 @@ function getVariableOperation(op: CatnipReadonlyIrOp): VariableOperation | null 
 }
 
 interface VariableState {
+    variable: CatnipVariable;
     isDefinitlySynced: boolean;
     isDefinitlyInitizlied: boolean;
-    prevOperations: (VariableOperation | VariableSync)[];
+    prevOperations: Set<VariableOperation | VariableSyncOperation>;
 }
 
 class FunctionState {
@@ -106,31 +116,60 @@ class FunctionState {
         let variableState = this.variables.get(variable);
         if (variableState === undefined) {
             variableState = {
+                variable,
                 isDefinitlySynced: true,
                 isDefinitlyInitizlied: false,
-                prevOperations: []
+                prevOperations: new Set(),
             };
             this.variables.set(variable, variableState);
         }
         return variableState;
     }
 
-    public or(other: FunctionState) {
+    public or(other: FunctionState): boolean {
+        let modified = false;
+
         for (const [variable, otherVariableState] of other.variables) {
             const ourVariableState = this.variables.get(variable);
 
             if (ourVariableState === undefined) {
                 this.variables.set(variable, {
-                    isDefinitlySynced: false,
+                    variable,
+                    isDefinitlySynced: otherVariableState.isDefinitlyInitizlied,
                     isDefinitlyInitizlied: false,
-                    prevOperations: []
+                    prevOperations: new Set(),
                 });
+                modified = true;
             } else {
-                ourVariableState.isDefinitlySynced &&= otherVariableState.isDefinitlySynced;
-                ourVariableState.isDefinitlyInitizlied &&= otherVariableState.isDefinitlyInitizlied;
-                ourVariableState.prevOperations.push(...otherVariableState.prevOperations);
+                if (ourVariableState.isDefinitlySynced && !otherVariableState.isDefinitlySynced) {
+                    ourVariableState.isDefinitlySynced = false;
+                    modified = true;
+                }
+
+                if (ourVariableState.isDefinitlyInitizlied && !otherVariableState.isDefinitlyInitizlied) {
+                    ourVariableState.isDefinitlyInitizlied = false;
+                    modified = true;
+                }
+
+                for (const otherPrevOp of otherVariableState.prevOperations) {
+                    if (!ourVariableState.prevOperations.has(otherPrevOp)) {
+                        ourVariableState.prevOperations.add(otherPrevOp);
+                        modified = true;
+                    }
+                }
             }
         }
+
+        for (const [variable, variableState] of this.variables) {
+            if (other.variables.has(variable)) continue;
+
+            if (variableState.isDefinitlyInitizlied) {
+                variableState.isDefinitlyInitizlied = false;
+                modified = true;
+            }
+        }
+
+        return modified;
     }
 
     public clone(): FunctionState {
@@ -139,7 +178,7 @@ class FunctionState {
         for (const [variable, variableState] of this.variables) {
             clone.variables.set(variable, {
                 ...variableState,
-                prevOperations: [...variableState.prevOperations]
+                prevOperations: new Set(variableState.prevOperations)
             });
         }
 
@@ -203,7 +242,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                             const branchName = branchNames[i];
                             const subbranch = op.branches[branchName];
 
-                            if (subbranch !== null && subbranch.func === func) {
+                            if (subbranch.func === func) {
                                 const branchNode = createBranchVariableCfg(subbranch);
                                 node.pushNode(branchNode.head);
 
@@ -236,7 +275,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                 bodyNodes.tail.sync = { op: null };
 
             /**
-             * TODO We want a way of moving any initial gets or sets outside of any loops. This can
+             * TODO We want a way of moving any initial gets outside of any loops. This can
              *  be done by moving all guarenteed "gets" to the top of the function / after the sync
              *  points. This can only happen if all the possible next operations are gets.
              */
@@ -246,7 +285,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
             function getTransient(variable: CatnipVariable): CatnipIrTransientVariable {
                 let transient = variableTransients.get(variable);
                 if (transient === undefined) {
-                    transient = new CatnipIrTransientVariable(CatnipValueFormat.VALUE_BOXED, variable.name + "_inline");
+                    transient = new CatnipIrTransientVariable(ir, CatnipValueFormat.VALUE_BOXED, variable.name + "_inline");
                     func.body.insertOpFirst(
                         ir_transient_create, { transient }, {}
                     );
@@ -255,52 +294,105 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                 return transient;
             }
 
+            const variableOptimizationCount: Map<CatnipVariable, number> = new Map();
             const visitedNodes: Set<VariableCfgNode> = new Set();
+
+            function setOperationStatus(operation: VariableOperation, status: VariableOperationInlineStatus) {
+                if (operation.status === status) return;
+
+                if (operation.status === VariableOperationInlineStatus.INLINE) {
+                    variableOptimizationCount.set(operation.variable,
+                        (variableOptimizationCount.get(operation.variable) ?? 0) - 1
+                    );
+                } else if (status === VariableOperationInlineStatus.INLINE) {
+                    variableOptimizationCount.set(operation.variable,
+                        (variableOptimizationCount.get(operation.variable) ?? 0) + 1
+                    );
+                }
+
+                operation.status = status;
+            }
 
             function findOptimizations(node: VariableCfgNode, state: FunctionState) {
 
-                let updated = false;
+                let modified = false;
+
+                if (node.entryState !== null) {
+                    modified ||= node.entryState.or(state);
+                    state = node.entryState.clone();
+                } else {
+                    node.entryState = state.clone();
+                }
 
                 for (const [variable, operations] of node.variables) {
                     const variableState = state.getVariableState(variable);
 
                     for (const operation of operations) {
 
-                        let status = operation.status;
-                        if (status === VariableOperationInlineStatus.DEFAULT) {
+                        if (operation.type === VariableOperationType.SYNC) {
 
-                            if (operation.type === VariableOperationType.SET) {
-                                variableState.isDefinitlySynced = true;
-                            }
+                            variableState.isDefinitlySynced = true;
+                            variableState.isDefinitlyInitizlied = false;
 
                         } else {
 
-                            if (operation.type === VariableOperationType.GET) {
-                                if (!variableState.isDefinitlyInitizlied) {
-                                    status = VariableOperationInlineStatus.BOTH;
-                                } else {
-                                    // console.log("B");
-                                    if (status !== VariableOperationInlineStatus.BOTH)
-                                        status = VariableOperationInlineStatus.INLINE;
-                                }
-                            } else {
-                                if (status === VariableOperationInlineStatus.BOTH) {
+                            let status = operation.status;
+                            if (status === VariableOperationInlineStatus.DEFAULT) {
+
+                                if (operation.type === VariableOperationType.SET) {
                                     variableState.isDefinitlySynced = true;
-                                } else {
-                                    status = VariableOperationInlineStatus.INLINE;
-                                    variableState.isDefinitlySynced = false;
                                 }
+
+                            } else {
+
+                                if (operation.type === VariableOperationType.GET) {
+                                    if (!variableState.isDefinitlyInitizlied) {
+                                        if (variableState.prevOperations.size !== 0) {
+                                            /*
+                                            
+                                            This is a case like
+                                             
+                                            if () {
+                                               set (var) to (10)
+                                            }
+                                            print (var)
+    
+                                            In this case, we must ensure all the possible previous
+                                            operations write to the actual variable
+                                             */
+                                            for (const prevOperation of variableState.prevOperations) {
+                                                if (prevOperation.type !== VariableOperationType.SYNC && prevOperation.status === VariableOperationInlineStatus.INLINE) {
+                                                    setOperationStatus(prevOperation, VariableOperationInlineStatus.BOTH);
+                                                    modified = true;
+                                                }
+                                            }
+                                        }
+
+                                        status = VariableOperationInlineStatus.BOTH;
+                                    } else {
+                                        if (status !== VariableOperationInlineStatus.BOTH)
+                                            status = VariableOperationInlineStatus.INLINE;
+                                    }
+                                } else {
+                                    if (status === VariableOperationInlineStatus.BOTH) {
+                                        variableState.isDefinitlySynced = true;
+                                    } else {
+                                        status = VariableOperationInlineStatus.INLINE;
+                                        variableState.isDefinitlySynced = false;
+                                    }
+                                }
+
+                                if (status !== operation.status) {
+                                    setOperationStatus(operation, status);
+                                    modified = true;
+                                }
+
+                                variableState.isDefinitlyInitizlied = true;
                             }
 
-                            if (status !== operation.status)
-                                updated = true;
-                            operation.status = status;
-
-                            variableState.isDefinitlyInitizlied = true;
                         }
-
-                        variableState.prevOperations.length = 1;
-                        variableState.prevOperations[0] = operation;
+                        variableState.prevOperations.clear();
+                        variableState.prevOperations.add(operation);
                     }
                 }
 
@@ -308,59 +400,30 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
 
                     for (const [variable, variableState] of state.variables) {
                         if (!variableState.isDefinitlySynced || !variableState.isDefinitlyInitizlied) {
-
-                            let syncGetOp: CatnipReadonlyIrOp;
-
-                            if (node.sync.op === null) {
-                                syncGetOp = node.branch.insertOpLast(
-                                    ir_get_var,
-                                    { target: variable.sprite.defaultTarget, variable: variable },
-                                    {}
-                                );
-                            } else {
-                                syncGetOp = node.branch.insertOpBefore(
-                                    ir_get_var,
-                                    { target: variable.sprite.defaultTarget, variable: variable },
-                                    {},
-                                    node.sync.op,
-                                );
-                            }
-
-                            const getOperation: VariableOperation = {
-                                type: VariableOperationType.GET,
-                                op: syncGetOp,
-                                variable,
-                                status: VariableOperationInlineStatus.INLINE
-                            };
-
-                            node.pushOperation(getOperation);
-
-                            const syncSetOp = syncGetOp.branch.insertOpAfter(
-                                syncGetOp,
-                                ir_set_var,
-                                { target: variable.sprite.defaultTarget, variable: variable, format: CatnipValueFormat.f64 },
-                                {}
-                            );
-
-                            const setOperation: VariableOperation = {
-                                type: VariableOperationType.SET,
-                                op: syncSetOp,
-                                variable,
-                                status: VariableOperationInlineStatus.DEFAULT
-                            };
-
-                            node.pushOperation(setOperation);
+                            modified = true;
 
                             variableState.isDefinitlySynced = true;
-                            variableState.prevOperations.length = 0;
-                            variableState.prevOperations[0] = setOperation;
+                            variableState.isDefinitlyInitizlied = false;
+
+                            const syncOp: VariableSyncOperation = {
+                                variable,
+                                type: VariableOperationType.SYNC,
+                            };
+
+                            variableState.prevOperations.clear();
+                            variableState.prevOperations.add(syncOp);
+
+                            node.pushOperation(syncOp);
                         }
                     }
                 }
 
-                if (!visitedNodes.has(node) || updated) {
+                if (!visitedNodes.has(node) || modified) {
                     visitedNodes.add(node);
                     for (const subnode of node.next) {
+                        // TODO This might stack overflow in long scripts :c
+                        //   We should wrap this whole function in a loop and process
+                        //   a subnode without another call.
                         findOptimizations(subnode, state.clone());
                     }
                 }
@@ -373,6 +436,11 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                 visitedNodes.add(node);
 
                 for (const [variable, operations] of node.variables) {
+
+                    if (!ir.compiler.config.enable_optimization_variable_inlining_force &&
+                        (variableOptimizationCount.get(variable) ?? 0) <= 1)
+                        continue;
+
                     for (const operation of operations) {
                         if (operation.type === VariableOperationType.GET) {
                             switch (operation.status) {
@@ -393,8 +461,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                     );
                                     break;
                             }
-                        } else {
-                            CatnipCompilerLogger.assert(operation.type === VariableOperationType.SET);
+                        } else if (operation.type === VariableOperationType.SET) {
                             switch (operation.status) {
                                 case VariableOperationInlineStatus.BOTH:
                                     operation.op.branch.insertOpBefore(
@@ -413,6 +480,33 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                     );
                                     break;
                             }
+                        } else {
+                            CatnipCompilerLogger.assert(operation.type === VariableOperationType.SYNC);
+                            CatnipCompilerLogger.assert(node.sync !== null);
+
+                            let syncGetOp: CatnipReadonlyIrOp;
+
+                            if (node.sync.op === null) {
+                                syncGetOp = node.branch.insertOpLast(
+                                    ir_transient_load,
+                                    { transient: getTransient(variable) },
+                                    {}
+                                );
+                            } else {
+                                syncGetOp = node.branch.insertOpBefore(
+                                    ir_transient_load,
+                                    { transient: getTransient(variable) },
+                                    {},
+                                    node.sync.op,
+                                );
+                            }
+
+                            syncGetOp.branch.insertOpAfter(
+                                syncGetOp,
+                                ir_set_var,
+                                { target: variable.sprite.defaultTarget, variable: variable, format: CatnipValueFormat.f64 },
+                                {}
+                            );
                         }
                     }
                 }

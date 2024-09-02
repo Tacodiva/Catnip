@@ -121,13 +121,13 @@ export class CatnipCompilerWasmGenContext {
         return expression!;
     }
 
-    public emitBranch(branch: CatnipIrBranch): SpiderExpression {
+    public emitBranch(branch: CatnipIrBranch, forceReturn: boolean = false): SpiderExpression {
         this.pushExpression();
-        this.emitBranchInline(branch);
+        this.emitBranchInline(branch, forceReturn);
         return this.popExpression();
     }
 
-    public emitBranchInline(branch: CatnipIrBranch) {
+    public emitBranchInline(branch: CatnipIrBranch, forceReturn: boolean = false) {
         if (branch.isFuncBody) {
             const targetFunc = branch.func;
 
@@ -139,7 +139,7 @@ export class CatnipCompilerWasmGenContext {
                 this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.variable));
             }
 
-            const isYielding = branch.isYielding();
+            const isYielding = branch.isYielding() || forceReturn;
 
             if (isYielding && this.compiler.config.enable_tail_call) {
                 this.emitWasm(SpiderOpcodes.return_call, targetFunc.spiderFunction);
@@ -157,6 +157,10 @@ export class CatnipCompilerWasmGenContext {
             );
 
             this.emitOps(branch);
+
+            if (forceReturn && !branch.isYielding()) {
+                this.emitWasm(SpiderOpcodes.return);
+            }
         }
     }
 

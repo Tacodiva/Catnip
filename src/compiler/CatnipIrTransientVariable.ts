@@ -1,5 +1,6 @@
 import { SpiderNumberType } from "wasm-spider";
 import { CatnipValueFormat, getValueFormatSpiderType } from "./types";
+import { CatnipReadonlyIr } from "./CatnipIr";
 
 /**
  * Functions will need to store:
@@ -21,13 +22,14 @@ import { CatnipValueFormat, getValueFormatSpiderType } from "./types";
  */
 
 export class CatnipIrTransientVariable {
-
+    public readonly ir: CatnipReadonlyIr;
     public readonly name: string | null;
     public readonly format: CatnipValueFormat;
 
-    public constructor(type: CatnipValueFormat, name?: string) {
+    public constructor(ir: CatnipReadonlyIr, type: CatnipValueFormat, name?: string) {
+        this.ir = ir;
         this.format = type;
-        this.name = name ?? null;
+        this.name = name ? ir.getUniqueTransientVariableName(name) : null;
     }
 
     public get type(): SpiderNumberType {

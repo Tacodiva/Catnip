@@ -130,8 +130,10 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
             this._parameters.push(variable);
         }
 
-        for (const caller of this._callers)
-            caller.useTransientVariable(variable.variable);
+        if (variable.type !== CatnipIrTransientVariableType.LOCAL) {
+            for (const caller of this._callers)
+                caller.useTransientVariable(variable.variable);
+        }
     }
 
     public createTransientVariable(variable: CatnipIrTransientVariable) {

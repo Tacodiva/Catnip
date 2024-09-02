@@ -47,19 +47,19 @@ export class CatnipCompilerIrGenContext {
         if (this._branch.funcNullable !== null) {
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
-                if (branch !== null && branch.funcNullable === null)
+                if (branch.funcNullable === null)
                     branch.setFunction(this._branch.func);
             }
         }
 
         const branchTails = this._branch.getTails();
 
-        let splitAfter = false;
+        let joinAfter = false;
         for (const branchName of opBranchNames) {
             const branch = op.branches[branchName];
 
-            if (branch !== null && branch.isYielding()) {
-                splitAfter = true;
+            if (branch.isYielding()) {
+                joinAfter = true;
                 break;
             }
         }
@@ -73,11 +73,13 @@ export class CatnipCompilerIrGenContext {
         }
 
         if (mergeBefore) {
-            this._switchToBranch(this.ir.createFunction(false).body);
+            this._switchToBranch(this.ir.createFunction(true).body);
 
             for (const tailBranch of branchTails) {
                 tailBranch.pushOp(this._createIr(
-                    ir_branch, {}, { branch: this._branch }, [], tailBranch
+                    ir_yield,
+                    { status: CatnipWasmEnumThreadStatus.RUNNING },
+                    { branch: this._branch }, [], tailBranch
                 ));
             }
 
@@ -97,41 +99,51 @@ export class CatnipCompilerIrGenContext {
             });
         }
 
-        if (splitAfter) {
+        if (joinAfter) {
 
-            let hasNonYieldingBranch = false;
+            let nonYieldingBraches: Set<CatnipIrBranch> = new Set();
             let yieldingBrachTails: Set<CatnipIrBranch> = new Set();
 
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
 
-                if (branch?.isYielding()) {
+                if (branch.isYielding()) {
                     for (const tail of branch.getTails())
                         yieldingBrachTails.add(tail);
                 } else {
-                    hasNonYieldingBranch = true;
+                    nonYieldingBraches.add(branch);
                 }
             }
 
+            // All the branches in "yieldingBrachTails" will be made to yield to
+            //  the next operations emitted, so they will be made into yielding branches
+            //  thus we do not consider them as "non yielding branches". 
+            for (const yieldingBranchTail of yieldingBrachTails)
+                nonYieldingBraches.delete(yieldingBranchTail);
+
             // We don't need to create a new function if there is only one place we continue
-            if (!hasNonYieldingBranch && yieldingBrachTails.size === 1) {
+            if (nonYieldingBraches.size === 0 && yieldingBrachTails.size === 1) {
                 for (const branchTail of yieldingBrachTails) {
                     this._switchToBranch(branchTail);
                     break;
                 }
             } else {
-                if (hasNonYieldingBranch || yieldingBrachTails.size !== 0) {
-                    const newBranch = this.ir.createFunction(false).body;
-
-                    if (hasNonYieldingBranch && op.type.doesContinue(op)) {
-                        this._branch.pushOp(this._createIr(
-                            ir_branch, {}, { branch: newBranch }, []
-                        ));
-                    }
+                if (nonYieldingBraches.size !== 0 || yieldingBrachTails.size !== 0) {
+                    const newBranch = this.ir.createFunction(true).body;
 
                     for (const branchTail of yieldingBrachTails) {
                         branchTail.pushOp(this._createIr(
-                            ir_branch, {}, { branch: newBranch }, [], branchTail
+                            ir_yield,
+                            { status: CatnipWasmEnumThreadStatus.RUNNING },
+                            { branch: newBranch }, [], branchTail
+                        ));
+                    }
+
+                    if (nonYieldingBraches.size !== 0 && op.type.doesContinue(op)) {
+                        this._branch.pushOp(this._createIr(
+                            ir_yield,
+                            { status: CatnipWasmEnumThreadStatus.RUNNING },
+                            { branch: newBranch }, []
                         ));
                     }
 
@@ -151,11 +163,13 @@ export class CatnipCompilerIrGenContext {
         type: TOpType,
         inputs: TInputs,
         branches: TBranches
-    ): CatnipIrOp<TInputs, TBranches, TOpType> {
+    ) {
+        if (!this._branch.doesContinue()) return null;
+
         const operandCount = type.getOperandCount(inputs, branches);
         const operands = this._branch.stack.pop(operandCount);
 
-        return this._emitIr(this._createIr(
+        this._emitIr(this._createIr(
             type,
             inputs,
             branches,
@@ -229,6 +243,7 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitCast(format: CatnipValueFormat, flags: CatnipValueFlags) {
+        if (!this._branch.doesContinue()) return;
         const operand = this.stack.peek();
 
         if (operand.format !== format) {
@@ -249,9 +264,10 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitConditionalJump(branch: CatnipIrBranch) {
+        const sourceBranch = this._branch;
         this.emitIr(ir_if_else, {}, {
             true_branch: this.emitBranch(() => {
-                if (this._branch.funcNullable === branch.funcNullable) {
+                if (sourceBranch.funcNullable === branch.funcNullable) {
                     branch.isLoop = true;
                     this.emitIr(ir_loop_jmp, {}, { branch })
                 } else {
@@ -291,7 +307,7 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitTransientCreate(format: CatnipValueFormat, name?: string): CatnipIrTransientVariable {
-        const transient = new CatnipIrTransientVariable(format, name);
+        const transient = new CatnipIrTransientVariable(this.ir, format, name);
         this.emitIr(ir_transient_create, { transient }, {});
         return transient;
     }

@@ -115,10 +115,7 @@ export class CatnipProject {
     private async _recompile(): Promise<void> {
         if (this._recompileScripts.size === 0) return;
 
-        const compiler = new CatnipCompiler(this, {
-            enable_tail_call: true,
-            enable_optimization_variable_inlining: true
-        });
+        const compiler = new CatnipCompiler(this);
 
         for (const script of this._recompileScripts) {
             compiler.compile(script);

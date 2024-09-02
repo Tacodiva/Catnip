@@ -14,11 +14,13 @@ export class Logger {
         if (!condition) { 
             message ??= "Assertion failed.";
             const throwable = new Error(message);
+            const stack = throwable.stack?.replace(/^[^\(]+?[\n$]/gm, '')
+                 ?? "{undefined stack trace}";
             if (error) {
-                this.error(`${message} \n${(throwable.stack)}`);
+                this.error(`${message} \n${(stack)}`);
                 throw throwable;
             } else {
-                this.warn(`${message} \n${throwable.stack}`);
+                this.warn(`${message} \n${stack}`);
             }
         }
     }

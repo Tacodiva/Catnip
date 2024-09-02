@@ -4,7 +4,7 @@ import { CatnipProjectModule } from "./CatnipProjectModule";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { ir_thread_terminate } from "./ir/core/thread_terminate";
-import { CatnipCompilerConfig } from "./CatnipCompilerConfig";
+import { CatnipCompilerConfig, catnipCreateDefaultCompilerConfig } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
 import { LoopPassVariableInlining } from "./passes/PostLoopPassVariableInlining";
@@ -17,15 +17,15 @@ import { ir_barrier } from "./ir/core/barrier";
 export class CatnipCompiler {
     public readonly project: CatnipProject;
     public readonly module: CatnipProjectModule;
-    public readonly config: CatnipCompilerConfig;
+    public readonly config: Readonly<CatnipCompilerConfig>;
 
     private readonly _passes: Map<CatnipCompilerPassStage, CatnipCompilerPass[]>;
 
     public get spiderModule() { return this.module.spiderModule; }
 
-    constructor(project: CatnipProject, config: CatnipCompilerConfig) {
+    constructor(project: CatnipProject, config?: CatnipCompilerConfig) {
         this.project = project;
-        this.config = config;
+        this.config = config ? {...config} : catnipCreateDefaultCompilerConfig();
         this.module = new CatnipProjectModule(this.project.runtimeModule);
         this._passes = new Map();
 
