@@ -2,7 +2,7 @@ import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
-import { CatnipValueFlags, CatnipValueFormat } from "../../types";
+import { CatnipValueFormat } from "../../types";
 
 
 export type add_ir_inputs = { type: SpiderNumberType };
@@ -17,9 +17,9 @@ export const ir_add = new class extends CatnipIrInputOpType<add_ir_inputs> {
     public getResult(inputs: add_ir_inputs): CatnipCompilerValue {
         switch (inputs.type) {
             case SpiderNumberType.f64:
-                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.f64, flags: CatnipValueFlags.ANY };
+                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.F64_NUMBER_OR_NAN };
             case SpiderNumberType.i32:
-                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.i32, flags: CatnipValueFlags.ANY };
+                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.I32_NUMBER };
             default:
                 CatnipCompilerWasmGenContext.logger.assert(false, true, `'${inputs.type}' type not supported by operation.`);
         }

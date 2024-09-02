@@ -285,7 +285,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
             function getTransient(variable: CatnipVariable): CatnipIrTransientVariable {
                 let transient = variableTransients.get(variable);
                 if (transient === undefined) {
-                    transient = new CatnipIrTransientVariable(ir, CatnipValueFormat.VALUE_BOXED, variable.name + "_inline");
+                    transient = new CatnipIrTransientVariable(ir, CatnipValueFormat.F64, variable.name + "_inline");
                     func.body.insertOpFirst(
                         ir_transient_create, { transient }, {}
                     );
@@ -504,7 +504,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                             syncGetOp.branch.insertOpAfter(
                                 syncGetOp,
                                 ir_set_var,
-                                { target: variable.sprite.defaultTarget, variable: variable, format: CatnipValueFormat.f64 },
+                                { target: variable.sprite.defaultTarget, variable: variable, format: CatnipValueFormat.F64 },
                                 {}
                             );
                         }

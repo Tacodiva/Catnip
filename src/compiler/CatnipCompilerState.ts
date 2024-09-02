@@ -1,4 +1,4 @@
-import { CatnipValueFlags, CatnipValueFormat } from "./types";
+import { CatnipValueFormat } from "./types";
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStack, CatnipCompilerValue, CatnipCompilerValueType } from "./CatnipCompilerStack";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
@@ -19,17 +19,17 @@ export class CatnipCompilerState {
         let value = this._variables.get(variable);
 
         if (value === undefined) {
-            value = { type: CatnipCompilerValueType.DYNAMIC, flags: CatnipValueFlags.ANY, format: CatnipValueFormat.VALUE_BOXED }
+            value = { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.F64 }
         }
 
         return value;
     }
 
     public setVariableValue(variable: CatnipVariable, value: CatnipCompilerValue) {
-        if (value.format !== CatnipValueFormat.VALUE_BOXED) {
+        if ((value.format & CatnipValueFormat.F64) !== value.format) {
             value = {
                 ...value,
-                format: CatnipValueFormat.VALUE_BOXED
+                format: CatnipValueFormat.F64
             };
         }
 

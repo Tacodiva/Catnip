@@ -1,94 +1,80 @@
 import { SpiderNumberType } from "wasm-spider";
 
-export enum CatnipValueFlags {
+export enum CatnipValueFormat {
     /** The value Infinity */
-    NUMBER_POS_INF = 0x001,
+    F64_POS_INF = 1 << 0,
     /** Any natural number */
-    NUMBER_POS_INT = 0x002,
+    F64_POS_INT = 1 << 1,
     /** Any positive fractional number, excluding integers. */
-    NUMBER_POS_FRACT = 0x004,
+    F64_POS_FRACT = 1 << 2,
     /** Any positive number excluding 0 and Infinity.  */
-    NUMBER_POS_REAL = NUMBER_POS_INT | NUMBER_POS_FRACT,
+    F64_POS_REAL = F64_POS_INT | F64_POS_FRACT,
     /** The value 0 */
-    NUMBER_ZERO = 0x008,
+    F64_ZERO = 1 << 3,
     /** The value -0 */
-    NUMBER_NEG_ZERO = 0x010,
+    F64_NEG_ZERO = 1 << 4,
     /** Any negitive integer excluding -0 */
-    NUMBER_NEG_INT = 0x020,
+    F64_NEG_INT = 1 << 5,
     /** Any negitive fractional number, excluding integers. */
-    NUMBER_NEG_FRACT = 0x040,
+    F64_NEG_FRACT = 1 << 6,
     /** Any negitive number excluding -0 and -Infinity */
-    NUMBER_NEG_REAL = NUMBER_NEG_INT | NUMBER_NEG_FRACT,
+    F64_NEG_REAL = F64_NEG_INT | F64_NEG_FRACT,
     /** The value -Infinity */
-    NUMBER_NEG_INF = 0x080,
-
-    /** The value NaN */
-    NUMBER_NAN = 0x100,
+    F64_NEG_INF = 1 << 7,
 
     /** Either 0 or -0. */
-    NUMBER_ANY_ZERO = NUMBER_ZERO | NUMBER_NEG_ZERO,
+    F64_ANY_ZERO = F64_ZERO | F64_NEG_ZERO,
     /** Either Infinity or -Infinity. */
-    NUMBER_INF = NUMBER_POS_INF | NUMBER_NEG_INF,
+    F64_INF = F64_POS_INF | F64_NEG_INF,
     /** Any positive number, excluding 0. */
-    NUMBER_POS = NUMBER_POS_REAL | NUMBER_POS_INF,
+    F64_POS = F64_POS_REAL | F64_POS_INF,
     /** Any negitive number, excluding -0. */
-    NUMBER_NEG = NUMBER_NEG_REAL | NUMBER_NEG_INF,
+    F64_NEG = F64_NEG_REAL | F64_NEG_INF,
     /** Any whole number. */
-    NUMBER_WHOLE = NUMBER_POS_INT | NUMBER_ZERO,
+    F64_WHOLE = F64_POS_INT | F64_ZERO,
     /** Any integer. */
-    NUMBER_INT = NUMBER_POS_INT | NUMBER_ANY_ZERO | NUMBER_NEG_INT,
-    /** Any number that works as an array index. */
-    NUMBER_INDEX = NUMBER_INT | NUMBER_INF | NUMBER_NAN,
+    F64_INT = F64_POS_INT | F64_ANY_ZERO | F64_NEG_INT,
     /** Any fractional non-integer numbers. */
-    NUMBER_FRACT = NUMBER_POS_FRACT | NUMBER_NEG_FRACT,
+    F64_FRACT = F64_POS_FRACT | F64_NEG_FRACT,
     /** Any real number. */
-    NUMBER_REAL = NUMBER_POS_REAL | NUMBER_ANY_ZERO | NUMBER_NEG_REAL,
+    F64_REAL = F64_POS_REAL | F64_ANY_ZERO | F64_NEG_REAL,
 
+    /** The value NaN (specifically, a WASM canonical NaN). */
+    F64_NAN = 1 << 8,
     /** Any number, excluding NaN. */
-    NUMBER = NUMBER_REAL | NUMBER_INF,
+    F64_NUMBER = F64_REAL | F64_INF,
     /** Any number, including NaN. */
-    NUMBER_OR_NAN = NUMBER | NUMBER_NAN,
+    F64_NUMBER_OR_NAN = F64_NUMBER | F64_NAN,
 
-    /** Any string which as a non-NaN neumeric interpretation, excluding ''.  */
-    STRING_NUM = 0x200,
-    /** Any string which has no non-NaN neumeric interpretation, including ''. */
-    STRING_NAN = 0x400,
-    /** Either of the strings 'true' or 'false'. */
-    STRING_BOOLEAN = 0x800,
-
+    
     /** Any string. */
-    STRING = STRING_NUM | STRING_NAN | STRING_BOOLEAN,
+    I32_HSTRING = 1 << 9,    
+    /** A string nan-boxed into an F64. */
+    F64_BOXED_I32_HSTRING = 1 << 10,
+    
+    
+    /** Any number stored in an i32. */
+    I32_NUMBER = 1 << 12,
+    /** A boolean  */
+    I32_BOOLEAN = 1 << 13,
+    
+    /** Any F64. */
+    F64 = F64_NUMBER_OR_NAN | F64_BOXED_I32_HSTRING,
+    /** Any I32. */
+    I32 = I32_HSTRING | I32_NUMBER | I32_BOOLEAN,
+    /** Any value. */
+    ANY = I32 | F64,
 
-    /** Any boolean. */
-    BOOLEAN = 0x1000,
-    /** Any input that can be interperated as a boolean. */
-    BOOLEAN_INTERPRETABLE = BOOLEAN | STRING_BOOLEAN,
-
-    /** Anything that can be interperated as a number. */
-    NUMBER_INTERPRETABLE = NUMBER | STRING_NUM | BOOLEAN,
-
-    /** Any type. */
-    ANY = NUMBER_OR_NAN | STRING | BOOLEAN
+    /** No value. */
+    NONE = 0
 };
 
-export enum CatnipValueFormat {
-    i32,
-    HSTRING_PTR, // (i32)
-    VALUE_BOXED, // (f64)
-    f64,
-    ANY
-}
-
 export function getValueFormatSpiderType(inputFormat: CatnipValueFormat): SpiderNumberType {
-    switch (inputFormat) {
-        case CatnipValueFormat.i32:
-        case CatnipValueFormat.HSTRING_PTR:
-            return SpiderNumberType.i32;
-        case CatnipValueFormat.f64:
-            return SpiderNumberType.f64;
-        case CatnipValueFormat.VALUE_BOXED:
-            return SpiderNumberType.f64;
-        case CatnipValueFormat.ANY:
-            throw new Error("Cannot convert format 'any' to a number type.");
-    }
+    if ((inputFormat & CatnipValueFormat.I32) === inputFormat)
+        return SpiderNumberType.i32;
+
+    if ((inputFormat & CatnipValueFormat.F64) === inputFormat)
+        return SpiderNumberType.f64;
+
+    throw new Error(`Cannot store value of type '${inputFormat}'`)
 }

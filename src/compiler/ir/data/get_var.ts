@@ -6,7 +6,7 @@ import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValu
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipTarget } from '../../../runtime/CatnipTarget';
 import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
-import { CatnipValueFlags, CatnipValueFormat } from "../../types";
+import { CatnipValueFormat } from "../../types";
 import { CatnipIrBranch } from "../../CatnipIrBranch";
 
 export type get_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable };
@@ -18,7 +18,7 @@ export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_input
     public getOperandCount(): number { return 0; }
 
     public getResult(): CatnipCompilerValue {
-        return {type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.VALUE_BOXED, flags: CatnipValueFlags.ANY};
+        return {type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.F64 };
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<get_var_ir_inputs>, branch: CatnipIrBranch): void {

@@ -1,5 +1,5 @@
 import { CatnipIrInputOp } from "./CatnipIrOp";
-import { CatnipValueFlags, CatnipValueFormat } from "./types";
+import { CatnipValueFormat } from "./types";
 
 export enum CatnipCompilerValueType {
     DYNAMIC,
@@ -13,12 +13,11 @@ export interface CatnipCompilerValueBase {
 
 export interface CatnipCompilerDynamicValue extends CatnipCompilerValueBase {
     type: CatnipCompilerValueType.DYNAMIC,
-    flags: CatnipValueFlags,
 }
 
 export interface CatnipCompilerConstantValue extends CatnipCompilerValueBase {
     type: CatnipCompilerValueType.CONSTANT,
-    value: string,
+    value: string | number,
 }
 
 export type CatnipCompilerValue = CatnipCompilerDynamicValue | CatnipCompilerConstantValue;

@@ -1,5 +1,5 @@
 import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList } from "../ops";
-import { CatnipValueFormat, CatnipValueFlags } from "./types";
+import { CatnipValueFormat } from "./types";
 import { createLogger, Logger } from "../log";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";
@@ -224,12 +224,12 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>): void;
-    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipValueFormat, flags: CatnipValueFlags): void;
+    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format: CatnipValueFormat): void;
 
-    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format?: CatnipValueFormat, flags?: CatnipValueFlags) {
+    public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format?: CatnipValueFormat) {
         op.type.generateIr(this, op.inputs);
         if (format !== undefined)
-            this.emitCast(format, flags ?? CatnipValueFlags.ANY);
+            this.emitCast(format);
     }
 
     public emitCommand<TInputs extends CatnipOpInputs>(op: CatnipCommandOp<TInputs>) {
@@ -242,13 +242,13 @@ export class CatnipCompilerIrGenContext {
         }
     }
 
-    public emitCast(format: CatnipValueFormat, flags: CatnipValueFlags) {
+    public emitCast(format: CatnipValueFormat) {
         if (!this._branch.doesContinue()) return;
         const operand = this.stack.peek();
 
         if (operand.format !== format) {
-            if (!operand.source.type.tryCast(operand.source, format, flags)) {
-                this.emitIr(ir_cast, { format, flags }, {});
+            if (!operand.source.type.tryCast(operand.source, format)) {
+                this.emitIr(ir_cast, { format }, {});
             }
         }
     }

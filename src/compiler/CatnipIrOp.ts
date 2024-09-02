@@ -2,7 +2,7 @@ import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenC
 import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
 import { CatnipCompilerStackElement, CatnipCompilerValue } from "../compiler/CatnipCompilerStack";
 import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
-import { CatnipValueFlags, CatnipValueFormat } from "./types";
+import { CatnipValueFormat } from "./types";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
@@ -103,7 +103,7 @@ export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {},
 
     public abstract getResult(inputs: TInputs, branches: TBranches, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue;
 
-    public tryCast(ir: CatnipIrOp<TInputs, TBranches, this>, format: CatnipValueFormat, flags: CatnipValueFlags): boolean {
+    public tryCast(ir: CatnipIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
         return false;
     }
 }
