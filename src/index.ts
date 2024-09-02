@@ -133,74 +133,74 @@ export async function run(runtimeModule: WebAssembly.Module) {
                         // ],
 
                         // // Fib // // 
-                        commands: [
-                            CatnipOps.control_forever.create({
-                                loop: [
-                                    CatnipOps.control_repeat.create({
-                                        count: CatnipOps.core_const.create({ value: 100000 }),
-                                        loop: [
-                                            CatnipOps.data_set_var.create({
-                                                sprite: "sprite",
-                                                variable: "first",
-                                                value: CatnipOps.core_const.create({ value: 0 }),
-                                            }),
-                                            CatnipOps.data_set_var.create({
-                                                sprite: "sprite",
-                                                variable: "second",
-                                                value: CatnipOps.core_const.create({ value: 1 }),
-                                            }),
-                                            CatnipOps.data_set_var.create({
-                                                sprite: "sprite",
-                                                variable: "nth",
-                                                value: CatnipOps.core_const.create({ value: 1 }),
-                                            }),
-                                            CatnipOps.control_repeat.create({
-                                                count: CatnipOps.core_const.create({ value: 1200 }),
-                                                loop: [
-                                                    CatnipOps.data_set_var.create({
-                                                        sprite: "sprite",
-                                                        variable: "nth",
-                                                        value: CatnipOps.operators_add.create({
-                                                            left: CatnipOps.data_get_var.create({
-                                                                sprite: "sprite",
-                                                                variable: "first",
-                                                            }),
-                                                            right: CatnipOps.data_get_var.create({
-                                                                sprite: "sprite",
-                                                                variable: "second",
-                                                            }),
-                                                        }),
-                                                    }),
-                                                    CatnipOps.data_set_var.create({
-                                                        sprite: "sprite",
-                                                        variable: "first",
-                                                        value: CatnipOps.data_get_var.create({
-                                                            sprite: "sprite",
-                                                            variable: "second",
-                                                        }),
-                                                    }),
-                                                    CatnipOps.data_set_var.create({
-                                                        sprite: "sprite",
-                                                        variable: "second",
-                                                        value: CatnipOps.data_get_var.create({
-                                                            sprite: "sprite",
-                                                            variable: "nth",
-                                                        }),
-                                                    }),
-                                                ]
-                                            }),
-                                        ]
-                                    }),
-                                    CatnipOps.core_log.create({
-                                        msg: CatnipOps.data_get_var.create({
-                                            sprite: "sprite",
-                                            variable: "nth",
-                                        }),
-                                    }),
-                                    CatnipOps.core_yield.create({})
-                                ]
-                            }),
-                        ],
+                        // commands: [
+                        //     CatnipOps.control_forever.create({
+                        //         loop: [
+                        //             CatnipOps.control_repeat.create({
+                        //                 count: CatnipOps.core_const.create({ value: 100000 }),
+                        //                 loop: [
+                        //                     CatnipOps.data_set_var.create({
+                        //                         sprite: "sprite",
+                        //                         variable: "first",
+                        //                         value: CatnipOps.core_const.create({ value: 0 }),
+                        //                     }),
+                        //                     CatnipOps.data_set_var.create({
+                        //                         sprite: "sprite",
+                        //                         variable: "second",
+                        //                         value: CatnipOps.core_const.create({ value: 1 }),
+                        //                     }),
+                        //                     CatnipOps.data_set_var.create({
+                        //                         sprite: "sprite",
+                        //                         variable: "nth",
+                        //                         value: CatnipOps.core_const.create({ value: 1 }),
+                        //                     }),
+                        //                     CatnipOps.control_repeat.create({
+                        //                         count: CatnipOps.core_const.create({ value: 1200 }),
+                        //                         loop: [
+                        //                             CatnipOps.data_set_var.create({
+                        //                                 sprite: "sprite",
+                        //                                 variable: "nth",
+                        //                                 value: CatnipOps.operators_add.create({
+                        //                                     left: CatnipOps.data_get_var.create({
+                        //                                         sprite: "sprite",
+                        //                                         variable: "first",
+                        //                                     }),
+                        //                                     right: CatnipOps.data_get_var.create({
+                        //                                         sprite: "sprite",
+                        //                                         variable: "second",
+                        //                                     }),
+                        //                                 }),
+                        //                             }),
+                        //                             CatnipOps.data_set_var.create({
+                        //                                 sprite: "sprite",
+                        //                                 variable: "first",
+                        //                                 value: CatnipOps.data_get_var.create({
+                        //                                     sprite: "sprite",
+                        //                                     variable: "second",
+                        //                                 }),
+                        //                             }),
+                        //                             CatnipOps.data_set_var.create({
+                        //                                 sprite: "sprite",
+                        //                                 variable: "second",
+                        //                                 value: CatnipOps.data_get_var.create({
+                        //                                     sprite: "sprite",
+                        //                                     variable: "nth",
+                        //                                 }),
+                        //                             }),
+                        //                         ]
+                        //                     }),
+                        //                 ]
+                        //             }),
+                        //             CatnipOps.core_log.create({
+                        //                 msg: CatnipOps.data_get_var.create({
+                        //                     sprite: "sprite",
+                        //                     variable: "nth",
+                        //                 }),
+                        //             }),
+                        //             CatnipOps.core_yield.create({})
+                        //         ]
+                        //     }),
+                        // ],
 
                         // commands: [
                         //     CatnipOps.control_if_else.create({
@@ -220,6 +220,16 @@ export async function run(runtimeModule: WebAssembly.Module) {
                         //         }),
                         //     }),
                         // ],
+
+                        commands: [
+                            CatnipOps.core_log.create({
+                                msg: CatnipOps.operators_add.create({
+                                    left: CatnipOps.core_const.create({ value: 1 }),
+                                    right: CatnipOps.core_const.create({ value: 2 }),
+                                }),
+                            }),
+                        ],
+
                         trigger: {
                             type: "event",
                             event: "greenflag"

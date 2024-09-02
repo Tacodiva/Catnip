@@ -2,7 +2,7 @@ import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenC
 import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
 import { CatnipCompilerStackElement, CatnipCompilerValue } from "../compiler/CatnipCompilerStack";
 import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
-import { CatnipValueFormat } from "./types";
+import { CatnipValueFormat } from "./CatnipValueFormat";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;

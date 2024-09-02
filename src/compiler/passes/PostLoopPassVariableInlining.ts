@@ -13,7 +13,7 @@ import { ir_transient_store } from "../ir/core/transient_store";
 import { ir_transient_tee } from "../ir/core/transient_tee";
 import { get_var_ir_inputs, ir_get_var } from "../ir/data/get_var";
 import { ir_set_var, set_var_ir_inputs } from "../ir/data/set_var";
-import { CatnipValueFormat } from "../types";
+import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
 enum VariableOperationType {

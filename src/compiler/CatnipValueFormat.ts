@@ -68,13 +68,3 @@ export enum CatnipValueFormat {
     /** No value. */
     NONE = 0
 };
-
-export function getValueFormatSpiderType(inputFormat: CatnipValueFormat): SpiderNumberType {
-    if ((inputFormat & CatnipValueFormat.I32) === inputFormat)
-        return SpiderNumberType.i32;
-
-    if ((inputFormat & CatnipValueFormat.F64) === inputFormat)
-        return SpiderNumberType.f64;
-
-    throw new Error(`Cannot store value of type '${inputFormat}'`)
-}

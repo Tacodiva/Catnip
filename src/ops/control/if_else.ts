@@ -1,6 +1,6 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { ir_if_else } from "../../compiler/ir/control/if_else";
-import { CatnipValueFormat } from "../../compiler/types";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
 type if_else_inputs = { condition: CatnipInputOp, true_branch: CatnipCommandList, false_branch?: CatnipCommandList };

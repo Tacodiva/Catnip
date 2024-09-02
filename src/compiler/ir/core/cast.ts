@@ -1,9 +1,10 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
+import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipValueFormat } from "../../types";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
+import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 
 export type cast_ir_inputs = {
     format: CatnipValueFormat,
@@ -18,7 +19,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
     public getResult(inputs: cast_ir_inputs, branches: {}, operands: ReadonlyArray<CatnipCompilerValue>): CatnipCompilerValue {
         return {
-            type: CatnipCompilerValueType.DYNAMIC,
+            isConstant: false,
             format: inputs.format
         };
     }
@@ -31,18 +32,19 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
     }
 
     private _convert(ctx: CatnipCompilerWasmGenContext, src: CatnipValueFormat, dst: CatnipValueFormat) {
-        if ((src & dst) === src)
+
+        if (CatnipValueFormatUtils.isAlways(src, dst))
             return;
 
         function notSupported(): never {
             throw new Error(`Conversion from '${src}' -> '${dst}' not supported.`);
         }
 
-        if ((src & CatnipValueFormat.F64) === src) {
+        if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.F64)) {
 
-            if ((src & CatnipValueFormat.F64_NUMBER_OR_NAN) === src) {
+            if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
 
-                if ((dst & CatnipValueFormat.F64_NUMBER) === dst) {
+                if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.F64_NUMBER)) {
                     // TODO
                     // throw new Error("NaN check not implemented.");
 
@@ -65,13 +67,13 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     return;
                 }
 
-                if ((dst & CatnipValueFormat.I32_HSTRING) === dst) {
+                if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.I32_HSTRING)) {
                     // Convert from a number to a string
                     ctx.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
                     return;
                 }
 
-                if ((dst & CatnipValueFormat.F64_BOXED_I32_HSTRING) === dst) {
+                if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
                     this._convert(ctx, src, CatnipValueFormat.I32_HSTRING);
                     this._convert(ctx, CatnipValueFormat.I32_HSTRING, CatnipValueFormat.F64_BOXED_I32_HSTRING);
                     return;
@@ -80,7 +82,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 notSupported();
             }
 
-            if ((src & CatnipValueFormat.F64_BOXED_I32_HSTRING) === src) {
+            if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
 
                 // Unbox the pointer from the F64
                 ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
@@ -90,7 +92,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 return;
             }
 
-            if ((dst & CatnipValueFormat.F64_NUMBER_OR_NAN) !== 0) {
+            if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
                 // Convert from an F64 that may be a boxed hstring or a number into a number
 
                 const value = ctx.createLocal(SpiderNumberType.f64);
@@ -120,7 +122,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 return;
             }
 
-            if ((dst & CatnipValueFormat.I32_HSTRING) !== 0) {
+            if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_HSTRING)) {
                 // Convert from an F64 that may be a boxed hstring or a number to an hstring
                 
                 const value = ctx.createLocal(SpiderNumberType.i64);
@@ -158,9 +160,9 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
             notSupported();
         }
 
-        if ((src & CatnipValueFormat.I32) === src) {
+        if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32)) {
 
-            if ((src & CatnipValueFormat.I32_HSTRING) === src) {
+            if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_HSTRING)) {
                 ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
                 this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
                 return;

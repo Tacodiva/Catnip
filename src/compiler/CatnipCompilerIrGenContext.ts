@@ -1,5 +1,5 @@
 import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList } from "../ops";
-import { CatnipValueFormat } from "./types";
+import { CatnipValueFormat } from "./CatnipValueFormat";
 import { createLogger, Logger } from "../log";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";

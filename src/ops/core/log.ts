@@ -1,6 +1,6 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { ir_log } from "../../compiler/ir/core/log";
-import { CatnipValueFormat } from "../../compiler/types";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
 export const op_log = new class extends CatnipCommandOpType<{ msg: CatnipInputOp }> {

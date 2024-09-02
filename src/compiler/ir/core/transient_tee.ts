@@ -3,7 +3,7 @@ import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipCompilerStackElement, CatnipCompilerValue, CatnipCompilerValueType } from "../../CatnipCompilerStack";
+import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../CatnipCompilerStack";
 
 export type ir_transient_tee_inputs = { transient: CatnipIrTransientVariable };
 

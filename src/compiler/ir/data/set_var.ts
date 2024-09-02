@@ -1,15 +1,11 @@
 
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipSpriteID } from "../../../runtime/CatnipSprite";
-import { CatnipVariable, CatnipVariableID } from "../../../runtime/CatnipVariable";
+import { CatnipVariable } from "../../../runtime/CatnipVariable";
 import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
-import { CatnipWasmUnionValue, VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
+import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipTarget } from "../../../runtime/CatnipTarget";
-import { CatnipValueFormat, getValueFormatSpiderType } from "../../types";
-import { CatnipRuntimeModule } from "../../../runtime/CatnipRuntimeModule";
 
 export type set_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable };
 

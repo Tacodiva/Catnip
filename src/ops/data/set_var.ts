@@ -1,7 +1,7 @@
 
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { ir_set_var } from "../../compiler/ir/data/set_var";
-import { CatnipValueFormat } from "../../compiler/types";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipVariableID } from "../../runtime/CatnipVariable";
 import { CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";

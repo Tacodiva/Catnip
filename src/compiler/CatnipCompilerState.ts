@@ -1,7 +1,8 @@
-import { CatnipValueFormat } from "./types";
+import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipVariable } from "../runtime/CatnipVariable";
-import { CatnipCompilerReadonlyStack, CatnipCompilerStack, CatnipCompilerValue, CatnipCompilerValueType } from "./CatnipCompilerStack";
+import { CatnipCompilerReadonlyStack, CatnipCompilerStack, CatnipCompilerValue } from "./CatnipCompilerStack";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
+import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
 export class CatnipCompilerState {
     public readonly stack: CatnipCompilerStack;
@@ -19,14 +20,14 @@ export class CatnipCompilerState {
         let value = this._variables.get(variable);
 
         if (value === undefined) {
-            value = { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.F64 }
+            value = { isConstant: false, format: CatnipValueFormat.F64 }
         }
 
         return value;
     }
 
     public setVariableValue(variable: CatnipVariable, value: CatnipCompilerValue) {
-        if ((value.format & CatnipValueFormat.F64) !== value.format) {
+        if (!CatnipValueFormatUtils.isAlways(value.format, CatnipValueFormat.F64)) {
             value = {
                 ...value,
                 format: CatnipValueFormat.F64

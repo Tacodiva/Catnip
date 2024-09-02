@@ -5,7 +5,7 @@ import { ir_const } from "../../compiler/ir/core/const";
 import { ir_transient_load } from "../../compiler/ir/core/transient_load";
 import { ir_transient_store } from "../../compiler/ir/core/transient_store";
 import { ir_sub } from "../../compiler/ir/operators/sub";
-import { CatnipValueFormat } from "../../compiler/types";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
 type repeat_inputs = { count: CatnipInputOp, loop: CatnipCommandList };

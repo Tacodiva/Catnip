@@ -2,8 +2,8 @@ import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
-import { CatnipValueFormat } from "../../types";
+import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export type sub_ir_inputs = { type: SpiderNumberType };
 
@@ -15,9 +15,9 @@ export const ir_sub = new class extends CatnipIrInputOpType<sub_ir_inputs> {
     public getResult(inputs: sub_ir_inputs): CatnipCompilerValue {
         switch (inputs.type) {
             case SpiderNumberType.f64:
-                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.F64_NUMBER_OR_NAN };
+                return { isConstant: false, format: CatnipValueFormat.F64_NUMBER_OR_NAN };
             case SpiderNumberType.i32:
-                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.I32_NUMBER };
+                return { isConstant: false, format: CatnipValueFormat.I32_NUMBER };
             default:
                 CatnipCompilerWasmGenContext.logger.assert(false, true, `'${inputs.type}' type not supported by operation.`);
         }

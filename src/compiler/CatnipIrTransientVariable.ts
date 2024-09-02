@@ -1,6 +1,7 @@
 import { SpiderNumberType } from "wasm-spider";
-import { CatnipValueFormat, getValueFormatSpiderType } from "./types";
+import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipReadonlyIr } from "./CatnipIr";
+import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
 /**
  * Functions will need to store:
@@ -33,7 +34,7 @@ export class CatnipIrTransientVariable {
     }
 
     public get type(): SpiderNumberType {
-        return getValueFormatSpiderType(this.format);
+        return CatnipValueFormatUtils.getFormatSpiderType(this.format);
     }
 
     public get size(): number {

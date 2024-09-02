@@ -2,7 +2,7 @@ import { SpiderNumberType } from "wasm-spider";
 import { ir_sub } from "../../compiler/ir/operators/sub";
 import { CatnipInputOp, CatnipInputOpType } from "../CatnipOp";
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-import { CatnipValueFormat } from "../../compiler/types";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 
 export type sub_inputs = { left: CatnipInputOp, right: CatnipInputOp };
 

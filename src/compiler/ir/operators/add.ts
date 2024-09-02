@@ -1,8 +1,10 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipCompilerValue, CatnipCompilerValueType } from "../../../compiler/CatnipCompilerStack";
-import { CatnipValueFormat } from "../../types";
+import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
+import { Cast } from "../../cast";
+import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 
 
 export type add_ir_inputs = { type: SpiderNumberType };
@@ -14,12 +16,18 @@ export const ir_add = new class extends CatnipIrInputOpType<add_ir_inputs> {
         return 2;
     }
 
-    public getResult(inputs: add_ir_inputs): CatnipCompilerValue {
+    public getResult(inputs: add_ir_inputs, branches: {}, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue {
+
+        if (operands[0].isConstant && operands[1].isConstant) {
+            const value = Cast.toNumber(operands[0].value) + Cast.toNumber(operands[1].value);
+            return { isConstant: true, value, format: CatnipValueFormatUtils.getNumberFormat(value) }
+        }
+
         switch (inputs.type) {
             case SpiderNumberType.f64:
-                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.F64_NUMBER_OR_NAN };
+                return { isConstant: false, format: CatnipValueFormat.F64_NUMBER_OR_NAN };
             case SpiderNumberType.i32:
-                return { type: CatnipCompilerValueType.DYNAMIC, format: CatnipValueFormat.I32_NUMBER };
+                return { isConstant: false, format: CatnipValueFormat.I32_NUMBER };
             default:
                 CatnipCompilerWasmGenContext.logger.assert(false, true, `'${inputs.type}' type not supported by operation.`);
         }
