@@ -10,7 +10,7 @@ export const CatnipWasmStructSprite = new WasmStruct("catnip_sprite", {
     variable_count: WasmUInt32,
     variables: new WasmPtr(new WasmArray(new WasmPtr(CatnipWasmStructVariable), null)),
 
-    target_default: WasmPtrVoid
+    target: WasmPtrVoid
 });
 
 export const CatnipWasmPtrSprite = new WasmPtr(CatnipWasmStructSprite);

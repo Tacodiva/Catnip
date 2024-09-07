@@ -1,4 +1,4 @@
-import { CatnipIrInputOp } from "./CatnipIrOp";
+import { CatnipIrInputOp, CatnipReadonlyIrInputOp } from "./CatnipIrOp";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 
 export interface CatnipCompilerValueBase {
@@ -22,8 +22,8 @@ export interface CatnipCompilerReadonlyStack {
     peek(offset: number): CatnipCompilerStackElement;
 }
 
-export type CatnipCompilerStackElement = CatnipCompilerValue & {
-    source: CatnipIrInputOp;
+export type CatnipCompilerStackElement = Readonly<CatnipCompilerValue> & {
+    readonly source: CatnipReadonlyIrInputOp;
 }
 
 export class CatnipCompilerStack implements CatnipCompilerReadonlyStack {
@@ -34,6 +34,14 @@ export class CatnipCompilerStack implements CatnipCompilerReadonlyStack {
 
     public constructor() {
         this._stack = [];
+    }
+
+    public clone(): CatnipCompilerStack {
+        const clone = new CatnipCompilerStack();
+
+        clone._stack.push(...this._stack);
+
+        return clone;
     }
 
     public pop(): CatnipCompilerStackElement;
@@ -64,5 +72,4 @@ export class CatnipCompilerStack implements CatnipCompilerReadonlyStack {
     public push(value: CatnipCompilerStackElement) {
         this._stack.push(value);
     }
-
 }

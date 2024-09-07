@@ -20,7 +20,12 @@ struct catnip_target {
     catnip_runtime *runtime;
     catnip_sprite *sprite;
     catnip_target_flags flags;
-    catnip_target *next;
+
+    catnip_target *next_global;
+    catnip_target *prev_global;
+
+    catnip_target *next_sprite;
+    catnip_target *prev_sprite;
 
     catnip_value *variable_table;
 

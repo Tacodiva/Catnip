@@ -3,6 +3,7 @@ import { ir_sub } from "../../compiler/ir/operators/sub";
 import { CatnipInputOp, CatnipInputOpType } from "../CatnipOp";
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
+import { registerSB3InputBlock } from "../../sb3_ops";
 
 export type sub_inputs = { left: CatnipInputOp, right: CatnipInputOp };
 
@@ -13,3 +14,8 @@ export const op_sub = new class extends CatnipInputOpType<sub_inputs> {
         ctx.emitIr(ir_sub, { type: SpiderNumberType.f64 }, {});
     }
 }
+
+registerSB3InputBlock("operator_subtract", (ctx, block) => op_sub.create({
+    left: ctx.readInput(block.inputs.NUM1),
+    right: ctx.readInput(block.inputs.NUM2),
+}));

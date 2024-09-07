@@ -118,8 +118,10 @@ export class CatnipProject {
         const compiler = new CatnipCompiler(this);
 
         for (const script of this._recompileScripts) {
-            compiler.compile(script);
+            compiler.compileScript(script);
         }
+
+        const module = await compiler.createModule();
 
         if (globalThis.document) {
             const downloadURL = (data: string, fileName: string) => {
@@ -147,24 +149,14 @@ export class CatnipProject {
             downloadBlob(writeModule(compiler.spiderModule), "module.wasm", "application/wasm");
         }
 
-        const module = await compileModule(compiler.spiderModule);
-
-        const instance = await WebAssembly.instantiate(module, {
-            env: {
-                memory: this.runtimeModule.imports.env.memory,
-                indirect_function_table: this.runtimeModule.indirectFunctionTable
-            },
-            catnip: this.runtimeModule.functions
-        });
-
-        const sprite = this._sprites.get("sprite")!;
-        const thread = this.runtimeModule.functions.catnip_thread_new(sprite.defaultTarget.structWrapper.ptr, 1);
+        const stage = this._sprites.values().next().value;
+        module.triggerEvent("whenflagclicked");
 
         for (let tick = 1; tick <= 10; tick++) {
             console.time(""+tick);
             this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
             console.timeEnd(""+tick);
-            console.log("nth = " + sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(this.getSprite("sprite")!.getVariable("nth")!._index).getMemberWrapper(0).get());
+            console.log("nth = " + stage.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(stage.getVariable("2")!._index).getMemberWrapper(0).get());
         }
     }
 }

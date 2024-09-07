@@ -11,7 +11,8 @@ export type CatnipEventID = string;
 
 export interface CatnipScriptTriggerEventDesc {
     type: "event",
-    event: CatnipEventID
+    event: CatnipEventID,
+    priority?: number
 }
 
 export type CatnipScriptTriggerDesc = CatnipScriptTriggerProcedureDesc | CatnipScriptTriggerEventDesc;
@@ -29,6 +30,8 @@ export class CatnipScript {
     public readonly sprite: CatnipSprite;
     public readonly id: CatnipScriptID;
 
+    public readonly trigger: Readonly<CatnipScriptTriggerDesc>;
+
     private _commands: CatnipCommandList;
     public get commands(): CatnipCommandList { return this._commands; }
 
@@ -38,6 +41,7 @@ export class CatnipScript {
     public constructor(sprite: CatnipSprite, desc: CatnipScriptDesc) {
         this.sprite = sprite;
         this.id = desc.id;
+        this.trigger = desc.trigger;
         this._commands = desc.commands;
         this._dependantScripts = new Set();
         this._recompile = true;

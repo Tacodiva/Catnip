@@ -1,6 +1,6 @@
 import { CatnipCompilerIrGenContext } from "../compiler/CatnipCompilerIrGenContext";
 
-export type CatnipCommandList = CatnipCommandOp<CatnipOpInputs>[];
+export type CatnipCommandList = CatnipCommandOp[];
 
 export type CatnipOpInputs = Record<string, any>;
 

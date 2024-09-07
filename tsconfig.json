@@ -6,7 +6,7 @@
         "strict": true,
         "esModuleInterop": true,
         "stripInternal": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
     },
     "ts-node": {
         "experimentalSpecifierResolution": "node",
@@ -14,7 +14,9 @@
         "esm": true,
         "compilerOptions": {
             "module": "ESNext"
-        }
+        },
     },
-    "include": ["src"]
+    "include": [
+        "src"
+    ],
 }

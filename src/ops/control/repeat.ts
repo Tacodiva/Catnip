@@ -7,6 +7,7 @@ import { ir_transient_store } from "../../compiler/ir/core/transient_store";
 import { ir_sub } from "../../compiler/ir/operators/sub";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { registerSB3CommandBlock } from "../../sb3_ops";
 
 type repeat_inputs = { count: CatnipInputOp, loop: CatnipCommandList };
 
@@ -20,7 +21,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
             {
                 branch: ctx.emitBranch((loopHead) => {
                     ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
-                    ctx.emitIr(ir_const, { value: "1", format: CatnipValueFormat.I32_NUMBER }, {});
+                    ctx.emitIr<typeof ir_const>(ir_const, { value: "1", format: CatnipValueFormat.I32_NUMBER }, {});
                     ctx.emitIr(ir_sub, { type: SpiderNumberType.i32 }, {});
                     ctx.emitIr(ir_transient_store, { transient: loopCount }, {});
 
@@ -33,3 +34,8 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
         );
     }
 }
+
+registerSB3CommandBlock("control_repeat", (ctx, block) => op_repeat.create({
+    count: ctx.readInput(block.inputs.TIMES),
+    loop: ctx.readStack(block.inputs.SUBSTACK),
+}));

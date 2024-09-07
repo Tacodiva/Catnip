@@ -17,5 +17,12 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
 
   CATNIP_LIST_ADD(&runtime->targets, catnip_target*, target);
 
+  target->next_sprite = sprite->target;
+  target->prev_sprite = CATNIP_NULL;
+
+  if (target->next_sprite != CATNIP_NULL) {
+    target->next_sprite->prev_sprite = target;
+  }
+
   return target;
 }

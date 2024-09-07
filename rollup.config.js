@@ -1,7 +1,8 @@
-import typescript  from '@rollup/plugin-typescript';
-import terser  from '@rollup/plugin-terser';
-import livereload  from 'rollup-plugin-livereload';
-import nodeResolve  from '@rollup/plugin-node-resolve';
+import typescript from '@rollup/plugin-typescript';
+import terser from '@rollup/plugin-terser';
+import livereload from 'rollup-plugin-livereload';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -11,9 +12,17 @@ export default [
 
         output: {
             sourcemap: !production,
-            format: 'es',
-            file: 'public/bundle.js'
+            format: 'iife',
+            file: 'public/bundle.js',
+
+            globals: {
+                jszip: "JSZip"
+            }
         },
+
+        external: [
+            'jszip'
+        ],
 
         plugins: [
             typescript(
@@ -21,7 +30,6 @@ export default [
                     tsconfig: "tsconfig.json",
                     sourceMap: !production,
                     inlineSources: !production,
-
                     // paths: {
                     //     "scuff": [
                     //         "../public/bundle/core/scuff.d.ts"
@@ -32,8 +40,9 @@ export default [
                     // }
                 }
             ),
-            
+
             nodeResolve(),
+            commonjs(),
 
             !production && livereload({ watch: ['public'] }),
             production && terser({ mangle: false }),

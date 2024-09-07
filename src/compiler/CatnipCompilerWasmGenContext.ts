@@ -18,9 +18,9 @@ export class CatnipCompilerWasmGenContext {
     public static readonly logger: Logger = createLogger("CatnipCompilerWasmGenContext");
 
     public readonly compiler: CatnipCompiler;
-    public get projectModule() { return this.compiler.module; }
-    public get spiderModule() { return this.projectModule.spiderModule; }
-    public get runtimeModule() { return this.projectModule.runtimeModule; }
+    public get projectModule() { return this.compiler.spiderModule; }
+    public get spiderModule() { return this.compiler.spiderModule; }
+    public get runtimeModule() { return this.compiler.runtimeModule; }
 
     public get project() { return this.compiler.project; }
 
@@ -214,7 +214,7 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public emitWasmRuntimeFunctionCall(funcName: CatnipRuntimeModuleFunctionName) {
-        this.emitWasm(SpiderOpcodes.call, this.projectModule.getRuntimeFunction(funcName));
+        this.emitWasm(SpiderOpcodes.call, this.compiler.getRuntimeFunction(funcName));
     }
 
     public emitWasmGetThread() {

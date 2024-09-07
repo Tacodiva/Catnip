@@ -11,9 +11,10 @@ struct catnip_sprite {
     catnip_ui32_t variable_count;
     catnip_variable **variables;
 
-    catnip_target *target_default;
-    catnip_list targets;
-    
+    // All the targets assosiated with this sprite.
+    // Must be sorted in layer order
+    catnip_target *target;
+        
 };
 
 typedef struct catnip_sprite catnip_sprite;

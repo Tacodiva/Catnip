@@ -9,7 +9,7 @@ import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStackElement } from "./CatnipCompilerStack";
 import { CatnipIrBranch } from "./CatnipIrBranch";
-import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpInputs, CatnipIrOpType } from "./CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType } from "./CatnipIrOp";
 import { ir_branch } from "./ir/core/branch";
 import { ir_yield } from "./ir/core/yield";
 import { ir_cast } from "./ir/core/cast";
@@ -156,13 +156,13 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitIr<
-        TInputs extends CatnipOpInputs,
-        TBranches extends CatnipIrOpBranches,
-        TOpType extends CatnipIrOpType<TInputs, TBranches>
+        TOpType extends CatnipIrOpType<TInputs, TBranches>,
+        TInputs extends CatnipOpInputs = TOpType extends CatnipIrOpType<infer I, CatnipIrOpBranchesDefinition> ? I : never,
+        TBranches extends CatnipIrOpBranches = TOpType extends CatnipIrOpType<CatnipIrOpInputs, infer I> ? CatnipIrOpBranches<I> : never,
     >(
         type: TOpType,
         inputs: TInputs,
-        branches: TBranches
+        branches: CatnipIrOpBranches<TBranches>
     ) {
         if (!this._branch.doesContinue()) return null;
 

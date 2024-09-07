@@ -71,7 +71,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         this.name = name;
     }
 
-    public abstract getOperandCount(inputs: TInputs, branches: TBranches): number;
+    public abstract getOperandCount(inputs: TInputs, branches: CatnipReadonlyIrOpBranches<TBranches>): number;
 
     public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<TInputs, TBranches>, branch: CatnipIrBranch): void;
 
@@ -94,16 +94,16 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         return false;
     }
 
-    public applyState(ir: CatnipIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
+    public applyState(ir: CatnipReadonlyIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
 }
 
 export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranchesDefinition = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {
 
     public readonly isInput: true = true;
 
-    public abstract getResult(inputs: TInputs, branches: TBranches, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue;
+    public abstract getResult(inputs: TInputs, branches: CatnipReadonlyIrOpBranches<TBranches>, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue;
 
-    public tryCast(ir: CatnipIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
+    public tryCast(ir: CatnipReadonlyIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
         return false;
     }
 }

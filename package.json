@@ -3,15 +3,17 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"serve public\" \"rollup -c -w\"",
+    "dev": "concurrently \"serve\" \"rollup -c -w\"",
     "build": "rollup -c",
     "test": "node --no-deprecation --import ./ts-node.register.js ./test/index.ts"
   },
   "dependencies": {
+    "@rollup/plugin-commonjs": "^26.0.1",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "jest": "^29.7.0",
+    "jszip": "^3.10.1",
     "rollup": "^3.9.0",
     "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",

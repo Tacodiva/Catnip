@@ -8,12 +8,9 @@ export const PreWasmPassFunctionIndexAllocation: CatnipCompilerPass = {
 
     run(ir: CatnipReadonlyIr): void {
         const needsFunctionIndices = ir.functions.filter(fn => fn.needsFunctionTableIndex);
-        let index = 1;
 
         for (const fn of needsFunctionIndices) {
-            fn.setFunctionTableIndex(index++);
+            fn.setFunctionTableIndex(ir.compiler.allocateFunctionTableIndex());
         }
-
-        ir.compiler.module.createFunctionsElement(ir.functions);
     }
 }

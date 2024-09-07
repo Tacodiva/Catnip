@@ -59,7 +59,11 @@ export type ProjectSB3InputValueNameID = [
     id: string,
 ];
 
-export type ProjectSB3InputValue = string | ProjectSB3InputValueNumber | ProjectSB3InputValueColor | ProjectSB3InputValueString | ProjectSB3InputValueNameID;
+/** An array representing an input. */
+export type ProjectSB3InputValueInline = ProjectSB3InputValueNumber | ProjectSB3InputValueColor | ProjectSB3InputValueString | ProjectSB3InputValueNameID;
+
+/** The block ID of the input or an array representing it. */
+export type ProjectSB3InputValue = string | ProjectSB3InputValueInline;
 
 export const enum ProjectSB3InputType {
     SHADOW_ONLY = 1,
@@ -85,10 +89,10 @@ export type ProjectSB3InputShadowedInput = [
 
 export type ProjectSB3Input = ProjectSB3InputShadowOnly | ProjectSB3InputInputOnly | ProjectSB3InputShadowedInput;
 
-export type ProjectSB3Field = [
+export type ProjectSB3Field<TID extends string | undefined = string | undefined> = [
     value: ProjectSB3Value,
     /** The ID of the field's value. On present on certain fields. */
-    id?: string
+    id: TID
 ];
 
 interface ProjectSB3MutationBase {
@@ -130,10 +134,20 @@ export type ProjectSB3BlockTopLevelVariable = [
     y: number
 ];
 
+export type ProjectSB3BlockOpcode = keyof SB3BlockTypes | string;
 
-interface ProjectSB3BlockBase {
+export type ProjectSB3BlockInputs<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3BlockOpcode>
+    = TOpcode extends keyof SB3BlockTypes ? SB3BlockTypes[TOpcode]["inputs"] : Record<string, ProjectSB3Input>;
+
+export type ProjectSB3BlockFields<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3BlockOpcode>
+    = TOpcode extends keyof SB3BlockTypes ? SB3BlockTypes[TOpcode]["fields"] : Record<string, ProjectSB3Field>;
+
+export type ProjectSB3BlockMutation<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3BlockOpcode>
+    = TOpcode extends keyof SB3BlockTypes ? SB3BlockTypes[TOpcode]["mutation"] : ProjectSB3Mutation;
+
+interface ProjectSB3BlockBase<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3BlockOpcode> {
     /** A string naming the block. */
-    opcode: string;
+    opcode: TOpcode;
     /** The ID of the following block */
     next: string | null;
     /** 
@@ -147,32 +161,30 @@ interface ProjectSB3BlockBase {
      * An object associating input names with the ID of the block inside the input, or an array
      * representing the value of the input.
      */
-    inputs: Record<string, ProjectSB3Input>;
-    /**
-     * An object associating field names and their values.
-     */
-    fields: Record<string, ProjectSB3Field>;
+    inputs: ProjectSB3BlockInputs<TOpcode>;
+    /** An object associating field names and their values. */
+    fields: ProjectSB3BlockFields<TOpcode>;
+    /** Present when opcode is "procedures_call", "procedures_prototype" or "control_stop". */
+    mutation?: ProjectSB3BlockMutation<TOpcode>;
     /** True if this block is a shadow. */
     shadow: boolean;
     /** True if this block has no parent. */
     topLevel: boolean;
     /** The ID of the attached comment, if there is one. */
     comment?: string;
-    /** Present when opcode is "procedures_call", "procedures_prototype" or "control_stop". */
-    mutation?: ProjectSB3Mutation;
 }
 
-export interface ProjectSB3BlockTopLevel extends ProjectSB3BlockBase {
+export interface ProjectSB3BlockTopLevel<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3BlockOpcode> extends ProjectSB3BlockBase<TOpcode> {
     topLevel: true;
     x: number;
     y: number;
 }
 
-export interface ProjectSB3BlockInput extends ProjectSB3BlockBase {
+export interface ProjectSB3BlockInput<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3BlockOpcode> extends ProjectSB3BlockBase<TOpcode> {
     topLevel: false;
 }
 
-export type ProjectSB3Block = ProjectSB3BlockTopLevel | ProjectSB3BlockInput;
+export type ProjectSB3Block<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3BlockOpcode> = ProjectSB3BlockTopLevel<TOpcode> | ProjectSB3BlockInput<TOpcode>;
 
 export interface ProjectSB3Comment {
     /** The ID of the block the comment is attached to. */
@@ -216,6 +228,8 @@ export interface ProjectSB3Sound extends ProjectSB3Asset {
     sampleCount: number;
 }
 
+export type ProjectSB3TargetBlocks = Record<string, ProjectSB3Block | ProjectSB3BlockTopLevelVariable>;
+
 interface ProjectSB3TargetBase {
     isStage: boolean;
     name: string;
@@ -226,7 +240,7 @@ interface ProjectSB3TargetBase {
     /** A record associating broadcast IDs with their name. Normally only present in the stage. */
     broadcasts?: Record<string, string>;
     /** A record associating IDs with lists.  */
-    blocks: Record<string, ProjectSB3Block | ProjectSB3BlockTopLevelVariable>;
+    blocks: ProjectSB3TargetBlocks;
     /** A record associating IDs with comments.  */
     comments: Record<string, ProjectSB3Comment>;
     /** The index in the costumes array of the current costume.  */
@@ -315,3 +329,73 @@ export interface ProjectSB3 {
     /** An array of the identifiers of the extensions used. */
     extensions: (string | ProjectSB3Extension)[],
 }
+
+export type SB3BlockTypes = {
+    [K in keyof SB3BlockTypeDefinition]: SB3BlockTypeDefinition[K] & {
+        inputs: {},
+        fields: {},
+    } & ("mutation" extends keyof SB3BlockTypeDefinition[K] ? { mutation: SB3BlockTypeDefinition[K]["mutation"] } : { mutation: undefined });
+};
+
+type SB3BlockTypeDefinition = {
+
+    "looks_say": {
+        inputs: {
+            "MESSAGE": ProjectSB3Input,
+        }
+    },
+
+    "event_whenflagclicked": {},
+
+    "control_if": {
+        inputs: {
+            "CONDITION": ProjectSB3Input,
+            "SUBSTACK": ProjectSB3Input,
+        },
+    },
+    "control_if_else": {
+        inputs: {
+            "CONDITION": ProjectSB3Input,
+            "SUBSTACK": ProjectSB3Input,
+            "SUBSTACK2": ProjectSB3Input,
+        },
+    },
+    "control_repeat": {
+        inputs: {
+            "TIMES": ProjectSB3Input,
+            "SUBSTACK": ProjectSB3Input,
+        },
+    },
+    "control_forever": {
+        inputs: {
+            "SUBSTACK": ProjectSB3Input,
+        },
+    },
+
+    "operator_add": {
+        inputs: {
+            "NUM1": ProjectSB3Input,
+            "NUM2": ProjectSB3Input,
+        },
+    },
+    "operator_subtract": {
+        inputs: {
+            "NUM1": ProjectSB3Input,
+            "NUM2": ProjectSB3Input,
+        },
+    },
+
+    "data_variable": {
+        fields: {
+            "VARIABLE": ProjectSB3Field<string>
+        },
+    },
+    "data_setvariableto": {
+        inputs: {
+            "VALUE": ProjectSB3Input
+        },
+        fields: {
+            "VARIABLE": ProjectSB3Field<string>
+        },
+    },
+};

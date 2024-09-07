@@ -1,6 +1,6 @@
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipVariable } from "../runtime/CatnipVariable";
-import { CatnipCompilerReadonlyStack, CatnipCompilerStack, CatnipCompilerValue } from "./CatnipCompilerStack";
+import { CatnipCompilerStack, CatnipCompilerValue } from "./CatnipCompilerStack";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
@@ -10,10 +10,24 @@ export class CatnipCompilerState {
     private _variables: Map<CatnipVariable, CatnipCompilerValue>;
     private _transientVariable: Map<CatnipIrTransientVariable, CatnipCompilerValue>;
 
-    public constructor() {
-        this.stack = new CatnipCompilerStack();
-        this._variables = new Map();
-        this._transientVariable = new Map();
+    public constructor(clone?: CatnipCompilerState) {
+        if (clone === undefined) {
+            this.stack = new CatnipCompilerStack();
+            this._variables = new Map();
+            this._transientVariable = new Map();
+        } else {
+            this.stack = clone.stack.clone();
+            this._variables = new Map(clone._variables);
+            this._transientVariable = new Map(clone._transientVariable);
+        }
+    }
+
+    public clone(): CatnipCompilerState {
+        return new CatnipCompilerState(this);
+    }
+
+    public or(other: CatnipCompilerState) {
+        
     }
 
     public getVariableValue(variable: CatnipVariable): CatnipCompilerValue {

@@ -72,7 +72,7 @@ export class CatnipSprite {
 
         this.defaultTarget = new CatnipTarget(this, desc.target);
         this._rewriteTargets.add(this.defaultTarget);
-        this.structWrapper.setMember("target_default", this.defaultTarget.structWrapper.ptr);
+        this.structWrapper.setMember("target", this.defaultTarget.structWrapper.ptr);
 
         this._rewrite();
     }

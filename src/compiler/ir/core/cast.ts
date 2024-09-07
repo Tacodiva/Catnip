@@ -18,6 +18,15 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
     public getOperandCount(): number { return 1; }
 
     public getResult(inputs: cast_ir_inputs, branches: {}, operands: ReadonlyArray<CatnipCompilerValue>): CatnipCompilerValue {
+
+        if (operands[0].isConstant) {
+            return {
+                isConstant: true,
+                format: inputs.format,
+                value: operands[0].value
+            }
+        }
+
         return {
             isConstant: false,
             format: inputs.format
@@ -97,26 +106,26 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
                 const value = ctx.createLocal(SpiderNumberType.f64);
                 ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
-    
+
                 ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
                 ctx.emitWasm(SpiderOpcodes.i64_const, 32);
                 ctx.emitWasm(SpiderOpcodes.i64_shr_u);
                 ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
                 ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
                 ctx.emitWasm(SpiderOpcodes.i32_eq);
-    
+
                 // Executed if the value is a string
                 ctx.pushExpression();
                 ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
                 this._convert(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst);
                 const trueExpr = ctx.popExpression();
-    
+
                 // Executed if the value is a double already
                 ctx.pushExpression();
                 ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
                 this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
                 const falseExpr = ctx.popExpression();
-    
+
                 ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
                 ctx.releaseLocal(value);
                 return;
@@ -124,7 +133,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
             if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_HSTRING)) {
                 // Convert from an F64 that may be a boxed hstring or a number to an hstring
-                
+
                 const value = ctx.createLocal(SpiderNumberType.i64);
                 ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
                 ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);

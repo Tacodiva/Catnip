@@ -1,69 +1,34 @@
-import { createModule, SpiderElementFuncIdxActive, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderReferenceType } from "wasm-spider";
-import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
-import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipIrFunction, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { createLogger, Logger } from "../log";
-import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
+import { CatnipProject } from "../runtime/CatnipProject";
+import { CatnipEventID } from "../runtime/CatnipScript";
+
+export type CatnipProjectModuleEvent = { id: CatnipEventID, exportName: string };
+type CatnipProjectEventLambda = (runtimePtr: number) => void;
 
 export class CatnipProjectModule {
     private static readonly _logger: Logger = createLogger("CatnipProjectModule");
 
-    public readonly runtimeModule: CatnipRuntimeModule;
+    public readonly project: CatnipProject;
+    public readonly instance: WebAssembly.Instance;
+    private _events: Map<CatnipEventID, CatnipProjectEventLambda> = new Map();
 
-    public readonly spiderModule: SpiderModule;
+    public constructor(project: CatnipProject, instance: WebAssembly.Instance, events: CatnipProjectModuleEvent[]) {
+        this.project = project;
+        this.instance = instance;
 
-    public readonly spiderMemory: SpiderImportMemory;
-    public readonly spiderIndirectFunctionTable: SpiderImportTable;
-
-    private readonly _runtimeFuncs: Map<CatnipRuntimeModuleFunctionName, SpiderImportFunction>;
-    private _spiderFunctionElement: SpiderElementFuncIdxActive | null;
-
-    public constructor(runtimeModule: CatnipRuntimeModule) {
-        this.runtimeModule = runtimeModule;
-
-        this.spiderModule = createModule();
-        this.spiderMemory = this.spiderModule.importMemory("env", "memory");
-        this.spiderIndirectFunctionTable = this.spiderModule.importTable(
-            "env", "indirect_function_table",
-            SpiderReferenceType.funcref, 0
-        );
-
-        this._spiderFunctionElement = null;
-
-        this._runtimeFuncs = new Map();
-
-        let funcName: CatnipRuntimeModuleFunctionName;
-        for (funcName in CatnipRuntimeModuleFunctions) {
-            const func = CatnipRuntimeModuleFunctions[funcName];
-            const funcType = this.spiderModule.createType(func.args, ...(func.result === undefined ? [] : [func.result]));
-            this._runtimeFuncs.set(funcName, this.spiderModule.importFunction("catnip", funcName, funcType));
+        this._events = new Map();
+        for (const event of events) {
+            const eventExport = this.instance.exports[event.exportName] as (CatnipProjectEventLambda | undefined);
+            if (eventExport === undefined) throw new Error(`Can't find event export '${event.exportName}'.`);
+            this._events.set(event.id, eventExport);
         }
     }
 
-    public getRuntimeFunction(funcName: CatnipRuntimeModuleFunctionName): SpiderImportFunction {
-        const func = this._runtimeFuncs.get(funcName);
-        if (func === undefined) throw new Error(`Unknown runtime function '${funcName}'.`);
-        return func;
+    public triggerEvent(event: CatnipEventID) {
+        const eventLambda = this._events.get(event);
+
+        if (eventLambda === undefined) return;
+
+        eventLambda(this.project.runtimeInstance.ptr);
     }
-
-    public createFunctionsElement(functions: ReadonlyArray<CatnipReadonlyIrFunction>) {
-        CatnipProjectModule._logger.assert(this._spiderFunctionElement === null, false, "Functions element created twice!");
-
-        const spiderFns: SpiderFunctionDefinition[] = [];
-        const baseIdx = 1;
-        let idx = baseIdx;
-
-        for (const fn of functions) {
-            if (fn.needsFunctionTableIndex) {
-                CatnipCompilerLogger.assert(fn.functionTableIndex === idx);
-                idx++;
-                spiderFns.push(fn.spiderFunction);
-            }
-        }
-
-        this._spiderFunctionElement = this.spiderModule.createElementFuncIdxActive(
-            this.spiderIndirectFunctionTable, baseIdx, spiderFns
-        );
-    }
-
 }

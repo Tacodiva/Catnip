@@ -2,6 +2,7 @@ import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenCo
 import { ir_if_else } from "../../compiler/ir/control/if_else";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { registerSB3CommandBlock } from "../../sb3_ops";
 
 type if_else_inputs = { condition: CatnipInputOp, true_branch: CatnipCommandList, false_branch?: CatnipCommandList };
 
@@ -17,3 +18,14 @@ export const op_if_else = new class extends CatnipCommandOpType<if_else_inputs> 
         );
     }
 }
+
+registerSB3CommandBlock("control_if", (ctx, block) => op_if_else.create({
+    condition: ctx.readInput(block.inputs.CONDITION),
+    true_branch: ctx.readStack(block.inputs.SUBSTACK),
+}));
+
+registerSB3CommandBlock("control_if_else", (ctx, block) => op_if_else.create({
+    condition: ctx.readInput(block.inputs.CONDITION),
+    true_branch: ctx.readStack(block.inputs.SUBSTACK),
+    false_branch: ctx.readStack(block.inputs.SUBSTACK2),
+}));

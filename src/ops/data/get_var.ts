@@ -2,6 +2,7 @@ import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenCo
 import { ir_get_var } from "../../compiler/ir/data/get_var";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipVariableID } from "../../runtime/CatnipVariable";
+import { registerSB3InputBlock } from "../../sb3_ops";
 import { CatnipInputOpType } from "../CatnipOp";
 
 type get_var_inputs = { sprite: CatnipSpriteID, variable: CatnipVariableID };
@@ -16,3 +17,8 @@ export const op_get_var = new class extends CatnipInputOpType<get_var_inputs> {
         ctx.emitIr(ir_get_var, { target, variable }, {});
     }
 }
+
+registerSB3InputBlock("data_variable", (ctx, block) => {
+    const varInfo = ctx.getVariable(block.fields.VARIABLE);
+    return op_get_var.create({ sprite: varInfo.spriteID, variable: varInfo.variableID });
+});

@@ -5,6 +5,7 @@ import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipVariableID } from "../../runtime/CatnipVariable";
 import { CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { registerSB3CommandBlock, registerSB3InputBlock } from "../../sb3_ops";
 
 type set_var_inputs = { sprite: CatnipSpriteID, variable: CatnipVariableID, value: CatnipInputOp };
 
@@ -19,3 +20,12 @@ export const op_set_var = new class extends CatnipCommandOpType<set_var_inputs> 
         ctx.emitIr(ir_set_var, { target, variable }, {});
     }
 }
+
+registerSB3CommandBlock("data_setvariableto", (ctx, block) => {
+    const varInfo = ctx.getVariable(block.fields.VARIABLE);
+    return op_set_var.create({
+        sprite: varInfo.spriteID,
+        variable: varInfo.variableID,
+        value: ctx.readInput(block.inputs.VALUE)
+    });
+});

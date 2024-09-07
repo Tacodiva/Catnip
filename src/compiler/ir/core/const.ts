@@ -1,6 +1,6 @@
 import { SpiderNumberType } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
@@ -28,8 +28,9 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         }
     }
 
-    public tryCast(ir: CatnipIrInputOp<const_ir_inputs, {}>, format: CatnipValueFormat): boolean {
-        ir.inputs.format = format;
+    public tryCast(ir: CatnipReadonlyIrOp<const_ir_inputs, {}, this>, format: CatnipValueFormat): boolean {
+        /** TODO */
+        (ir as any).inputs.format = format;
         return true;
     }
 
@@ -38,7 +39,7 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         const format = this._getFormat(ir.inputs);
 
         if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_HSTRING)) {
-            ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString(""+value));
+            ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("" + value));
             return;
         }
 

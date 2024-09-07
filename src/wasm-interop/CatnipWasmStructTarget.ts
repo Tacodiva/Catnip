@@ -6,7 +6,12 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     runtime: WasmPtrVoid,
     sprite: CatnipWasmPtrSprite,
     flags: WasmUInt32,
-    next: WasmPtrVoid,
+
+    next_global: WasmPtrVoid,
+    prev_global: WasmPtrVoid,
+
+    next_sprite: WasmPtrVoid,
+    prev_sprite: WasmPtrVoid,
 
     variable_table: new WasmPtr(new WasmArray(CatnipWasmUnionValue, null)),
 

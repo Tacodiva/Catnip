@@ -14,6 +14,6 @@ export const ir_branch = new class extends CatnipIrCommandOpType<{}, ir_branch_b
     }
 
     public doesContinue(ir: CatnipReadonlyIrOp<{}, ir_branch_branches, CatnipIrOpType<{}, ir_branch_branches>>): boolean {
-        return !(ir.branches.branch.isYielding() && ir.branches.branch.isFuncBody);
+        return !(ir.branches.branch.isFuncBody && ir.branches.branch.isYielding());
     }
 }
