@@ -100,7 +100,7 @@ export class CatnipCompilerWasmGenContext {
                         );
                 }
 
-                this.emitWasm(SpiderOpcodes.local_set, variableInfo.ref);
+                this.emitWasm(SpiderOpcodes.local_set, this._func.getTransientVariableRef(variableInfo.variable));
             }
 
             this.releaseLocal(stackPtrLocal);
@@ -139,13 +139,10 @@ export class CatnipCompilerWasmGenContext {
 
             this.emitWasmGetThread();
 
-            for (const parameter of targetFunc.externalValues) {
-                if (parameter.location.type !== CatnipIrExternalLocationType.PARAMETER)
-                    continue;
-
-                if (parameter.value.type === CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE) {
-                    this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.value.variable));
-                } else if (parameter.value.type === CatnipIrExternalValueSourceType.PROCEDURE_INPUT) {
+            for (const parameter of targetFunc.parameters) {
+                if (parameter.type === CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE) {
+                    this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.variable));
+                } else if (parameter.type === CatnipIrExternalValueSourceType.PROCEDURE_INPUT) {
                     throw new Error("Not implemented.");
                 }
             }

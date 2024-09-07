@@ -73,7 +73,7 @@ export class CatnipCompilerIrGenContext {
         }
 
         if (mergeBefore) {
-            this._switchToBranch(this.ir.createFunction(true).body);
+            this._switchToBranch(this.ir.createFunction().body);
 
             for (const tailBranch of branchTails) {
                 tailBranch.pushOp(this._createIr(
@@ -129,7 +129,7 @@ export class CatnipCompilerIrGenContext {
                 }
             } else {
                 if (nonYieldingBraches.size !== 0 || yieldingBrachTails.size !== 0) {
-                    const newBranch = this.ir.createFunction(true).body;
+                    const newBranch = this.ir.createFunction().body;
 
                     for (const branchTail of yieldingBrachTails) {
                         branchTail.pushOp(this._createIr(
@@ -202,9 +202,9 @@ export class CatnipCompilerIrGenContext {
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, branch?: CatnipIrBranch) {
         if (branch === undefined) {
-            branch = this.ir.createFunction(true).body;
+            branch = this.ir.createFunction().body;
         } else {
-            this._createBranchFunction(branch, true);
+            this._createBranchFunction(branch);
         }
         this.emitIr(ir_yield, { status }, { branch });
         this._switchToBranch(branch);
@@ -214,13 +214,12 @@ export class CatnipCompilerIrGenContext {
         this._branch = branch;
     }
 
-    private _createBranchFunction(branch: CatnipIrBranch, needsFunctionTableIndex: boolean): CatnipIrFunction {
+    private _createBranchFunction(branch: CatnipIrBranch): CatnipIrFunction {
         if (branch.isFuncBody) {
-            branch.func.needsFunctionTableIndex ||= needsFunctionTableIndex;
             return branch.func;
         }
 
-        return this.ir.createFunction(needsFunctionTableIndex, branch);
+        return this.ir.createFunction(branch);
     }
 
     public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>): void;
@@ -258,7 +257,7 @@ export class CatnipCompilerIrGenContext {
             branch.isLoop = true;
             this.emitIr(ir_loop_jmp, {}, { branch })
         } else {
-            this._createBranchFunction(branch, true);
+            this._createBranchFunction(branch);
             this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch });
         }
     }
@@ -271,7 +270,7 @@ export class CatnipCompilerIrGenContext {
                     branch.isLoop = true;
                     this.emitIr(ir_loop_jmp, {}, { branch })
                 } else {
-                    this._createBranchFunction(branch, true);
+                    this._createBranchFunction(branch);
                     this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch });
                 }
             }),

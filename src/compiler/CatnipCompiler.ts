@@ -126,8 +126,6 @@ export class CatnipCompiler {
         }
 
         this._compiledFuncs.set(script, ir);
-
-        this.spiderModule.exportFunction("testFunction", ir.entrypoint.spiderFunction);
     }
 
     public removeScript(script: CatnipScript) {
@@ -161,7 +159,7 @@ export class CatnipCompiler {
 
         for (const ir of this._compiledFuncs.values()) {
             for (const func of ir.functions) {
-                if (func.needsFunctionTableIndex) {
+                if (func.hasFunctionTableIndex) {
                     CatnipCompilerLogger.assert(spiderFns[func.functionTableIndex] === this._spiderFunctionNop);
                     spiderFns[func.functionTableIndex] = func.spiderFunction;
                 }

@@ -27,14 +27,14 @@ export class CatnipIr implements CatnipReadonlyIr {
 
     public constructor(compiler: CatnipCompiler, funcName: string) {
         this.compiler = compiler;
-        this.entrypoint = new CatnipIrFunction(this, true, funcName);
+        this.entrypoint = new CatnipIrFunction(this, funcName);
         this._functions = [this.entrypoint];
         this._transientVariableNames = new Set();
     }
 
-    public createFunction(needsFunctionTableIndex: boolean, branch?: CatnipIrBranch): CatnipIrFunction {
+    public createFunction(branch?: CatnipIrBranch): CatnipIrFunction {
         const func = new CatnipIrFunction(
-            this, needsFunctionTableIndex,
+            this,
             `${this.entrypoint.name}_func${this._functions.length}`,
             branch
         );
@@ -147,14 +147,7 @@ export class CatnipIr implements CatnipReadonlyIr {
             string += ": ";
             if (func.body.isYielding()) string += "(yielding) ";
             if (func.stackSize !== 0) string += `(${func.stackSize} byte stack) `;
-
-            const parameterCount = func.externalValues.reduce((count, v) => {
-                if (v.location.type === CatnipIrExternalLocationType.PARAMETER)
-                    return count + 1;
-                return count;
-            }, 0);
-
-            if (parameterCount !== 0) string += `(${parameterCount} params) `;
+            if (func.hasFunctionTableIndex) string += `(fntbl ${func.functionTableIndex}) `;
 
             let hasTransients = false;
             for (const variableInfo of func.transientVariables) {

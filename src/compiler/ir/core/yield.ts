@@ -6,8 +6,8 @@ import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructTh
 import { CatnipIrBranch } from "../../CatnipIrBranch";
 import { CatnipIrExternalLocationType } from "../../CatnipIrFunction";
 
-type yield_ir_inptus = { status: CatnipWasmEnumThreadStatus };
-type yield_ir_branches = { branch: CatnipIrBranch };
+export type yield_ir_inptus = { status: CatnipWasmEnumThreadStatus };
+export type yield_ir_branches = { branch: CatnipIrBranch };
 
 export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus, yield_ir_branches> {
     public constructor() { super("core_yield"); }
@@ -22,19 +22,20 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
 
         const targetFunc = ir.branches.branch.func;
 
+        if (ir.inputs.status === CatnipWasmEnumThreadStatus.RUNNING && ctx.compiler.config.enable_tail_call) {
+            ctx.emitBranchInline(ir.branches.branch, true);
+            return;
+        }
+        
         CatnipCompilerWasmGenContext.logger.assert(
-            targetFunc.needsFunctionTableIndex,
-            true, "Yield branch function must have a function table index."
-        );
-
-        CatnipCompilerWasmGenContext.logger.assert(
-            targetFunc.externalValues.find(val => val.location.type === CatnipIrExternalLocationType.PARAMETER) === undefined,
+            targetFunc.parameters.length === 0,
             false, "Cannot yield to a function with parameters."
         );
 
-        if (ir.inputs.status === CatnipWasmEnumThreadStatus.RUNNING && ctx.compiler.config.enable_tail_call) {
-            ctx.emitBranchInline(ir.branches.branch);
-        }
+        CatnipCompilerWasmGenContext.logger.assert(
+            targetFunc.hasFunctionTableIndex,
+            true, "Non-tail-call yield branch function must have a function table index."
+        );
 
         ctx.prepareStackForCall(targetFunc, true);
 
