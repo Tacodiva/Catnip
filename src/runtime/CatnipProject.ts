@@ -149,14 +149,17 @@ export class CatnipProject {
             downloadBlob(writeModule(compiler.spiderModule), "module.wasm", "application/wasm");
         }
 
-        const stage = this._sprites.values().next().value;
+        const stage = [...this._sprites.values()][0];
+        const printVariable = stage.getVariable("2");
         module.triggerEvent("whenflagclicked");
 
         for (let tick = 1; tick <= 10; tick++) {
             console.time(""+tick);
             this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
             console.timeEnd(""+tick);
-            console.log("nth = " + stage.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(stage.getVariable("2")!._index).getMemberWrapper(0).get());
+            if (printVariable !== undefined) {
+                console.log("nth = " + printVariable.sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(printVariable._index).getMemberWrapper(0).get());
+            }
         }
     }
 }

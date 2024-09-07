@@ -1,7 +1,7 @@
 import { SpiderExpression, SpiderLocalReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipIrFunction, CatnipIrTransientVariableType } from './CatnipIrFunction';
+import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType } from './CatnipIrFunction';
 import { createLogger, Logger } from "../log";
 import { CatnipWasmStructThread } from "../wasm-interop/CatnipWasmStructThread";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStack } from "./CatnipCompilerStack";
@@ -66,8 +66,12 @@ export class CatnipCompilerWasmGenContext {
             const stackPtrLocal = this.createLocal(SpiderNumberType.i32);
             let first = true;
 
-            for (const [value, variable] of this._func.transientVariables) {
-                if (variable.type !== CatnipIrTransientVariableType.STACK)
+            for (const variableInfo of this._func.transientVariables) {
+                if (variableInfo.source === null) continue;
+
+                const location = variableInfo.source.location;
+
+                if (location.type !== CatnipIrExternalLocationType.STACK)
                     continue;
 
                 if (first) {
@@ -79,10 +83,10 @@ export class CatnipCompilerWasmGenContext {
                     this.emitWasm(SpiderOpcodes.local_get, stackPtrLocal.ref);
                 }
 
-                this.emitWasmConst(SpiderNumberType.i32, variable.stackOffset - this._func.stackSize);
+                this.emitWasmConst(SpiderNumberType.i32, location.stackOffset - this._func.stackSize);
                 this.emitWasm(SpiderOpcodes.i32_add);
 
-                switch (value.type) {
+                switch (variableInfo.variable.type) {
                     case SpiderNumberType.i32:
                         this.emitWasm(SpiderOpcodes.i32_load, 2, 0);
                         break;
@@ -96,7 +100,7 @@ export class CatnipCompilerWasmGenContext {
                         );
                 }
 
-                this.emitWasm(SpiderOpcodes.local_set, variable.ref);
+                this.emitWasm(SpiderOpcodes.local_set, variableInfo.ref);
             }
 
             this.releaseLocal(stackPtrLocal);
@@ -135,8 +139,15 @@ export class CatnipCompilerWasmGenContext {
 
             this.emitWasmGetThread();
 
-            for (const parameter of targetFunc.parameters) {
-                this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.variable));
+            for (const parameter of targetFunc.externalValues) {
+                if (parameter.location.type !== CatnipIrExternalLocationType.PARAMETER)
+                    continue;
+
+                if (parameter.value.type === CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE) {
+                    this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.value.variable));
+                } else if (parameter.value.type === CatnipIrExternalValueSourceType.PROCEDURE_INPUT) {
+                    throw new Error("Not implemented.");
+                }
             }
 
             const isYielding = branch.isYielding() || forceReturn;
@@ -145,7 +156,7 @@ export class CatnipCompilerWasmGenContext {
                 this.emitWasm(SpiderOpcodes.return_call, targetFunc.spiderFunction);
             } else {
                 this.emitWasm(SpiderOpcodes.call, targetFunc.spiderFunction);
-    
+
                 if (isYielding) {
                     this.emitWasm(SpiderOpcodes.return);
                 }
@@ -291,25 +302,31 @@ export class CatnipCompilerWasmGenContext {
             this.emitWasm(SpiderOpcodes.if, this.popExpression());
             // }
 
-            for (const [value, variable] of targetFunc.transientVariables) {
-                if (variable.type !== CatnipIrTransientVariableType.STACK)
+            for (const transientVariable of targetFunc.externalValues) {
+
+                if (transientVariable.location.type !== CatnipIrExternalLocationType.STACK)
                     continue;
 
-                this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
-                this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(value));
+                if (transientVariable.value.type === CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE) {
 
-                switch (value.type) {
-                    case SpiderNumberType.i32:
-                        this.emitWasm(SpiderOpcodes.i32_store, 2, variable.stackOffset);
-                        break;
-                    case SpiderNumberType.f64:
-                        this.emitWasm(SpiderOpcodes.f64_store, 2, variable.stackOffset);
-                        break;
-                    default:
-                        CatnipCompilerWasmGenContext.logger.assert(
-                            false,
-                            true, "Unsupported stack value type."
-                        );
+                    this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
+                    this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(transientVariable.value.variable));
+
+                    switch (transientVariable.value.variable.type) {
+                        case SpiderNumberType.i32:
+                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset);
+                            break;
+                        case SpiderNumberType.f64:
+                            this.emitWasm(SpiderOpcodes.f64_store, 2, transientVariable.location.stackOffset);
+                            break;
+                        default:
+                            CatnipCompilerWasmGenContext.logger.assert(
+                                false,
+                                true, "Unsupported stack value type."
+                            );
+                    }
+                } else if (transientVariable.value.type === CatnipIrExternalValueSourceType.PROCEDURE_INPUT) {
+                    throw new Error("Not implemented.");
                 }
             }
 

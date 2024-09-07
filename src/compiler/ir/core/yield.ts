@@ -4,6 +4,7 @@ import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType } from "../../CatnipI
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 import { CatnipIrBranch } from "../../CatnipIrBranch";
+import { CatnipIrExternalLocationType } from "../../CatnipIrFunction";
 
 type yield_ir_inptus = { status: CatnipWasmEnumThreadStatus };
 type yield_ir_branches = { branch: CatnipIrBranch };
@@ -27,7 +28,7 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
         );
 
         CatnipCompilerWasmGenContext.logger.assert(
-            targetFunc.parameters.length === 0,
+            targetFunc.externalValues.find(val => val.location.type === CatnipIrExternalLocationType.PARAMETER) === undefined,
             false, "Cannot yield to a function with parameters."
         );
 

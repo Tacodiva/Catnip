@@ -5,36 +5,49 @@ import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
 import { CatnipIr as CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 
-/** How does a CatnipIrTransientValue get its value at the begining of a function */
-export enum CatnipIrTransientVariableType {
-    /** It has no initial value and is initialize by this function. */
-    LOCAL,
-    /** It is passed into this function as an argument. */
-    PARAMETER,
-    /** It is stored on the thread stack and read at the begining of the function. */
-    STACK
+export interface CatnipIrTransientVariableSourceInfo {
+    readonly variable: CatnipIrTransientVariable;
+    readonly ref: SpiderLocalReference;
+    readonly source: CatnipIrExternalValue | null;
 }
 
-interface TransientVariableInfoBase {
-    variable: CatnipIrTransientVariable;
-    ref: SpiderLocalReference;
-    type: CatnipIrTransientVariableType;
+export enum CatnipIrExternalLocationType {
+    STACK,
+    PARAMETER
 }
 
-interface TransientVariableStackInfo extends TransientVariableInfoBase {
-    type: CatnipIrTransientVariableType.STACK;
-    stackOffset: number;
+export enum CatnipIrExternalValueSourceType {
+    TRANSIENT_VARIABLE,
+    PROCEDURE_INPUT,
 }
 
-interface TransientVariableParameterInfo extends TransientVariableInfoBase {
-    type: CatnipIrTransientVariableType.PARAMETER;
+export interface CatnipIrExternalValue {
+    readonly location: CatnipIrExternalLocation;
+    readonly value: CatnipIrExternalValueSource;
 }
 
-interface TransientVariableLocalInfo extends TransientVariableInfoBase {
-    type: CatnipIrTransientVariableType.LOCAL;
+export interface CatnipIrExternalLocationStack {
+    readonly type: CatnipIrExternalLocationType.STACK;
+    readonly stackOffset: number;
 }
 
-type TransientVariableInfo = TransientVariableStackInfo | TransientVariableParameterInfo | TransientVariableLocalInfo;
+export interface CatnipIrExternalLocationParameter {
+    readonly type: CatnipIrExternalLocationType.PARAMETER;
+}
+
+export type CatnipIrExternalLocation = CatnipIrExternalLocationParameter | CatnipIrExternalLocationStack;
+
+export interface CatnipIrExternalValueSourceTransientVariable {
+    readonly type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,
+    readonly variable: CatnipIrTransientVariable
+}
+
+export interface CatnipIrExternalValueSourceProcedureInput {
+    readonly type: CatnipIrExternalValueSourceType.PROCEDURE_INPUT
+}
+
+export type CatnipIrExternalValueSource = CatnipIrExternalValueSourceProcedureInput | CatnipIrExternalValueSourceTransientVariable;
+
 
 export interface CatnipReadonlyIrFunction {
     readonly ir: CatnipReadonlyIr;
@@ -42,18 +55,18 @@ export interface CatnipReadonlyIrFunction {
     readonly spiderModule: SpiderModule;
     readonly spiderFunction: SpiderFunctionDefinition;
     readonly spiderThreadParam: SpiderLocalReference;
-    
+
     readonly body: CatnipReadonlyIrBranch;
     readonly name: string;
 
     readonly needsFunctionTableIndex: boolean;
     readonly functionTableIndex: number;
-    
+
     registerCaller(caller: CatnipReadonlyIrFunction): void;
     setFunctionTableIndex(index: number): void;
 
     createTransientVariable(variable: CatnipIrTransientVariable): void;
-    useTransientVariable(variable: CatnipIrTransientVariable): void;
+    sourceExternalValue(source: CatnipIrExternalValueSource): void;
 }
 
 export class CatnipIrFunction implements CatnipReadonlyIrFunction {
@@ -77,20 +90,19 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         return this._functionTableIndex;
     }
 
-    private _transientVariables: Map<CatnipIrTransientVariable, TransientVariableInfo>;
+    private _transientVariables: Map<CatnipIrTransientVariable, CatnipIrTransientVariableSourceInfo>;
 
-    public get transientVariables(): IterableIterator<[CatnipIrTransientVariable, TransientVariableInfo]> {
-        return this._transientVariables.entries();
+    public get transientVariables(): IterableIterator<CatnipIrTransientVariableSourceInfo> {
+        return this._transientVariables.values();
     }
 
     private _stackSize: number;
     public get stackSize(): number { return this._stackSize; }
 
-    // TODO Parameters should have a source and destination
-    // Source could be a procedure parameter instead
-    //  In that case, the transient variable is the destination, but not the source
-    private _parameters: TransientVariableParameterInfo[];
-    public get parameters(): ReadonlyArray<TransientVariableParameterInfo> { return this._parameters; }
+    private readonly _externalValues: CatnipIrExternalValue[];
+    public get externalValues(): ReadonlyArray<CatnipIrExternalValue> {
+        return this._externalValues;
+    }
 
     private _callers: Set<CatnipIrFunction>;
 
@@ -118,21 +130,19 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
 
         this._transientVariables = new Map();
         this._stackSize = 0;
-        this._parameters = [];
+        this._externalValues = [];
 
         this._callers = new Set();
     }
 
-    private _addLocalVariable(variable: TransientVariableInfo) {
+    private _addLocalVariable(variable: CatnipIrTransientVariableSourceInfo) {
         this._transientVariables.set(variable.variable, variable);
 
-        if (variable.type === CatnipIrTransientVariableType.PARAMETER) {
-            this._parameters.push(variable);
-        }
+        if (variable.source !== null) {
+            this._externalValues.push(variable.source);
 
-        if (variable.type !== CatnipIrTransientVariableType.LOCAL) {
             for (const caller of this._callers)
-                caller.useTransientVariable(variable.variable);
+                caller.sourceExternalValue(variable.source.value);
         }
     }
 
@@ -145,29 +155,50 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         this._addLocalVariable({
             variable: variable,
             ref: this.spiderFunction.addLocalVariable(variable.type),
-            type: CatnipIrTransientVariableType.LOCAL
+            source: null
         });
     }
 
-    public useTransientVariable(variable: CatnipIrTransientVariable) {
-        if (this._transientVariables.has(variable))
-            return;
+    public sourceExternalValue(source: CatnipIrExternalValueSource) {
 
-        if (this.needsFunctionTableIndex) {
-            this._addLocalVariable({
-                variable: variable,
-                ref: this.spiderFunction.addLocalVariable(variable.type),
-                type: CatnipIrTransientVariableType.STACK,
-                stackOffset: this._stackSize
-            });
+        if (source.type === CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE) {
+            if (this._transientVariables.has(source.variable))
+                return;
 
-            this._stackSize += variable.size;
-        } else {
-            this._addLocalVariable({
-                variable: variable,
-                ref: this.spiderFunction.addParameter(variable.type),
-                type: CatnipIrTransientVariableType.PARAMETER
-            });
+            if (this.needsFunctionTableIndex) {
+                this._addLocalVariable({
+                    variable: source.variable,
+                    ref: this.spiderFunction.addLocalVariable(source.variable.type),
+                    source: {
+                        value: {
+                            type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,
+                            variable: source.variable,
+                        },
+                        location: {
+                            type: CatnipIrExternalLocationType.STACK,
+                            stackOffset: this._stackSize,
+                        },
+                    }
+                });
+
+                this._stackSize += source.variable.size;
+            } else {
+                this._addLocalVariable({
+                    variable: source.variable,
+                    ref: this.spiderFunction.addLocalVariable(source.variable.type),
+                    source: {
+                        value: {
+                            type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,
+                            variable: source.variable,
+                        },
+                        location: {
+                            type: CatnipIrExternalLocationType.PARAMETER,
+                        },
+                    }
+                });
+            }
+        } else if (source.type === CatnipIrExternalValueSourceType.PROCEDURE_INPUT) {
+            throw new Error("Not implemented.");
         }
     }
 
@@ -187,9 +218,9 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         this._callers.add(caller);
 
         for (const [value, variable] of this._transientVariables) {
-            if (variable.type === CatnipIrTransientVariableType.LOCAL)
+            if (variable.source === null)
                 continue;
-            caller.useTransientVariable(value);
+            caller.sourceExternalValue(variable.source.value);
         }
     }
 

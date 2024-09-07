@@ -1,5 +1,6 @@
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipReadonlyIr } from "../CatnipIr";
+import { CatnipIrExternalValueSourceType } from "../CatnipIrFunction";
 import { ir_transient_create } from "../ir/core/transient_create";
 import { ir_transient_load } from "../ir/core/transient_load";
 import { ir_transient_store } from "../ir/core/transient_store";
@@ -15,7 +16,10 @@ export const PreWasmPassTransientVariablePropagation: CatnipCompilerPass = {
             if (op.type === ir_transient_create) {
                 op.branch.func.createTransientVariable(op.inputs.transient);
             } else if (op.type === ir_transient_load || op.type === ir_transient_store || op.type === ir_transient_tee) {
-                op.branch.func.useTransientVariable(op.inputs.transient);
+                op.branch.func.sourceExternalValue({
+                    type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,
+                    variable: op.inputs.transient
+                });
             } 
         });
     }

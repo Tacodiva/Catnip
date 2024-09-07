@@ -2,7 +2,7 @@ import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrBranch } from "./CatnipIrBranch";
-import { CatnipIrFunction, CatnipIrTransientVariableType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
+import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 
@@ -23,7 +23,7 @@ export class CatnipIr implements CatnipReadonlyIr {
     private readonly _functions: CatnipIrFunction[];
     public get functions(): ReadonlyArray<CatnipIrFunction> { return this._functions; }
 
-    private _transientVariableNames: Set<string>; 
+    private _transientVariableNames: Set<string>;
 
     public constructor(compiler: CatnipCompiler, funcName: string) {
         this.compiler = compiler;
@@ -75,7 +75,7 @@ export class CatnipIr implements CatnipReadonlyIr {
 
         let i = 2;
         while (true) {
-            const possibleName = name + " #"+i;
+            const possibleName = name + " #" + i;
             if (!this._transientVariableNames.has(possibleName)) {
                 this._transientVariableNames.add(possibleName);
                 return possibleName;
@@ -103,11 +103,11 @@ export class CatnipIr implements CatnipReadonlyIr {
                     string += " ";
                     string += JSON.stringify(op.inputs, (key: string, value: any) => {
                         if (value instanceof CatnipVariable) {
-                            return `[VARIABLE '${value.id}']`;
+                            return `<VARIABLE '${value.id}'>`;
                         } else if (value instanceof CatnipTarget) {
-                            return `[TARGET '${value.sprite.id}']`;
+                            return `<TARGET '${value.sprite.id}'>`;
                         } else if (value instanceof CatnipIrTransientVariable) {
-                            return `[TRANSIENT '${value.name}']`;
+                            return `<TRANSIENT '${value.name}'>`;
                         }
                         return value;
                     });
@@ -147,26 +147,46 @@ export class CatnipIr implements CatnipReadonlyIr {
             string += ": ";
             if (func.body.isYielding()) string += "(yielding) ";
             if (func.stackSize !== 0) string += `(${func.stackSize} byte stack) `;
-            if (func.parameters.length !== 0) string += `(${func.parameters.length} params) `;
+
+            const parameterCount = func.externalValues.reduce((count, v) => {
+                if (v.location.type === CatnipIrExternalLocationType.PARAMETER)
+                    return count + 1;
+                return count;
+            }, 0);
+
+            if (parameterCount !== 0) string += `(${parameterCount} params) `;
 
             let hasTransients = false;
-            for (const [variable, info] of func.transientVariables) {
+            for (const variableInfo of func.transientVariables) {
                 hasTransients = true;
-                string += "\n  ['";
-                string += variable.name;
-                string += "' ";
-                switch (info.type) {
-                    case CatnipIrTransientVariableType.LOCAL:
-                        string += "LOCAL";
-                        break;
-                    case CatnipIrTransientVariableType.PARAMETER:
-                        string += "PARAMETER";
-                        break;
-                    case CatnipIrTransientVariableType.STACK:
-                        string += "STACK";
-                        break;
+                string += "\n  <'";
+                string += variableInfo.variable.name;
+                string += "'";
+                if (variableInfo.source !== null) {
+                    string += " ";
+                    switch (variableInfo.source.location.type) {
+                        case CatnipIrExternalLocationType.PARAMETER:
+                            string += "PARAMETER ";
+                            break;
+                        case CatnipIrExternalLocationType.STACK:
+                            string += "STACK ";
+                            break;
+                    }
+                    switch (variableInfo.source.value.type) {
+                        case CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE:
+                            string += "TRANSIENT";
+                            if (variableInfo.source.value.variable !== variableInfo.variable) {
+                                string += " '";
+                                string += variableInfo.source.value.variable.name;
+                                string += "'";
+                            }
+                            break;
+                        case CatnipIrExternalValueSourceType.PROCEDURE_INPUT:
+                            string += "PROCEDURE_INPUT";
+                            break;
+                    }
                 }
-                string += "]";
+                string += ">";
             }
             if (hasTransients) string += "\n";
 
