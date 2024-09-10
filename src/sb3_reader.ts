@@ -1,7 +1,7 @@
 import { createLogger, Logger } from "./log";
 import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./ops";
 import { CatnipProjectDesc } from "./runtime/CatnipProject";
-import { CatnipScriptID, CatnipScriptTriggerDesc } from "./runtime/CatnipScript";
+import { CatnipProcedureID, CatnipScriptID, CatnipScriptTriggerDesc, CatnipScriptTriggerProcedureArgTypeDesc } from "./runtime/CatnipScript";
 import { CatnipSpriteDesc, CatnipSpriteID } from "./runtime/CatnipSprite";
 import { CatnipTargetVariableDesc } from "./runtime/CatnipTarget";
 import { CatnipVariableDesc, CatnipVariableID } from "./runtime/CatnipVariable";
@@ -14,20 +14,36 @@ export interface SB3VariableInfo {
     readonly variableID: CatnipVariableID;
 }
 
+export interface SB3ProcedureArgumentInfo {
+    readonly id: string;
+    readonly name: string;
+    readonly type: CatnipScriptTriggerProcedureArgTypeDesc;
+}
+
+export interface SB3ProcedureInfo {
+    readonly procedureID: CatnipProcedureID;
+    readonly args: ReadonlyArray<SB3ProcedureArgumentInfo>;
+}
+
 export class SB3ReadMetadata {
     public static Logger: Logger = createLogger("SB3Read");
 
     private _spriteCount: number;
     private _scriptCount: number;
 
+    private _procedureMap: Map<string, SB3ProcedureInfo>;
+    private _procedureCount: number;
+
     private _variableMap: Map<string, SB3VariableInfo>;
     private _variableCount: number;
 
     public constructor() {
-        this._variableMap = new Map();
-        this._variableCount = 0;
         this._spriteCount = 0;
         this._scriptCount = 0;
+        this._variableCount = 0;
+        this._variableMap = new Map();
+        this._procedureCount = 0;
+        this._procedureMap = new Map();
     }
 
     private _assignVariableID(): CatnipVariableID {
@@ -44,6 +60,25 @@ export class SB3ReadMetadata {
         const variableInfo = this._variableMap.get(scratchVariableID);
         if (variableInfo === undefined) throw new Error(`Unknown variable ID '${scratchVariableID}'`);
         return variableInfo;
+    }
+
+    private _assignProcedureID(proccode: string): CatnipProcedureID {
+        return (this._procedureCount++) + "_" + proccode;
+    }
+
+    public addProcedure(proccode: string, args: ReadonlyArray<SB3ProcedureArgumentInfo>): CatnipProcedureID {
+        const procedureID = this._assignProcedureID(proccode);
+        this._procedureMap.set(proccode, {
+            procedureID,
+            args
+        });
+        return procedureID;
+    }
+
+    public getProcedure(proccode: string): SB3ProcedureInfo {
+        const procedureInfo = this._procedureMap.get(proccode);
+        if (procedureInfo === undefined) throw new Error(`Unknown procedure proccode '${proccode}'`);
+        return procedureInfo;
     }
 
     public assignSpriteID(): CatnipSpriteID {
@@ -124,7 +159,16 @@ export class SB3ScriptReader {
         throw new Error(`Unknown SB3 block opcode '${opcode}'.`);
     }
 
+    public getBlock(id: string): ProjectSB3Block {
+        const block = this.blocks.get(id);
+        if (block === undefined) throw new Error(`Unknown block ID '${id}'`);
+        return block;
+    }
+
     public readScripts() {
+        const scripts: { trigger: CatnipScriptTriggerDesc, stack: string | null }[] = [];
+
+        // We deserialize the hats first to enumerate all the procedures
         for (const hatBlock of this.blocks.values()) {
             if (!hatBlock.topLevel) continue;
 
@@ -132,12 +176,20 @@ export class SB3ScriptReader {
 
             if (hatBlockInfo.type !== BlockType.HAT) continue;
 
-            const scriptTrigger = hatBlockInfo.deserializer(this, hatBlock);
-            const scriptCommands = this.readStack(hatBlock.next);
+            const trigger = hatBlockInfo.deserializer(this, hatBlock);
+
+            scripts.push({
+                trigger,
+                stack: hatBlock.next
+            });
+        }
+
+        for (const script of scripts) {
+            const scriptCommands = this.readStack(script.stack);
 
             this.spriteDesc.scripts.push({
                 id: this.meta.assignScriptID(),
-                trigger: scriptTrigger,
+                trigger: script.trigger,
                 commands: scriptCommands
             });
         }
@@ -168,28 +220,34 @@ export class SB3ScriptReader {
         }
     }
 
-    public readStack(stack: ProjectSB3Input | string | null): CatnipCommandList {
-        const stackCommands: CatnipCommandList = [];
+    public readInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline {
+        SB3ReadMetadata.Logger.assert(input !== null);
 
-        let stackID: string | null;
-
-        if (Array.isArray(stack)) {
-            if (stack[0] === ProjectSB3InputType.SHADOW_ONLY)
-                return stackCommands;
-
-            const inputValue = stack[1];
+        if (Array.isArray(input)) {
+            const inputValue = input[1];
 
             if (typeof inputValue !== "string")
-                throw new Error(`Unexpected input array.`);
+                return inputValue;
 
-            stackID = inputValue;
+            return inputValue;
         } else {
-            stackID = stack;
+            return input;
         }
+    }
+
+    public readBlockID(input: ProjectSB3Input | string | null): string {
+        const inputOrBlockID = this.readInputOrBlockID(input);
+        if (typeof inputOrBlockID !== "string")
+            throw new Error(`Unexpected array literal, expected block ID.`);
+        return inputOrBlockID;
+    }
+
+    public readStack(stack: ProjectSB3Input | string | null): CatnipCommandList {
+        let stackID: string | null = this.readBlockID(stack);
+        const stackCommands: CatnipCommandList = [];
 
         while (stackID !== null) {
-            const block = this.blocks.get(stackID);
-            SB3ReadMetadata.Logger.assert(block !== undefined);
+            const block = this.getBlock(stackID);
 
             const blockInfo = this._getBlockInfo(block.opcode);
 
@@ -205,27 +263,17 @@ export class SB3ScriptReader {
     }
 
     public readInput(input: ProjectSB3Input | string | null): CatnipInputOp {
-        SB3ReadMetadata.Logger.assert(input !== null);
+        const inputOrBlockID = this.readInputOrBlockID(input);
 
-        let inputID: string;
-
-        if (Array.isArray(input)) {
-            const inputValue = input[1];
-
-            if (typeof inputValue !== "string")
-                return this._readInputFromArray(inputValue);
-
-            inputID = inputValue;
-        } else {
-            inputID = input;
+        if (Array.isArray(inputOrBlockID)) {
+            return this._readInputFromArray(inputOrBlockID);
         }
 
-        const block = this.blocks.get(inputID);
-        SB3ReadMetadata.Logger.assert(block !== undefined);
+        const block = this.getBlock(inputOrBlockID);
         const blockInfo = this._getBlockInfo(block.opcode);
 
         if (blockInfo.type !== BlockType.INPUT)
-            throw new Error(`Unexpected input ${(blockInfo.type === BlockType.HAT ? "hat" : "command")} type '${block.opcode}' in input (block '${inputID}').`);
+            throw new Error(`Unexpected input ${(blockInfo.type === BlockType.HAT ? "hat" : "command")} type '${block.opcode}' in input (block '${inputOrBlockID}').`);
 
         return blockInfo.deserializer(this, block);
     }

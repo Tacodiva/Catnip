@@ -1,4 +1,4 @@
-import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
+import { SpiderMemoryDefinition, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
@@ -54,8 +54,6 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
 
                 if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.F64_NUMBER)) {
-                    // TODO
-                    // throw new Error("NaN check not implemented.");
 
                     const local = ctx.createLocal(SpiderNumberType.f64);
                     ctx.emitWasm(SpiderOpcodes.local_tee, local.ref);
@@ -175,6 +173,40 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
                 this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
                 return;
+            }
+
+            if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_BOOLEAN)) {
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_HSTRING | CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
+                    // boolean -> string
+
+                    ctx.pushExpression();
+                    ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("true"));
+                    const trueExpr = ctx.popExpression();
+
+                    ctx.pushExpression();
+                    ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("false"));
+                    const falseExpr = ctx.popExpression();
+
+                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
+                    
+                    this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
+                    return;
+                }
+
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
+                    ctx.emitWasmConst(SpiderNumberType.i32, 0);
+                    ctx.emitWasm(SpiderOpcodes.i32_ne);
+                    return;
+                }
+
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER)) {
+                    ctx.emitWasmConst(SpiderNumberType.i32, 0);
+                    ctx.emitWasm(SpiderOpcodes.i32_ne);
+                    ctx.emitWasm(SpiderOpcodes.f64_convert_i32_u);
+
+                    this._convert(ctx, CatnipValueFormat.F64_ZERO | CatnipValueFormat.F64_POS_INT, dst);
+                    return;
+                }
             }
 
             notSupported();

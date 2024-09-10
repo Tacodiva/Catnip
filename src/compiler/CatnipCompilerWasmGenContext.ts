@@ -8,6 +8,11 @@ import { CatnipCompilerReadonlyStack, CatnipCompilerStack } from "./CatnipCompil
 import { CatnipOpInputs } from "../ops";
 import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpType } from "./CatnipIrOp";
 import { CatnipIrBranch } from "./CatnipIrBranch";
+import { CatnipProcedureID } from "../runtime/CatnipScript";
+import { CatnipValueFormat } from "./CatnipValueFormat";
+import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
+import { CatnipSpriteID } from "../runtime/CatnipSprite";
+import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 
 export interface CatnipCompilerWasmLocal {
     ref: SpiderLocalReference,
@@ -42,6 +47,8 @@ export class CatnipCompilerWasmGenContext {
     private _locals: Map<SpiderNumberType, CatnipCompilerWasmLocal[]>;
     private _unreleasedLocalCount: number;
 
+    private _procedureArgs: CatnipCompilerWasmLocal[][];
+
     private _blockDepth: number;
     public get blockDepth() { return this._blockDepth; }
 
@@ -57,6 +64,8 @@ export class CatnipCompilerWasmGenContext {
 
         this._locals = new Map();
         this._unreleasedLocalCount = 0;
+
+        this._procedureArgs = [];
 
         this._blockDepth = 0;
 
@@ -141,9 +150,24 @@ export class CatnipCompilerWasmGenContext {
 
             for (const parameter of targetFunc.parameters) {
                 if (parameter.type === CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE) {
+
                     this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(parameter.variable));
+
                 } else if (parameter.type === CatnipIrExternalValueSourceType.PROCEDURE_INPUT) {
-                    throw new Error("Not implemented.");
+
+                    const argIdx = parameter.index;
+
+                    const localVar = this._getProcedureArg(argIdx);
+                    this.emitWasm(SpiderOpcodes.local_get, localVar.ref);
+
+                } else throw new Error("Not reachable");
+            }
+
+            if (targetFunc.isEntrypoint) {
+                for (let i = 0; i < targetFunc.ir.procedureArguments.length; i++) {
+                    const arg = this._procedureArgs[i].pop();
+                    CatnipCompilerLogger.assert(arg !== undefined, false, `No procedure argument at ${i}`)
+                    if (arg !== undefined) this.releaseLocal(arg);
                 }
             }
 
@@ -209,6 +233,7 @@ export class CatnipCompilerWasmGenContext {
     }
 
     // TODO This will leak memory :c
+    // TODO Keep a map of duplicate strings.
     public alloateHeapString(str: string): number {
         return this.runtimeModule.allocateHeapString(str);
     }
@@ -304,26 +329,39 @@ export class CatnipCompilerWasmGenContext {
                 if (transientVariable.location.type !== CatnipIrExternalLocationType.STACK)
                     continue;
 
+
+                this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
+
+                let valueType: SpiderNumberType;
+
                 if (transientVariable.value.type === CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE) {
 
-                    this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
-                    this.emitWasm(SpiderOpcodes.local_get, this._func.getTransientVariableRef(transientVariable.value.variable));
+                    const variableRef = this._func.getTransientVariableRef(transientVariable.value.variable);
+                    this.emitWasm(SpiderOpcodes.local_get, variableRef);
+                    valueType = transientVariable.value.variable.type;
 
-                    switch (transientVariable.value.variable.type) {
-                        case SpiderNumberType.i32:
-                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset);
-                            break;
-                        case SpiderNumberType.f64:
-                            this.emitWasm(SpiderOpcodes.f64_store, 2, transientVariable.location.stackOffset);
-                            break;
-                        default:
-                            CatnipCompilerWasmGenContext.logger.assert(
-                                false,
-                                true, "Unsupported stack value type."
-                            );
-                    }
                 } else if (transientVariable.value.type === CatnipIrExternalValueSourceType.PROCEDURE_INPUT) {
-                    throw new Error("Not implemented.");
+
+                    const argIdx = transientVariable.value.index;
+                    const localVar = this._getProcedureArg(argIdx);
+                    this.emitWasm(SpiderOpcodes.local_get, localVar.ref);
+                    valueType = localVar.type;
+
+                } else throw new Error("Unreachable.")
+
+
+                switch (valueType) {
+                    case SpiderNumberType.i32:
+                        this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset);
+                        break;
+                    case SpiderNumberType.f64:
+                        this.emitWasm(SpiderOpcodes.f64_store, 2, transientVariable.location.stackOffset);
+                        break;
+                    default:
+                        CatnipCompilerWasmGenContext.logger.assert(
+                            false,
+                            true, "Unsupported stack value type."
+                        );
                 }
             }
 
@@ -352,6 +390,29 @@ export class CatnipCompilerWasmGenContext {
         }
     }
 
+    private _getProcedureArg(argIdx: number) {
+        const args = this._procedureArgs[argIdx];
+        if (args.length === 0) throw new Error(`No argument assigned to index ${argIdx}.`);
+        return args[args.length - 1];
+    }
+
+    public createProcedureArgLocal(spriteID: CatnipSpriteID, procedureID: CatnipProcedureID, argIdx: number): CatnipCompilerWasmLocal {
+        const procedure = this.compiler.getProcedureInfo(spriteID, procedureID);
+        const argumentInfo = procedure.args[argIdx];
+        const argumentType = CatnipValueFormatUtils.getFormatSpiderType(argumentInfo.format);
+
+        let currentProcedureArgs = this._procedureArgs[argIdx];
+
+        if (currentProcedureArgs === undefined)
+            currentProcedureArgs = this._procedureArgs[argIdx] = [];
+
+        const local = this.createLocal(argumentType);
+
+        currentProcedureArgs.push(local);
+
+        return local;
+    }
+
     public releaseLocal(local: CatnipCompilerWasmLocal) {
         --this._unreleasedLocalCount;
 
@@ -363,6 +424,18 @@ export class CatnipCompilerWasmGenContext {
         }
 
         locals.push(local);
+    }
+
+    public finish() {
+        if (this._unreleasedLocalCount !== 0)
+            CatnipCompilerLogger.warn("WASM generation has unreleased locals.");
+
+        for (const procedureArgs of this._procedureArgs) {
+            if (procedureArgs !== undefined && procedureArgs.length !== 0) {
+                CatnipCompilerLogger.warn(`WASM generation has unreleased procedure args.`);
+                break;
+            }
+        }
     }
 
 }

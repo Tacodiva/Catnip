@@ -10,7 +10,7 @@ export const PreWasmPassFunctionIndexAllocation: CatnipCompilerPass = {
 
     run(ir: CatnipReadonlyIr): void {
 
-        if (!ir.entrypoint.hasFunctionTableIndex)
+        if (ir.procedureInfo === null && !ir.entrypoint.hasFunctionTableIndex)
             ir.entrypoint.assignFunctionTableIndex();
         
         ir.forEachOp(op => {

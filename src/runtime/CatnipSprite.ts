@@ -39,6 +39,8 @@ export class CatnipSprite {
     private readonly _scripts: Map<CatnipScriptID, CatnipScript>;
     private _rewriteScripts: boolean;
 
+    public get scripts(): IterableIterator<CatnipScript> { return this._scripts.values(); }
+
     // TODO Dependant scripts
 
     /** @internal */

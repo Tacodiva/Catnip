@@ -89,7 +89,7 @@ export type ProjectSB3InputShadowedInput = [
 
 export type ProjectSB3Input = ProjectSB3InputShadowOnly | ProjectSB3InputInputOnly | ProjectSB3InputShadowedInput;
 
-export type ProjectSB3Field<TID extends string | undefined = string | undefined> = [
+export type ProjectSB3Field<TID extends string | null | undefined = string | null | undefined> = [
     value: ProjectSB3Value,
     /** The ID of the field's value. On present on certain fields. */
     id: TID
@@ -103,17 +103,17 @@ interface ProjectSB3MutationBase {
 export interface ProjectSB3MutationProcedure extends ProjectSB3MutationBase {
     /** The name of the custom block, including inputs: %s for string/number inputs and %b for boolean inputs. */
     proccode: string;
-    /** An array of the ids of the arguments; these can also be found in the input property of the main block. */
-    argumentids: string[];
+    /** A string which contains a JSON array of the ids of the arguments; these can also be found in the input property of the main block. */
+    argumentids: string;
     /** True if this block runs without screen refresh. */
     warp: boolean;
 }
 
 export interface ProjectSB3MutationProcedurePrototype extends ProjectSB3MutationProcedure {
-    /** An array of the names of the arguments. */
-    argumentnames: string[];
-    /** An array of the defaults of the arguments. For round inputs this is "" and for booleans it's false. */
-    argumentdefaults: ("" | false)[];
+    /** A string which contains a JSON array of the names of the arguments. */
+    argumentnames: string;
+    /** A string which contains a JSON array of the defaults of the arguments. For round inputs this is "" and for booleans it's false. */
+    argumentdefaults: string;
 }
 
 export interface ProjectSB3MutationControlStop extends ProjectSB3MutationBase {
@@ -165,7 +165,7 @@ interface ProjectSB3BlockBase<TOpcode extends ProjectSB3BlockOpcode = ProjectSB3
     /** An object associating field names and their values. */
     fields: ProjectSB3BlockFields<TOpcode>;
     /** Present when opcode is "procedures_call", "procedures_prototype" or "control_stop". */
-    mutation?: ProjectSB3BlockMutation<TOpcode>;
+    mutation: ProjectSB3BlockMutation<TOpcode>;
     /** True if this block is a shadow. */
     shadow: boolean;
     /** True if this block has no parent. */
@@ -397,5 +397,32 @@ type SB3BlockTypeDefinition = {
         fields: {
             "VARIABLE": ProjectSB3Field<string>
         },
+    },
+
+    "procedures_definition": {
+        inputs: {
+            /** custom_block points to a block of type procedures_prototype */
+            "custom_block": ProjectSB3Input
+        }
+    },
+    "procedures_prototype": {
+        inputs: Record<string, ProjectSB3Input>,
+        mutation: ProjectSB3MutationProcedurePrototype
+    },
+    "procedures_call": {
+        inputs: Record<string, ProjectSB3Input>,
+        mutation: ProjectSB3MutationProcedure
+    },
+    "argument_reporter_string_number": {
+        fields: {
+            /** The name of this reporter */
+            "VALUE": ProjectSB3Field
+        }
+    },
+    "argument_reporter_boolean": {
+        fields: {
+            /** The name of this reporter */
+            "VALUE": ProjectSB3Field
+        }
     },
 };

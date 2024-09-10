@@ -1,6 +1,8 @@
+import { CatnipProcedureID } from "../runtime/CatnipScript";
+import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipVariable } from "../runtime/CatnipVariable";
-import { CatnipCompiler } from "./CatnipCompiler";
+import { CatnipCompiler, CatnipCompilerProcedureInfo } from "./CatnipCompiler";
 import { CatnipIrBranch } from "./CatnipIrBranch";
 import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
@@ -10,6 +12,8 @@ export interface CatnipReadonlyIr {
     readonly compiler: CatnipCompiler;
     readonly entrypoint: CatnipReadonlyIrFunction;
     readonly functions: ReadonlyArray<CatnipReadonlyIrFunction>;
+    readonly procedureInfo: Readonly<CatnipCompilerProcedureInfo> | null;
+    readonly procedureArguments: ReadonlyArray<CatnipIrTransientVariable>
 
     forEachOp(lambda: (op: CatnipReadonlyIrOp) => void): void;
     getUniqueTransientVariableName(name: string): string;
@@ -18,6 +22,7 @@ export interface CatnipReadonlyIr {
 export class CatnipIr implements CatnipReadonlyIr {
 
     public readonly compiler: CatnipCompiler;
+    public readonly spriteID: CatnipSpriteID;
 
     public readonly entrypoint: CatnipIrFunction;
     private readonly _functions: CatnipIrFunction[];
@@ -25,11 +30,30 @@ export class CatnipIr implements CatnipReadonlyIr {
 
     private _transientVariableNames: Set<string>;
 
-    public constructor(compiler: CatnipCompiler, funcName: string) {
+    public readonly procedureInfo: Readonly<CatnipCompilerProcedureInfo> | null;
+    public readonly procedureArguments: ReadonlyArray<CatnipIrTransientVariable>;
+
+    public constructor(compiler: CatnipCompiler, funcName: string, spriteID: CatnipSpriteID, procedureInfo: CatnipCompilerProcedureInfo | null) {
         this.compiler = compiler;
         this.entrypoint = new CatnipIrFunction(this, funcName);
         this._functions = [this.entrypoint];
         this._transientVariableNames = new Set();
+        this.spriteID = spriteID;
+
+        this.procedureInfo = procedureInfo;
+
+        if (procedureInfo === null) {
+            this.procedureArguments = [];
+        } else {
+            procedureInfo.ir = this;
+            let procedureArguments: CatnipIrTransientVariable[] = [];
+
+            for (const argInfo of procedureInfo.args) {
+                procedureArguments.push(new CatnipIrTransientVariable(this, argInfo.format, argInfo.name));
+            }
+
+            this.procedureArguments = procedureArguments;
+        }
     }
 
     public createFunction(branch?: CatnipIrBranch): CatnipIrFunction {
@@ -50,6 +74,7 @@ export class CatnipIr implements CatnipReadonlyIr {
     }
 
     private _forEachOpInBranch(lambda: (op: CatnipIrOp) => void, branch: CatnipIrBranch, visited: Set<CatnipIrBranch>) {
+        if (branch.func.ir !== this) return;
         if (visited.has(branch)) return;
         visited.add(branch);
 
@@ -129,6 +154,11 @@ export class CatnipIr implements CatnipReadonlyIr {
                             string += " -> ";
                             if (!subbranch.isFuncBody) string += "[INVALID] ";
                             string += subbranch.func.name;
+                            if (subbranch.func.ir !== this) {
+                                string += " [IR '";
+                                string += subbranch.func.ir.entrypoint.name;
+                                string += "']"
+                            }
                             string += "\n";
                         }
                     }

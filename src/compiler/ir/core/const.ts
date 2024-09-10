@@ -1,9 +1,11 @@
-import { SpiderNumberType } from "wasm-spider";
+import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
+import { VALUE_STRING_MASK } from "../../../wasm-interop/CatnipWasmStructValue";
+import { Cast } from "../../cast";
 
 type const_ir_inputs = { value: string | number, format?: CatnipValueFormat };
 
@@ -16,13 +18,21 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         return { isConstant: true, value: inputs.value, format: this._getFormat(inputs) };
     }
 
+    private _isValidNumber(inputs: const_ir_inputs): boolean {
+        return "" + (+inputs.value) === inputs.value;
+    }
+
     private _getFormat(inputs: const_ir_inputs): CatnipValueFormat {
         if (inputs.format === undefined) {
-            if ("" + (+inputs.value) === inputs.value) {
+            if (this._isValidNumber(inputs))
                 return CatnipValueFormat.F64_NUMBER_OR_NAN;
-            }
 
             return CatnipValueFormat.I32_HSTRING;
+        } else if (inputs.format === CatnipValueFormat.F64) {
+            if (this._isValidNumber(inputs))
+                return CatnipValueFormat.F64_NUMBER_OR_NAN;
+
+            return CatnipValueFormat.F64_BOXED_I32_HSTRING;
         } else {
             return inputs.format;
         }
@@ -39,19 +49,30 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         const format = this._getFormat(ir.inputs);
 
         if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_HSTRING)) {
-            ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("" + value));
+            ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString(Cast.toString(value)));
             return;
         }
 
         if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
-            ctx.emitWasmConst(SpiderNumberType.f64, +value);
+            ctx.emitWasmConst(SpiderNumberType.f64, Cast.toNumber(value));
+            return;
+        }
+
+        if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
+            const stringPtr = ctx.alloateHeapString(Cast.toString(value));
+            ctx.emitWasmConst(SpiderNumberType.i64, VALUE_STRING_MASK | BigInt(stringPtr));
+            ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
             return;
         }
 
         if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_NUMBER)) {
-            ctx.emitWasmConst(SpiderNumberType.i32, +value);
+            ctx.emitWasmConst(SpiderNumberType.i32, Cast.toNumber(value));
             return;
+        }
 
+        if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_BOOLEAN)) {
+            ctx.emitWasmConst(SpiderNumberType.i32, Cast.toBoolean(value) ? 1 : 0);
+            return;
         }
 
         throw new Error(`Unknown format for constant '${format}'`);

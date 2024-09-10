@@ -3,8 +3,22 @@ import { CatnipCommandList } from '../ops/CatnipOp';
 import { CatnipSprite } from './CatnipSprite';
 
 
+export type CatnipProcedureID = string;
+
+export enum CatnipScriptTriggerProcedureArgTypeDesc {
+    STRING_OR_NUMBER,
+    BOOLEAN
+}
+
+export interface CatnipScriptTriggerProcedureArgDesc {
+    type: CatnipScriptTriggerProcedureArgTypeDesc,
+    name: string,
+}
+
 export interface CatnipScriptTriggerProcedureDesc {
     type: "procedure",
+    id: CatnipProcedureID,
+    args: CatnipScriptTriggerProcedureArgDesc[]
 }
 
 export type CatnipEventID = string;
@@ -37,6 +51,7 @@ export class CatnipScript {
 
     private _dependantScripts: Set<CatnipScript>;
     private _recompile: boolean;
+    public get recompile(): boolean { return this._recompile; }
 
     public constructor(sprite: CatnipSprite, desc: CatnipScriptDesc) {
         this.sprite = sprite;
@@ -45,7 +60,6 @@ export class CatnipScript {
         this._commands = desc.commands;
         this._dependantScripts = new Set();
         this._recompile = true;
-        
     }
 
     public delete() {
@@ -78,6 +92,11 @@ export class CatnipScript {
     _onDelete() {
         this._recompileDependantScripts();
         this.sprite.project._removeRecompileScript(this);
+    }
+
+    /** @internal */
+    _onCompile() {
+        this._recompile = false;
     }
 
 }
