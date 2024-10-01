@@ -2,8 +2,8 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
-import { CatnipProcedureID } from "../../../runtime/CatnipScript";
 import { CatnipSpriteID } from '../../../runtime/CatnipSprite';
+import { CatnipProcedureID } from "../../../ops/procedure/procedure_definition";
 
 export type ir_procedure_arg_set_inputs = { sprite: CatnipSpriteID, procedure: CatnipProcedureID, argIdx: number }
 

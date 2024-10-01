@@ -1,8 +1,8 @@
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrBranch } from "../../CatnipIrBranch";
+import { CatnipIrBranch, CatnipIrBranchType } from "../../CatnipIrBranch";
 import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
 
-export type ir_branch_branches = { branch: CatnipIrBranch }
+export type ir_branch_branches = { branch: CatnipIrBranch };
 
 export const ir_branch = new class extends CatnipIrCommandOpType<{}, ir_branch_branches> {
     public constructor() { super("core_branch"); }
@@ -14,6 +14,6 @@ export const ir_branch = new class extends CatnipIrCommandOpType<{}, ir_branch_b
     }
 
     public doesContinue(ir: CatnipReadonlyIrOp<{}, ir_branch_branches, CatnipIrOpType<{}, ir_branch_branches>>): boolean {
-        return !(ir.branches.branch.isFuncBody && ir.branches.branch.isYielding());
+        return ir.branches.branch.branchType === CatnipIrBranchType.EXTERNAL || !(ir.branches.branch.body.isFuncBody && ir.branches.branch.body.isYielding());
     }
 }

@@ -30,6 +30,12 @@ export const CatnipRuntimeModuleFunctions = {
         ([], SpiderNumberType.i32),
     catnip_runtime_tick: fn<[runtime: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32], undefined),
+    catnip_runtime_start_threads: fn<[
+        runtime: SpiderNumberType.i32,
+        sprite: SpiderNumberType.i32,
+        entrypoint: SpiderNumberType.i32,
+        threadList: SpiderNumberType.i32
+    ], undefined>([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
 
     main: fn<[ptr: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32], undefined),

@@ -14,9 +14,9 @@ export const PreWasmPassTransientVariablePropagation: CatnipCompilerPass = {
     run(ir: CatnipReadonlyIr): void {
         ir.forEachOp(op => {
             if (op.type === ir_transient_create) {
-                op.branch.func.createTransientVariable(op.inputs.transient);
+                op.block.func.createTransientVariable(op.inputs.transient);
             } else if (op.type === ir_transient_load || op.type === ir_transient_store || op.type === ir_transient_tee) {
-                op.branch.func.sourceExternalValue({
+                op.block.func.sourceExternalValue({
                     type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,
                     variable: op.inputs.transient
                 });

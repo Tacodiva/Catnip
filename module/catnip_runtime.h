@@ -16,5 +16,6 @@ struct catnip_runtime {
 
 catnip_runtime *catnip_runtime_new();
 void catnip_runtime_tick(catnip_runtime *runtime);
+void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList);
 
 #endif

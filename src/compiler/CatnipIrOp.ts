@@ -1,8 +1,9 @@
 import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
+import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipCompilerStackElement, CatnipCompilerValue } from "../compiler/CatnipCompilerStack";
 import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
 import { CatnipValueFormat } from "./CatnipValueFormat";
+import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
@@ -23,7 +24,7 @@ export interface CatnipReadonlyIrOp<
     readonly type: TOpType;
     readonly inputs: Readonly<TInputs>;
     readonly branches: CatnipReadonlyIrOpBranches<TBranches>;
-    readonly branch: CatnipReadonlyIrBranch;
+    readonly block: CatnipReadonlyIrBasicBlock;
 
     readonly operands: ReadonlyArray<CatnipCompilerStackElement>;
 
@@ -40,7 +41,7 @@ export interface CatnipIrOp<
     readonly type: TOpType;
     readonly inputs: TInputs;
     readonly branches: CatnipIrOpBranches<TBranches>;
-    branch: CatnipIrBranch;
+    block: CatnipIrBasicBlock;
 
     operands: CatnipCompilerStackElement[];
 
@@ -73,12 +74,12 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
 
     public abstract getOperandCount(inputs: TInputs, branches: CatnipReadonlyIrOpBranches<TBranches>): number;
 
-    public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<TInputs, TBranches>, branch: CatnipIrBranch): void;
+    public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<TInputs, TBranches>, branch: CatnipIrBasicBlock): void;
 
-    public isYielding(ir: CatnipIrOp<TInputs, TBranches>, visited: Set<CatnipIrBranch>): boolean {
+    public isYielding(ir: CatnipIrOp<TInputs, TBranches>, visited: Set<CatnipIrBasicBlock>): boolean {
         for (const branchName in ir.branches) {
             const branch = ir.branches[branchName];
-            if (branch.isYielding(visited)) return true;
+            if (branch.body.isYielding(visited)) return true;
         }
         return false;
     }
@@ -88,7 +89,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         if (branchNames.length === 0) return true;
         for (const branchName of branchNames) {
             const branch = ir.branches[branchName];
-            if (branch.doesContinue())
+            if (branch.body.doesContinue())
                 return true;
         }
         return false;

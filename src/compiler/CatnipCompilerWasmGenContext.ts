@@ -7,12 +7,14 @@ import { CatnipWasmStructThread } from "../wasm-interop/CatnipWasmStructThread";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStack } from "./CatnipCompilerStack";
 import { CatnipOpInputs } from "../ops";
 import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpType } from "./CatnipIrOp";
-import { CatnipIrBranch } from "./CatnipIrBranch";
-import { CatnipProcedureID } from "../runtime/CatnipScript";
-import { CatnipValueFormat } from "./CatnipValueFormat";
+import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
+import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedure/procedure_trigger";
+import { CatnipProcedureID } from "../ops/procedure/procedure_definition";
+import { CatnipIrBranch, CatnipIrBranchType } from "./CatnipIrBranch";
+import { CatnipCompilerProcedureSubsystem } from "./subsystems/CatnipCompilerProcedureSubsystem";
 
 export interface CatnipCompilerWasmLocal {
     ref: SpiderLocalReference,
@@ -141,10 +143,10 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public emitBranchInline(branch: CatnipIrBranch, forceReturn: boolean = false) {
-        if (branch.isFuncBody) {
-            const targetFunc = branch.func;
+        if (branch.body.isFuncBody) {
+            const targetFunc = branch.body.func;
 
-            this.prepareStackForCall(targetFunc, branch.isYielding());
+            this.prepareStackForCall(targetFunc, branch.body.isYielding());
 
             this.emitWasmGetThread();
 
@@ -164,14 +166,17 @@ export class CatnipCompilerWasmGenContext {
             }
 
             if (targetFunc.isEntrypoint) {
-                for (let i = 0; i < targetFunc.ir.procedureArguments.length; i++) {
+                const trigger = targetFunc.ir.trigger;
+                if (trigger.type !== ir_procedure_trigger) throw new Error("Can only call function from another IR if it's a procedure.");
+                const triggerInputs = trigger.inputs as ir_procedure_trigger_inputs;
+                for (let i = 0; i < triggerInputs.args.length; i++) {
                     const arg = this._procedureArgs[i].pop();
                     CatnipCompilerLogger.assert(arg !== undefined, false, `No procedure argument at ${i}`)
                     if (arg !== undefined) this.releaseLocal(arg);
                 }
             }
 
-            const isYielding = branch.isYielding() || forceReturn;
+            const isYielding = branch.body.isYielding() || forceReturn;
 
             if (isYielding && this.compiler.config.enable_tail_call) {
                 this.emitWasm(SpiderOpcodes.return_call, targetFunc.spiderFunction);
@@ -184,19 +189,24 @@ export class CatnipCompilerWasmGenContext {
             }
         } else {
             CatnipCompilerWasmGenContext.logger.assert(
-                branch.func === this._func,
+                branch.branchType === CatnipIrBranchType.INTERNAL,
+                true, "Branch must be internal or a function body."
+            );
+
+            CatnipCompilerWasmGenContext.logger.assert(
+                branch.body.func === this._func,
                 true, "Branch must be a part of the current function or a function body."
             );
 
-            this.emitOps(branch);
+            this.emitOps(branch.body);
 
-            if (forceReturn && !branch.isYielding()) {
+            if (forceReturn && !branch.body.isYielding()) {
                 this.emitWasm(SpiderOpcodes.return);
             }
         }
     }
 
-    public emitOps(branch: CatnipIrBranch) {
+    public emitOps(branch: CatnipIrBasicBlock) {
         branch.blockDepth = this._blockDepth;
         if (branch.isLoop) {
             this.pushExpression();
@@ -219,7 +229,7 @@ export class CatnipCompilerWasmGenContext {
         TInputs extends CatnipOpInputs,
         TBranches extends CatnipIrOpBranches,
         TOpType extends CatnipIrOpType<TInputs, TBranches>
-    >(op: CatnipIrOp<TInputs, TBranches, TOpType>, branch: CatnipIrBranch) {
+    >(op: CatnipIrOp<TInputs, TBranches, TOpType>, branch: CatnipIrBasicBlock) {
         op.type.generateWasm(this, op, branch);
 
         const operands = this._stack.pop(op.type.getOperandCount(op.inputs, op.branches));
@@ -397,8 +407,8 @@ export class CatnipCompilerWasmGenContext {
     }
 
     public createProcedureArgLocal(spriteID: CatnipSpriteID, procedureID: CatnipProcedureID, argIdx: number): CatnipCompilerWasmLocal {
-        const procedure = this.compiler.getProcedureInfo(spriteID, procedureID);
-        const argumentInfo = procedure.args[argIdx];
+        const procedure = this.compiler.getSubsystem(CatnipCompilerProcedureSubsystem).getProcedureInfo(spriteID, procedureID);
+        const argumentInfo = procedure.inputs.args[argIdx];
         const argumentType = CatnipValueFormatUtils.getFormatSpiderType(argumentInfo.format);
 
         let currentProcedureArgs = this._procedureArgs[argIdx];

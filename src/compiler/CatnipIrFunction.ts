@@ -2,9 +2,9 @@ import { SpiderFunction, SpiderFunctionDefinition, SpiderLocalReference, SpiderM
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
-import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
+import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipIr as CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
-import { CatnipProcedureID } from "../runtime/CatnipScript";
+import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedure/procedure_trigger";
 
 export interface CatnipIrTransientVariableSourceInfo {
     readonly variable: CatnipIrTransientVariable;
@@ -58,7 +58,7 @@ export interface CatnipReadonlyIrFunction {
     readonly spiderFunction: SpiderFunctionDefinition;
     readonly spiderThreadParam: SpiderLocalReference;
 
-    readonly body: CatnipReadonlyIrBranch;
+    readonly body: CatnipReadonlyIrBasicBlock;
     readonly name: string;
 
     readonly hasFunctionTableIndex: boolean;
@@ -83,7 +83,7 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
     public readonly spiderThreadParam: SpiderLocalReference;
 
     public name: string;
-    public readonly body: CatnipIrBranch;
+    public readonly body: CatnipIrBasicBlock;
 
     private _hasFunctionTableIndex: boolean;
 
@@ -117,12 +117,12 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         return this._parameters;
     }
 
-    private _callers: Set<CatnipIrFunction>;
+    private _callers: Set<CatnipReadonlyIrFunction>;
 
     public get isEntrypoint(): boolean { return this.ir.entrypoint === this; }
 
     /** @internal */
-    constructor(ir: CatnipIr, name: string, branch?: CatnipIrBranch) {
+    constructor(ir: CatnipIr, name: string, branch?: CatnipIrBasicBlock) {
         this.ir = ir;
         this.spiderFunction = this.spiderModule.createFunction();
         this.spiderThreadParam = this.spiderFunction.addParameter(SpiderNumberType.i32);
@@ -130,7 +130,7 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         this.name = name;
 
         if (branch === undefined) {
-            this.body = new CatnipIrBranch(this);
+            this.body = new CatnipIrBasicBlock(this);
         } else {
             CatnipCompilerLogger.assert(
                 !branch.isFuncBody,
@@ -188,7 +188,11 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         let valueSource: CatnipIrExternalValueSource;
 
         if (this.isEntrypoint) {
-            const procedureArgIdx = this.ir.procedureArguments.indexOf(source.variable);
+            const trigger = this.ir.trigger;
+            if (trigger.type !== ir_procedure_trigger) throw new Error("Can only source arguments from procedures.");
+            const triggerInputs = trigger.inputs as ir_procedure_trigger_inputs;
+
+            const procedureArgIdx = triggerInputs.args.findIndex(arg => arg.variable === source.variable);
 
             if (procedureArgIdx === -1) throw new Error("Cannot source transient from entrypoint.");
 
@@ -240,7 +244,7 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         return this._transientVariables.get(variable)!.ref;
     }
 
-    public registerCaller(caller: CatnipIrFunction) {
+    public registerCaller(caller: CatnipReadonlyIrFunction) {
         if (this._callers.has(caller))
             return;
 

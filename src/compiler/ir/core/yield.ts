@@ -3,8 +3,9 @@ import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWa
 import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType } from "../../CatnipIrOp";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
-import { CatnipIrBranch } from "../../CatnipIrBranch";
+import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
 import { CatnipIrExternalLocationType } from "../../CatnipIrFunction";
+import { CatnipIrBranch } from "../../CatnipIrBranch";
 
 export type yield_ir_inptus = { status: CatnipWasmEnumThreadStatus };
 export type yield_ir_branches = { branch: CatnipIrBranch };
@@ -16,11 +17,11 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<yield_ir_inptus, yield_ir_branches>): void {
         CatnipCompilerWasmGenContext.logger.assert(
-            ir.branches.branch.isFuncBody,
+            ir.branches.branch.body.isFuncBody,
             true, "Yield branch must be a function body."
         );
 
-        const targetFunc = ir.branches.branch.func;
+        const targetFunc = ir.branches.branch.body.func;
 
         if (ir.inputs.status === CatnipWasmEnumThreadStatus.RUNNING && ctx.compiler.config.enable_tail_call) {
             ctx.emitBranchInline(ir.branches.branch, true);

@@ -9,4 +9,4 @@ async function main() {
     run(module, sb3File);
 }
 
-main();
+globalThis.main = main;

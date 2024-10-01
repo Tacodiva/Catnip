@@ -7,7 +7,7 @@ import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipTarget } from '../../../runtime/CatnipTarget';
 import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
-import { CatnipIrBranch } from "../../CatnipIrBranch";
+import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
 
 export type get_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable };
 
@@ -21,7 +21,7 @@ export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_input
         return {isConstant: false, format: CatnipValueFormat.F64 };
     }
 
-    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<get_var_ir_inputs>, branch: CatnipIrBranch): void {
+    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<get_var_ir_inputs>, branch: CatnipIrBasicBlock): void {
         const variable = ir.inputs.variable;
         const target = ir.inputs.target;
         

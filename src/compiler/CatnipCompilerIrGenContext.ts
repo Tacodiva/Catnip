@@ -8,7 +8,7 @@ import { CatnipIrTransientVariable } from './CatnipIrTransientVariable';
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStackElement } from "./CatnipCompilerStack";
-import { CatnipIrBranch } from "./CatnipIrBranch";
+import { CatnipIrBranch, CatnipIrBranchType } from "./CatnipIrBranch";
 import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType } from "./CatnipIrOp";
 import { ir_branch } from "./ir/core/branch";
 import { ir_yield } from "./ir/core/yield";
@@ -17,6 +17,7 @@ import { ir_loop_jmp } from "./ir/core/loop_jmp";
 import { ir_if_else } from "./ir/control/if_else";
 import { ir_transient_create } from "./ir/core/transient_create";
 import { CatnipIr } from "./CatnipIr";
+import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
@@ -25,40 +26,40 @@ export class CatnipCompilerIrGenContext {
     public get compiler() { return this.ir.compiler; }
     public get project() { return this.compiler.project; }
 
-    private _branch: CatnipIrBranch;
+    private _body: CatnipIrBasicBlock;
 
-    public get stack(): CatnipCompilerReadonlyStack { return this._branch.stack; }
+    public get stack(): CatnipCompilerReadonlyStack { return this._body.stack; }
 
     public constructor(ir: CatnipIr) {
         this.ir = ir;
-        this._branch = ir.entrypoint.body;
+        this._body = ir.entrypoint.body;
     }
 
     private _emitIr<
         TInputs extends CatnipIrOpInputs,
-        TBranches extends CatnipIrOpBranches,
+        TBranches extends CatnipIrOpBranchesDefinition,
         TOpType extends CatnipIrOpType<TInputs, TBranches>,
         TOp extends CatnipIrOp<TInputs, TBranches, TOpType>
     >(op: TOp): TOp {
-        if (!this._branch.doesContinue()) return op;
+        if (!this._body.doesContinue()) return op;
 
         const opBranchNames = Object.keys(op.branches);
 
-        if (this._branch.funcNullable !== null) {
+        if (this._body.funcNullable !== null) {
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
-                if (branch.funcNullable === null)
-                    branch.setFunction(this._branch.func);
+                if (branch.branchType === CatnipIrBranchType.INTERNAL && branch.body.funcNullable === null)
+                    branch.body.setFunction(this._body.func);
             }
         }
 
-        const branchTails = this._branch.getTails();
+        const branchTails = this._body.getTails();
 
         let joinAfter = false;
         for (const branchName of opBranchNames) {
             const branch = op.branches[branchName];
 
-            if (branch.isYielding()) {
+            if (branch.branchType === CatnipIrBranchType.INTERNAL && branch.body.isYielding()) {
                 joinAfter = true;
                 break;
             }
@@ -66,52 +67,55 @@ export class CatnipCompilerIrGenContext {
 
         let mergeBefore = false;
         for (const tailBranch of branchTails) {
-            if (tailBranch.funcNullable !== this._branch.funcNullable) {
+            if (tailBranch.funcNullable !== this._body.funcNullable) {
                 mergeBefore = true;
                 break;
             }
         }
 
         if (mergeBefore) {
-            this._switchToBranch(this.ir.createFunction().body);
+            this._switchToBlock(this.ir.createFunction().body);
 
             for (const tailBranch of branchTails) {
                 tailBranch.pushOp(this._createIr(
                     ir_yield,
                     { status: CatnipWasmEnumThreadStatus.RUNNING },
-                    { branch: this._branch }, [], tailBranch
+                    { branch: { body: this._body, branchType: CatnipIrBranchType.INTERNAL, resolved: true } }, [], tailBranch
                 ));
             }
 
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
-                branch?.setFunction(this._branch.func);
+                if (branch.branchType === CatnipIrBranchType.INTERNAL)
+                    branch.body.setFunction(this._body.func);
             }
         }
 
-        op.branch = this._branch;
-        this._branch.pushOp(op);
+        op.block = this._body;
+        this._body.pushOp(op);
 
         if (op.type.isInput) {
-            this._branch.stack.push({
+            this._body.stack.push({
                 ...op.type.getResult(op.inputs, op.branches, op.operands),
-                source: op as CatnipIrInputOp<TInputs, TBranches>
+                source: op as CatnipIrInputOp<TInputs, CatnipIrOpBranches<TBranches>>
             });
         }
 
         if (joinAfter) {
 
-            let nonYieldingBraches: Set<CatnipIrBranch> = new Set();
-            let yieldingBrachTails: Set<CatnipIrBranch> = new Set();
+            let nonYieldingBraches: Set<CatnipIrBasicBlock> = new Set();
+            let yieldingBrachTails: Set<CatnipIrBasicBlock> = new Set();
 
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
 
-                if (branch.isYielding()) {
-                    for (const tail of branch.getTails())
-                        yieldingBrachTails.add(tail);
-                } else {
-                    nonYieldingBraches.add(branch);
+                if (branch.branchType === CatnipIrBranchType.INTERNAL) {
+                    if (branch.body.isYielding()) {
+                        for (const tail of branch.body.getTails())
+                            yieldingBrachTails.add(tail);
+                    } else {
+                        nonYieldingBraches.add(branch.body);
+                    }
                 }
             }
 
@@ -124,30 +128,30 @@ export class CatnipCompilerIrGenContext {
             // We don't need to create a new function if there is only one place we continue
             if (nonYieldingBraches.size === 0 && yieldingBrachTails.size === 1) {
                 for (const branchTail of yieldingBrachTails) {
-                    this._switchToBranch(branchTail);
+                    this._switchToBlock(branchTail);
                     break;
                 }
             } else {
                 if (nonYieldingBraches.size !== 0 || yieldingBrachTails.size !== 0) {
-                    const newBranch = this.ir.createFunction().body;
+                    const newFuncBody = this.ir.createFunction().body;
 
                     for (const branchTail of yieldingBrachTails) {
                         branchTail.pushOp(this._createIr(
                             ir_yield,
                             { status: CatnipWasmEnumThreadStatus.RUNNING },
-                            { branch: newBranch }, [], branchTail
+                            { branch: { body: newFuncBody, branchType: CatnipIrBranchType.INTERNAL, resolved: true } }, [], branchTail
                         ));
                     }
 
                     if (nonYieldingBraches.size !== 0 && op.type.doesContinue(op)) {
-                        this._branch.pushOp(this._createIr(
+                        this._body.pushOp(this._createIr(
                             ir_yield,
                             { status: CatnipWasmEnumThreadStatus.RUNNING },
-                            { branch: newBranch }, []
+                            { branch: { body: newFuncBody, branchType: CatnipIrBranchType.INTERNAL, resolved: true } }, []
                         ));
                     }
 
-                    this._switchToBranch(newBranch);
+                    this._switchToBlock(newFuncBody);
                 }
             }
         }
@@ -164,10 +168,10 @@ export class CatnipCompilerIrGenContext {
         inputs: TInputs,
         branches: CatnipIrOpBranches<TBranches>
     ) {
-        if (!this._branch.doesContinue()) return null;
+        if (!this._body.doesContinue()) return null;
 
         const operandCount = type.getOperandCount(inputs, branches);
-        const operands = this._branch.stack.pop(operandCount);
+        const operands = this._body.stack.pop(operandCount);
 
         this._emitIr(this._createIr(
             type,
@@ -179,14 +183,14 @@ export class CatnipCompilerIrGenContext {
 
     public _createIr<
         TInputs extends CatnipOpInputs,
-        TBranches extends CatnipIrOpBranches,
+        TBranches extends CatnipIrOpBranchesDefinition,
         TOpType extends CatnipIrOpType<TInputs, TBranches>
     >(
         type: TOpType,
         inputs: TInputs,
-        branches: TBranches,
+        branches: CatnipIrOpBranches<TBranches>,
         operands: CatnipCompilerStackElement[],
-        branch?: CatnipIrBranch
+        branch?: CatnipIrBasicBlock
     ): CatnipIrOp<TInputs, TBranches, TOpType> {
         return {
             type,
@@ -195,31 +199,31 @@ export class CatnipCompilerIrGenContext {
             operands,
             next: null,
             prev: null,
-            branch: branch ?? this._branch,
+            block: branch ?? this._body,
             removed: false
         };
     }
 
-    public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, branch?: CatnipIrBranch) {
-        if (branch === undefined) {
-            branch = this.ir.createFunction().body;
+    public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, block?: CatnipIrBasicBlock) {
+        if (block === undefined) {
+            block = this.ir.createFunction().body;
         } else {
-            this._createBranchFunction(branch);
+            this._createBlockFunction(block);
         }
-        this.emitIr(ir_yield, { status }, { branch });
-        this._switchToBranch(branch);
+        this.emitIr(ir_yield, { status }, { branch: this.emitBranch(block) });
+        this._switchToBlock(block);
     }
 
-    private _switchToBranch(branch: CatnipIrBranch) {
-        this._branch = branch;
+    private _switchToBlock(block: CatnipIrBasicBlock) {
+        this._body = block;
     }
 
-    private _createBranchFunction(branch: CatnipIrBranch): CatnipIrFunction {
-        if (branch.isFuncBody) {
-            return branch.func;
+    private _createBlockFunction(block: CatnipIrBasicBlock): CatnipIrFunction {
+        if (block.isFuncBody) {
+            return block.func;
         }
 
-        return this.ir.createFunction(branch);
+        return this.ir.createFunction(block);
     }
 
     public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>): void;
@@ -242,7 +246,7 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitCast(format: CatnipValueFormat) {
-        if (!this._branch.doesContinue()) return;
+        if (!this._body.doesContinue()) return;
         const operand = this.stack.peek();
 
         if (operand.format !== format) {
@@ -252,26 +256,26 @@ export class CatnipCompilerIrGenContext {
         }
     }
 
-    public emitJump(branch: CatnipIrBranch) {
-        if (this._branch.funcNullable === branch.funcNullable) {
-            branch.isLoop = true;
-            this.emitIr(ir_loop_jmp, {}, { branch })
+    public emitJump(block: CatnipIrBasicBlock) {
+        if (this._body.funcNullable === block.funcNullable) {
+            block.isLoop = true;
+            this.emitIr(ir_loop_jmp, {}, { branch: this.emitBranch(block) })
         } else {
-            this._createBranchFunction(branch);
-            this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch });
+            this._createBlockFunction(block);
+            this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch: this.emitBranch(block) });
         }
     }
 
-    public emitConditionalJump(branch: CatnipIrBranch) {
-        const sourceBranch = this._branch;
+    public emitConditionalJump(block: CatnipIrBasicBlock) {
+        const sourceBlock = this._body;
         this.emitIr(ir_if_else, {}, {
             true_branch: this.emitBranch(() => {
-                if (sourceBranch.funcNullable === branch.funcNullable) {
-                    branch.isLoop = true;
-                    this.emitIr(ir_loop_jmp, {}, { branch })
+                if (sourceBlock.funcNullable === block.funcNullable) {
+                    block.isLoop = true;
+                    this.emitIr(ir_loop_jmp, {}, { branch: this.emitBranch(block) })
                 } else {
-                    this._createBranchFunction(branch);
-                    this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch });
+                    this._createBlockFunction(block);
+                    this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch: this.emitBranch(block) });
                 }
             }),
             false_branch: this.emitBranch(),
@@ -282,27 +286,33 @@ export class CatnipCompilerIrGenContext {
     public emitBranch(): CatnipIrBranch;
     /** Creates a new branch and emits all the commands in the command list to it. */
     public emitBranch(commands: CatnipCommandList | null): CatnipIrBranch;
+    /** Creates a new branch to the basic block */
+    public emitBranch(block: CatnipIrBasicBlock): CatnipIrBranch;
     /** Creates a new branch, switches this context to emit to that branch, calls lambda then switches back to the previous context.  */
-    public emitBranch(lambda: (branch: CatnipIrBranch) => void): CatnipIrBranch;
+    public emitBranch(lambda: (block: CatnipIrBasicBlock) => void): CatnipIrBranch;
 
-    public emitBranch(arg?: null | CatnipCommandList | ((branch: CatnipIrBranch) => void)): CatnipIrBranch {
+    public emitBranch(arg?: null | CatnipIrBasicBlock | CatnipCommandList | ((block: CatnipIrBasicBlock) => void)): CatnipIrBranch {
+        let body: CatnipIrBasicBlock;
 
-        let branch = new CatnipIrBranch();
-        if (arg !== undefined && arg !== null) {
-            const oldBranch = this._branch;
-            this._branch = branch;
+        if (arg instanceof CatnipIrBasicBlock) {
+            body = arg;
+        } else {
+            body = new CatnipIrBasicBlock();
+            if (arg !== undefined && arg !== null) {
+                const oldBranch = this._body;
+                this._body = body;
 
-            if (Array.isArray(arg)) {
-                this.emitCommands(arg);
-            } else {
-                arg(branch);
+                if (Array.isArray(arg)) {
+                    this.emitCommands(arg);
+                } else {
+                    arg(body);
+                }
+
+                this._body = oldBranch;
             }
-
-            this._branch = oldBranch;
         }
 
-
-        return branch;
+        return { body, branchType: CatnipIrBranchType.INTERNAL, resolved: true };
     }
 
     public emitTransientCreate(format: CatnipValueFormat, name?: string): CatnipIrTransientVariable {

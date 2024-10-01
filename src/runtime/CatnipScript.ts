@@ -1,41 +1,14 @@
 
 import { CatnipCommandList } from '../ops/CatnipOp';
+import { CatnipScriptTrigger } from '../ops/CatnipScriptTrigger';
 import { CatnipSprite } from './CatnipSprite';
 
-
-export type CatnipProcedureID = string;
-
-export enum CatnipScriptTriggerProcedureArgTypeDesc {
-    STRING_OR_NUMBER,
-    BOOLEAN
-}
-
-export interface CatnipScriptTriggerProcedureArgDesc {
-    type: CatnipScriptTriggerProcedureArgTypeDesc,
-    name: string,
-}
-
-export interface CatnipScriptTriggerProcedureDesc {
-    type: "procedure",
-    id: CatnipProcedureID,
-    args: CatnipScriptTriggerProcedureArgDesc[]
-}
-
-export type CatnipEventID = string;
-
-export interface CatnipScriptTriggerEventDesc {
-    type: "event",
-    event: CatnipEventID,
-    priority?: number
-}
-
-export type CatnipScriptTriggerDesc = CatnipScriptTriggerProcedureDesc | CatnipScriptTriggerEventDesc;
 
 export type CatnipScriptID = string;
 
 export interface CatnipScriptDesc {
     id: CatnipScriptID,
-    trigger: CatnipScriptTriggerDesc,
+    trigger: CatnipScriptTrigger,
     commands: CatnipCommandList
 };
 
@@ -44,7 +17,7 @@ export class CatnipScript {
     public readonly sprite: CatnipSprite;
     public readonly id: CatnipScriptID;
 
-    public readonly trigger: Readonly<CatnipScriptTriggerDesc>;
+    public readonly trigger: CatnipScriptTrigger;
 
     private _commands: CatnipCommandList;
     public get commands(): CatnipCommandList { return this._commands; }

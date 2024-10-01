@@ -1,19 +1,33 @@
-import { CatnipProcedureID } from "../runtime/CatnipScript";
+
+/**
+ * The Plan:
+ * 
+ *  - Each IR tracks a list of its script dependencies
+ *  - We figure out script dependencies by inspecting the ops
+ *  - No compilation is done when we add the script to the compiler
+ *      -> Only the IR is created and dependencies are found (but not resolved)
+ *      -> 
+ *  - Th
+ * 
+ */
+
+import { CatnipScript } from "../runtime/CatnipScript";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipVariable } from "../runtime/CatnipVariable";
-import { CatnipCompiler, CatnipCompilerProcedureInfo } from "./CatnipCompiler";
-import { CatnipIrBranch } from "./CatnipIrBranch";
+import { CatnipCompiler } from "./CatnipCompiler";
+import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
+import { CatnipIrBranchType } from "./CatnipIrBranch";
 import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
+import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 
 export interface CatnipReadonlyIr {
     readonly compiler: CatnipCompiler;
     readonly entrypoint: CatnipReadonlyIrFunction;
     readonly functions: ReadonlyArray<CatnipReadonlyIrFunction>;
-    readonly procedureInfo: Readonly<CatnipCompilerProcedureInfo> | null;
-    readonly procedureArguments: ReadonlyArray<CatnipIrTransientVariable>
+    readonly trigger: CatnipIrScriptTrigger;
 
     forEachOp(lambda: (op: CatnipReadonlyIrOp) => void): void;
     getUniqueTransientVariableName(name: string): string;
@@ -30,62 +44,48 @@ export class CatnipIr implements CatnipReadonlyIr {
 
     private _transientVariableNames: Set<string>;
 
-    public readonly procedureInfo: Readonly<CatnipCompilerProcedureInfo> | null;
-    public readonly procedureArguments: ReadonlyArray<CatnipIrTransientVariable>;
+    public readonly trigger: CatnipIrScriptTrigger;
 
-    public constructor(compiler: CatnipCompiler, funcName: string, spriteID: CatnipSpriteID, procedureInfo: CatnipCompilerProcedureInfo | null) {
+    public constructor(compiler: CatnipCompiler, script: CatnipScript) {
         this.compiler = compiler;
-        this.entrypoint = new CatnipIrFunction(this, funcName);
+        this.entrypoint = new CatnipIrFunction(this, "idk_man");
         this._functions = [this.entrypoint];
         this._transientVariableNames = new Set();
-        this.spriteID = spriteID;
+        this.spriteID = script.sprite.id;
 
-        this.procedureInfo = procedureInfo;
-
-        if (procedureInfo === null) {
-            this.procedureArguments = [];
-        } else {
-            procedureInfo.ir = this;
-            let procedureArguments: CatnipIrTransientVariable[] = [];
-
-            for (const argInfo of procedureInfo.args) {
-                procedureArguments.push(new CatnipIrTransientVariable(this, argInfo.format, argInfo.name));
-            }
-
-            this.procedureArguments = procedureArguments;
-        }
+        this.trigger = script.trigger.type.createTriggerIR(this, script.trigger.inputs);
     }
 
-    public createFunction(branch?: CatnipIrBranch): CatnipIrFunction {
+    public createFunction(body?: CatnipIrBasicBlock): CatnipIrFunction {
         const func = new CatnipIrFunction(
             this,
             `${this.entrypoint.name}_func${this._functions.length}`,
-            branch
+            body
         );
         this._functions.push(func);
         return func;
     }
 
     public forEachOp(lambda: (op: CatnipIrOp) => void) {
-        const visited: Set<CatnipIrBranch> = new Set();
+        const visited: Set<CatnipIrBasicBlock> = new Set();
         for (const func of this._functions) {
-            this._forEachOpInBranch(lambda, func.body, visited);
+            this._forEachOpInBlock(lambda, func.body, visited);
         }
     }
 
-    private _forEachOpInBranch(lambda: (op: CatnipIrOp) => void, branch: CatnipIrBranch, visited: Set<CatnipIrBranch>) {
-        if (branch.func.ir !== this) return;
-        if (visited.has(branch)) return;
-        visited.add(branch);
+    private _forEachOpInBlock(lambda: (op: CatnipIrOp) => void, block: CatnipIrBasicBlock, visited: Set<CatnipIrBasicBlock>) {
+        if (visited.has(block)) return;
+        visited.add(block);
 
-        let op = branch.head;
+        let op = block.head;
 
         while (op !== null) {
             lambda(op);
 
             for (const subbranchName in op.branches) {
                 const subbranch = op.branches[subbranchName];
-                this._forEachOpInBranch(lambda, subbranch, visited);
+                if (subbranch.branchType === CatnipIrBranchType.INTERNAL)
+                    this._forEachOpInBlock(lambda, subbranch.body, visited);
             }
 
             op = op.next;
@@ -111,16 +111,16 @@ export class CatnipIr implements CatnipReadonlyIr {
     public toString(): string {
         let string = "";
 
-        const stringifyIr = (branch: CatnipIrBranch, indent: string, branches: Set<CatnipIrBranch>) => {
-            branches.add(branch);
+        const stringifyIr = (block: CatnipIrBasicBlock, indent: string, visited: Set<CatnipIrBasicBlock>) => {
+            visited.add(block);
             let string = "";
 
-            if (branch.isLoop) {
+            if (block.isLoop) {
                 string += "(loop) "
             }
             string += "\n";
 
-            let op = branch.head;
+            let op = block.head;
             while (op !== null) {
                 string += indent;
                 string += op.type.name;
@@ -143,23 +143,28 @@ export class CatnipIr implements CatnipReadonlyIr {
                         string += "\n  ";
                         string += indent;
                         string += subbranchName;
-                        if (subbranch.func === branch.func && !subbranch.isFuncBody) {
-                            if (branches.has(subbranch)) {
-                                string += ": ??\n";
-                            } else {
-                                string += ": ";
-                                string += stringifyIr(subbranch, indent + "    ", branches);
-                            }
+
+                        if (!subbranch.resolved) {
+                            string += ": [UNRESOLVED]";
                         } else {
-                            string += " -> ";
-                            if (!subbranch.isFuncBody) string += "[INVALID] ";
-                            string += subbranch.func.name;
-                            if (subbranch.func.ir !== this) {
-                                string += " [IR '";
-                                string += subbranch.func.ir.entrypoint.name;
-                                string += "']"
+                            if (subbranch.body.func === block.func && !subbranch.body.isFuncBody) {
+                                if (visited.has(subbranch.body)) {
+                                    string += ": ??\n";
+                                } else {
+                                    string += ": ";
+                                    string += stringifyIr(subbranch.body, indent + "    ", visited);
+                                }
+                            } else {
+                                string += " -> ";
+                                if (!subbranch.body.isFuncBody) string += "[INVALID] ";
+                                string += subbranch.body.func.name;
+                                if (subbranch.body.func.ir !== this) {
+                                    string += " [IR '";
+                                    string += subbranch.body.func.ir.entrypoint.name;
+                                    string += "']"
+                                }
+                                string += "\n";
                             }
-                            string += "\n";
                         }
                     }
                 } else {

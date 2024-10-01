@@ -346,6 +346,16 @@ type SB3BlockTypeDefinition = {
     },
 
     "event_whenflagclicked": {},
+    "event_broadcast": {
+        inputs: {
+            "BROADCAST_INPUT": ProjectSB3Input
+        }
+    },
+    "event_whenbroadcastreceived": {
+        fields: {
+            "BROADCAST_OPTION": ProjectSB3Field<string>
+        }
+    }
 
     "control_if": {
         inputs: {

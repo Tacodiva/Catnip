@@ -2,7 +2,7 @@ import { CatnipVariable } from "../../runtime/CatnipVariable";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipReadonlyIr } from "../CatnipIr";
-import { CatnipReadonlyIrBranch } from "../CatnipIrBranch";
+import { CatnipReadonlyIrBasicBlock } from "../CatnipIrBasicBlock";
 import { CatnipReadonlyIrFunction } from "../CatnipIrFunction";
 import { CatnipReadonlyIrOp } from "../CatnipIrOp";
 import { CatnipIrTransientVariable } from "../CatnipIrTransientVariable";
@@ -15,6 +15,7 @@ import { get_var_ir_inputs, ir_get_var } from "../ir/data/get_var";
 import { ir_set_var, set_var_ir_inputs } from "../ir/data/set_var";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipCompilerPass } from "./CatnipCompilerPass";
+import { CatnipIrBranchType } from "../CatnipIrBranch";
 
 enum VariableOperationType {
     GET,
@@ -46,7 +47,7 @@ interface VariableSync {
 
 class VariableCfgNode {
 
-    public readonly branch: CatnipReadonlyIrBranch;
+    public readonly branch: CatnipReadonlyIrBasicBlock;
     public prev: VariableCfgNode[];
     public next: VariableCfgNode[];
 
@@ -55,7 +56,7 @@ class VariableCfgNode {
 
     public entryState: FunctionState | null;
 
-    public constructor(branch: CatnipReadonlyIrBranch) {
+    public constructor(branch: CatnipReadonlyIrBasicBlock) {
         this.branch = branch;
         this.prev = [];
         this.next = [];
@@ -64,7 +65,7 @@ class VariableCfgNode {
         this.entryState = null;
     }
 
-    public pushBranch(branch: CatnipReadonlyIrBranch): VariableCfgNode {
+    public pushBranch(branch: CatnipReadonlyIrBasicBlock): VariableCfgNode {
         const newNode = new VariableCfgNode(branch);
         this.pushNode(newNode);
         return newNode;
@@ -193,9 +194,9 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
 
         function optimizeFunction(func: CatnipReadonlyIrFunction) {
 
-            const visitedBranches: Map<CatnipReadonlyIrBranch, VariableCfgNode> = new Map();
+            const visitedBranches: Map<CatnipReadonlyIrBasicBlock, VariableCfgNode> = new Map();
 
-            function createBranchVariableCfg(branch: CatnipReadonlyIrBranch): { head: VariableCfgNode, tail: VariableCfgNode | null } {
+            function createBranchVariableCfg(branch: CatnipReadonlyIrBasicBlock): { head: VariableCfgNode, tail: VariableCfgNode | null } {
                 let headNode = visitedBranches.get(branch);
 
                 if (headNode !== undefined)
@@ -220,7 +221,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                     } else {
                         for (const branchName of branchNames) {
                             const subbranch = op.branches[branchName];
-                            if (subbranch !== null && subbranch.func !== branch.func) {
+                            if (subbranch.branchType === CatnipIrBranchType.EXTERNAL) {
                                 doesSync = true;
                                 break;
                             }
@@ -242,8 +243,8 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                             const branchName = branchNames[i];
                             const subbranch = op.branches[branchName];
 
-                            if (subbranch.func === func) {
-                                const branchNode = createBranchVariableCfg(subbranch);
+                            if (subbranch.branchType === CatnipIrBranchType.INTERNAL) {
+                                const branchNode = createBranchVariableCfg(subbranch.body);
                                 node.pushNode(branchNode.head);
 
                                 if (branchNode.tail !== null) {
@@ -445,7 +446,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                         if (operation.type === VariableOperationType.GET) {
                             switch (operation.status) {
                                 case VariableOperationInlineStatus.BOTH:
-                                    operation.op.branch.insertOpAfter(
+                                    operation.op.block.insertOpAfter(
                                         operation.op,
                                         ir_transient_tee,
                                         { transient: getTransient(variable) },
@@ -453,7 +454,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                     );
                                     break;
                                 case VariableOperationInlineStatus.INLINE:
-                                    operation.op.branch.replaceOp(
+                                    operation.op.block.replaceOp(
                                         operation.op,
                                         ir_transient_load,
                                         { transient: getTransient(variable) },
@@ -464,7 +465,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                         } else if (operation.type === VariableOperationType.SET) {
                             switch (operation.status) {
                                 case VariableOperationInlineStatus.BOTH:
-                                    operation.op.branch.insertOpBefore(
+                                    operation.op.block.insertOpBefore(
                                         ir_transient_tee,
                                         { transient: getTransient(variable) },
                                         {},
@@ -472,7 +473,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                     );
                                     break;
                                 case VariableOperationInlineStatus.INLINE:
-                                    operation.op.branch.replaceOp(
+                                    operation.op.block.replaceOp(
                                         operation.op,
                                         ir_transient_store,
                                         { transient: getTransient(variable) },
@@ -501,7 +502,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                 );
                             }
 
-                            syncGetOp.branch.insertOpAfter(
+                            syncGetOp.block.insertOpAfter(
                                 syncGetOp,
                                 ir_set_var,
                                 { target: variable.sprite.defaultTarget, variable: variable, format: CatnipValueFormat.F64 },

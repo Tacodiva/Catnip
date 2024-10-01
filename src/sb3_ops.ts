@@ -1,11 +1,11 @@
 import { CatnipCommandOp, CatnipInputOp } from "./ops";
-import { CatnipScriptTriggerDesc } from "./runtime/CatnipScript";
+import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
 import { ProjectSB3Block, ProjectSB3BlockOpcode, SB3BlockTypes } from "./sb3";
 import { SB3ScriptReader } from "./sb3_reader";
 
 export type SB3CommandBlockDeserializer<TOpcode extends ProjectSB3BlockOpcode> = (ctx: SB3ScriptReader, block: ProjectSB3Block<TOpcode>) => CatnipCommandOp;
 export type SB3InputBlockDeserializer<TOpcode extends ProjectSB3BlockOpcode> = (ctx: SB3ScriptReader, block: ProjectSB3Block<TOpcode>) => CatnipInputOp;
-export type SB3HatBlockDeserializer<TOpcode extends ProjectSB3BlockOpcode> = (ctx: SB3ScriptReader, block: ProjectSB3Block<TOpcode>) => CatnipScriptTriggerDesc;
+export type SB3HatBlockDeserializer<TOpcode extends ProjectSB3BlockOpcode> = (ctx: SB3ScriptReader, block: ProjectSB3Block<TOpcode>) => CatnipScriptTrigger;
 
 export const sb3_ops = {
     commandBlocks: new Map() as Map<string, SB3CommandBlockDeserializer<ProjectSB3BlockOpcode>>,

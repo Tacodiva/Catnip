@@ -11,6 +11,8 @@ struct catnip_list {
 
 typedef struct catnip_list catnip_list;
 
+catnip_list *catnip_list_new(catnip_ui32_t item_size, catnip_ui32_t capacity);
+
 #define CATNIP_LIST_INIT(list, type, capacity) (catnip_list_init((list), sizeof(type), (capacity)))
 void catnip_list_init(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t capacity);
 

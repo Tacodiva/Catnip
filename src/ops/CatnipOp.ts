@@ -4,7 +4,7 @@ export type CatnipCommandList = CatnipCommandOp[];
 
 export type CatnipOpInputs = Record<string, any>;
 
-interface CatnipOp<TInputs extends CatnipOpInputs = CatnipOpInputs> {
+export interface CatnipOp<TInputs extends CatnipOpInputs = CatnipOpInputs> {
     readonly type: CatnipOpType<TInputs>;
     readonly inputs: TInputs;
 }

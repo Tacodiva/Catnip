@@ -10,7 +10,7 @@ export const PreWasmPassFunctionIndexAllocation: CatnipCompilerPass = {
 
     run(ir: CatnipReadonlyIr): void {
 
-        if (ir.procedureInfo === null && !ir.entrypoint.hasFunctionTableIndex)
+        if (ir.trigger.type.requiresFunctionIndex(ir, ir.trigger.inputs))
             ir.entrypoint.assignFunctionTableIndex();
         
         ir.forEachOp(op => {
@@ -21,12 +21,12 @@ export const PreWasmPassFunctionIndexAllocation: CatnipCompilerPass = {
             const branch = (op.branches as yield_ir_branches).branch;
             const inputs = op.inputs as yield_ir_inptus;
 
-            if (branch.func.hasFunctionTableIndex) return;
+            if (branch.body.func.hasFunctionTableIndex) return;
 
             if (inputs.status === CatnipWasmEnumThreadStatus.RUNNING && ir.compiler.config.enable_tail_call)
                 return;
 
-            branch.func.assignFunctionTableIndex();
+            branch.body.func.assignFunctionTableIndex();
         });
     }
 }

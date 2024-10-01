@@ -1,5 +1,6 @@
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipReadonlyIr } from "../CatnipIr";
+import { CatnipIrBranchType } from "../CatnipIrBranch";
 import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
 export const PreLoopPassAnalyzeFunctionCallers: CatnipCompilerPass = {
@@ -11,8 +12,8 @@ export const PreLoopPassAnalyzeFunctionCallers: CatnipCompilerPass = {
             for (const subbranchName in op.branches) {
                 const subbranch = op.branches[subbranchName];
 
-                if (op.branch.func !== subbranch.func) {
-                    subbranch.func.registerCaller(op.branch.func);
+                if (subbranch.branchType === CatnipIrBranchType.INTERNAL && op.block.func !== subbranch.body.func) {
+                    subbranch.body.func.registerCaller(op.block.func);
                 }
             }
         });

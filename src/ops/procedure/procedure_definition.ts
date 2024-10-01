@@ -1,7 +1,51 @@
-import { CatnipScriptTriggerProcedureArgDesc, CatnipScriptTriggerProcedureArgTypeDesc } from "../../runtime/CatnipScript";
+import { CatnipIr } from "../../compiler/CatnipIr";
+import { CatnipIrScriptTrigger } from "../../compiler/CatnipIrScriptTrigger";
+import { CatnipIrTransientVariable } from "../../compiler/CatnipIrTransientVariable";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
+import { CatnipIrProcedureTriggerArg, ir_procedure_trigger } from "../../compiler/ir/procedure/procedure_trigger";
 import { ProjectSB3Block } from "../../sb3";
-import { registerSB3CommandBlock, registerSB3HatBlock } from "../../sb3_ops";
-import { SB3ProcedureArgumentInfo, SB3ProcedureInfo } from "../../sb3_reader";
+import { registerSB3HatBlock } from "../../sb3_ops";
+import { SB3ProcedureArgumentInfo } from "../../sb3_reader";
+import { CatnipScriptTriggerType } from "../CatnipScriptTrigger";
+
+export type CatnipProcedureID = string;
+
+export enum CatnipProcedureTriggerArgType {
+    STRING_OR_NUMBER,
+    BOOLEAN
+}
+
+export interface CatinpProcedureTriggerArg {
+    type: CatnipProcedureTriggerArgType,
+    name: string,
+}
+
+export type procedure_trigger_inputs = {
+    id: CatnipProcedureID,
+    args: CatinpProcedureTriggerArg[]
+}
+
+export const procedure_trigger = new class extends CatnipScriptTriggerType<procedure_trigger_inputs> {
+
+    public createTriggerIR(ir: CatnipIr, inputs: procedure_trigger_inputs): CatnipIrScriptTrigger {
+        const args: CatnipIrProcedureTriggerArg[] = [];
+
+        for (const arg of inputs.args) {
+            const format = arg.type === CatnipProcedureTriggerArgType.BOOLEAN ? CatnipValueFormat.I32_BOOLEAN : CatnipValueFormat.F64;
+            args.push({
+                format,
+                name: arg.name,
+                variable: new CatnipIrTransientVariable(ir, format, arg.name)
+            });
+        }
+
+        return ir_procedure_trigger.create(ir, {
+            id: inputs.id,
+            args
+        });
+    }
+
+}
 
 registerSB3HatBlock("procedures_definition", (ctx, block) => {
 
@@ -14,7 +58,7 @@ registerSB3HatBlock("procedures_definition", (ctx, block) => {
     const proccode = procPrototype.mutation.proccode;
 
     const sb3Args: SB3ProcedureArgumentInfo[] = [];
-    const catnipArgs: CatnipScriptTriggerProcedureArgDesc[] = [];
+    const catnipArgs: CatinpProcedureTriggerArg[] = [];
 
     for (const inputID in procPrototype.inputs) {
 
@@ -23,12 +67,12 @@ registerSB3HatBlock("procedures_definition", (ctx, block) => {
         const inputBlock = ctx.getBlock(inputBlockID) as 
             ProjectSB3Block<"argument_reporter_string_number"> | ProjectSB3Block<"argument_reporter_boolean">;
 
-        let type: CatnipScriptTriggerProcedureArgTypeDesc;
+        let type: CatnipProcedureTriggerArgType;
 
         if (inputBlock.opcode === "argument_reporter_string_number") {
-            type = CatnipScriptTriggerProcedureArgTypeDesc.STRING_OR_NUMBER;
+            type = CatnipProcedureTriggerArgType.STRING_OR_NUMBER;
         } else if (inputBlock.opcode === "argument_reporter_boolean") {
-            type = CatnipScriptTriggerProcedureArgTypeDesc.BOOLEAN;
+            type = CatnipProcedureTriggerArgType.BOOLEAN;
         } else {
             throw new Error(`Unexpected block '${(inputBlock as ProjectSB3Block).opcode}' (block ${inputBlockID}). Expected 'argument_reporter_string_number' or 'argument_reporter_boolean'.`)
         }
@@ -52,9 +96,8 @@ registerSB3HatBlock("procedures_definition", (ctx, block) => {
         sb3Args
     )
 
-    return {
-        type: "procedure",
+    return procedure_trigger.create({
         id: procedureID,
         args: catnipArgs
-    };
+    });
 });

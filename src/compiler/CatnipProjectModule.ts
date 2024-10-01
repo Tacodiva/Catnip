@@ -1,9 +1,9 @@
 import { createLogger, Logger } from "../log";
 import { CatnipProject } from "../runtime/CatnipProject";
-import { CatnipEventID } from "../runtime/CatnipScript";
+import { CatnipEventID } from "./ir/core/event_trigger";
 
 export type CatnipProjectModuleEvent = { id: CatnipEventID, exportName: string };
-type CatnipProjectEventLambda = (runtimePtr: number) => void;
+type CatnipProjectEventLambda = (runtimePtr: number, threadListPtr: number) => void;
 
 export class CatnipProjectModule {
     private static readonly _logger: Logger = createLogger("CatnipProjectModule");
@@ -29,6 +29,6 @@ export class CatnipProjectModule {
 
         if (eventLambda === undefined) return;
 
-        eventLambda(this.project.runtimeInstance.ptr);
+        eventLambda(this.project.runtimeInstance.ptr, 0);
     }
 }

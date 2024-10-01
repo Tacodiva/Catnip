@@ -16,6 +16,12 @@ catnip_bool_t catnip_list_index_is_valid(catnip_list *list, catnip_ui32_t index)
   return index < list->length;
 }
 
+catnip_list *catnip_list_new(catnip_ui32_t item_size, catnip_ui32_t capacity) {
+  catnip_list *list = catnip_mem_alloc(sizeof(catnip_list));
+  catnip_list_init(list, item_size, capacity);
+  return list;
+}
+
 void catnip_list_init(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t capacity) {
   list->capacity = capacity;
   list->length = 0;

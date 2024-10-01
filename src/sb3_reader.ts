@@ -1,11 +1,15 @@
+import { CatnipEventID } from "./compiler/ir/core/event_trigger";
 import { createLogger, Logger } from "./log";
 import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./ops";
+import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
+import { CatnipProcedureID, CatnipProcedureTriggerArgType } from "./ops/procedure/procedure_definition";
 import { CatnipProjectDesc } from "./runtime/CatnipProject";
-import { CatnipProcedureID, CatnipScriptID, CatnipScriptTriggerDesc, CatnipScriptTriggerProcedureArgTypeDesc } from "./runtime/CatnipScript";
+import { CatnipScriptID } from "./runtime/CatnipScript";
 import { CatnipSpriteDesc, CatnipSpriteID } from "./runtime/CatnipSprite";
 import { CatnipTargetVariableDesc } from "./runtime/CatnipTarget";
 import { CatnipVariableDesc, CatnipVariableID } from "./runtime/CatnipVariable";
 import { ProjectSB3, ProjectSB3Block, ProjectSB3BlockOpcode, ProjectSB3Field, ProjectSB3Input, ProjectSB3InputType, ProjectSB3InputValueColor, ProjectSB3InputValueInline, ProjectSB3InputValueNameID, ProjectSB3InputValueNumber, ProjectSB3InputValueString, ProjectSB3InputValueType, ProjectSB3Target, ProjectSB3TargetBlocks, SB3BlockTypes } from "./sb3";
+import { SB3ReadLogger } from "./sb3_logger";
 import { sb3_ops, SB3CommandBlockDeserializer, SB3HatBlockDeserializer, SB3InputBlockDeserializer } from "./sb3_ops";
 
 
@@ -17,7 +21,7 @@ export interface SB3VariableInfo {
 export interface SB3ProcedureArgumentInfo {
     readonly id: string;
     readonly name: string;
-    readonly type: CatnipScriptTriggerProcedureArgTypeDesc;
+    readonly type: CatnipProcedureTriggerArgType;
 }
 
 export interface SB3ProcedureInfo {
@@ -26,8 +30,6 @@ export interface SB3ProcedureInfo {
 }
 
 export class SB3ReadMetadata {
-    public static Logger: Logger = createLogger("SB3Read");
-
     private _spriteCount: number;
     private _scriptCount: number;
 
@@ -37,6 +39,9 @@ export class SB3ReadMetadata {
     private _variableMap: Map<string, SB3VariableInfo>;
     private _variableCount: number;
 
+    private _broadcastMap: Map<string, CatnipEventID>;
+    private _broadcastCount: number;
+
     public constructor() {
         this._spriteCount = 0;
         this._scriptCount = 0;
@@ -44,6 +49,8 @@ export class SB3ReadMetadata {
         this._variableMap = new Map();
         this._procedureCount = 0;
         this._procedureMap = new Map();
+        this._broadcastCount = 0;
+        this._broadcastMap = new Map();
     }
 
     private _assignVariableID(): CatnipVariableID {
@@ -81,12 +88,25 @@ export class SB3ReadMetadata {
         return procedureInfo;
     }
 
+    public getBroadcast(id: string, name: string): CatnipEventID {
+        let broadcastEvent = this._broadcastMap.get(id);
+        if (broadcastEvent === undefined) {
+            broadcastEvent = this._assignBroadcastID(name);
+            this._broadcastMap.set(id, broadcastEvent);
+        }
+        return broadcastEvent;
+    }
+
     public assignSpriteID(): CatnipSpriteID {
         return (this._spriteCount++) + "";
     }
 
     public assignScriptID(): CatnipScriptID {
         return (this._scriptCount++) + "";
+    }
+
+    private _assignBroadcastID(name: string): CatnipEventID {
+        return name + "_" + (this._broadcastCount++);
     }
 }
 
@@ -166,7 +186,7 @@ export class SB3ScriptReader {
     }
 
     public readScripts() {
-        const scripts: { trigger: CatnipScriptTriggerDesc, stack: string | null }[] = [];
+        const scripts: { trigger: CatnipScriptTrigger, stack: string | null }[] = [];
 
         // We deserialize the hats first to enumerate all the procedures
         for (const hatBlock of this.blocks.values()) {
@@ -207,7 +227,7 @@ export class SB3ScriptReader {
             case ProjectSB3InputValueType.COLOR:
                 throw new Error("Not supported.");
             case ProjectSB3InputValueType.BROADCAST:
-                throw new Error("Not supported.");
+                throw new Error("Cannot create input from broadcast.");
             case ProjectSB3InputValueType.VARIABLE: {
                 const variableInfo = this.meta.getVariable(array[2]);
                 return CatnipOps.data_get_var.create({
@@ -221,7 +241,7 @@ export class SB3ScriptReader {
     }
 
     public readInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline {
-        SB3ReadMetadata.Logger.assert(input !== null);
+        SB3ReadLogger.assert(input !== null);
 
         if (Array.isArray(input)) {
             const inputValue = input[1];

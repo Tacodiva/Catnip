@@ -123,7 +123,7 @@ export class CatnipProject {
 
         const module = await compiler.createModule();
 
-        if (globalThis.document) {
+        if (false && globalThis.document) {
             const downloadURL = (data: string, fileName: string) => {
                 const a = document.createElement('a')
                 a.href = data
@@ -151,7 +151,7 @@ export class CatnipProject {
 
         const stage = [...this._sprites.values()][0];
         const printVariable = stage.getVariable("2");
-        module.triggerEvent("whenflagclicked");
+        module.triggerEvent("when_flag_clicked");
 
         for (let tick = 1; tick <= 10; tick++) {
             console.time(""+tick);

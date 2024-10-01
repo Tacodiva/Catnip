@@ -34,3 +34,18 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
     }
   }
 }
+
+void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
+
+  catnip_target *target = sprite->target;
+
+  while (target != CATNIP_NULL) {
+
+    catnip_thread *newThread = catnip_thread_new(target, entrypoint);
+
+    if (threadList != CATNIP_NULL)
+      CATNIP_LIST_ADD(threadList, catnip_thread*, newThread);
+
+    target = target->next_sprite;
+  }
+}

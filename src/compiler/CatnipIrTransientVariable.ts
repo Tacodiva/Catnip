@@ -27,9 +27,9 @@ export class CatnipIrTransientVariable {
     public readonly name: string | null;
     public readonly format: CatnipValueFormat;
 
-    public constructor(ir: CatnipReadonlyIr, type: CatnipValueFormat, name?: string) {
+    public constructor(ir: CatnipReadonlyIr, format: CatnipValueFormat, name?: string) {
         this.ir = ir;
-        this.format = type;
+        this.format = format;
         this.name = name ? ir.getUniqueTransientVariableName(name) : null;
     }
 
