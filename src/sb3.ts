@@ -83,7 +83,7 @@ export type ProjectSB3InputInputOnly = [
 
 export type ProjectSB3InputShadowedInput = [
     type: ProjectSB3InputType.SHADOWED_INPUT,
-    input: ProjectSB3InputValue,
+    input: ProjectSB3InputValue | null,
     shadow: ProjectSB3InputValue
 ];
 

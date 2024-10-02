@@ -1,4 +1,6 @@
+import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
+import { ir_barrier } from "./ir/core/barrier";
 
 
 export type CatnipIrScriptTriggerInputs = Record<string, any>;
@@ -18,4 +20,16 @@ export abstract class CatnipIrScriptTriggerType<TInputs extends CatnipIrScriptTr
     }
 
     public abstract requiresFunctionIndex(ir: CatnipReadonlyIr, inputs: TInputs): boolean;
+
+    public requiresReturnLocation(ir: CatnipReadonlyIr, inputs: TInputs) {
+        return false;
+    }
+
+    public preIR(ctx: CatnipCompilerIrGenContext, inputs: TInputs) {
+
+    }
+
+    public postIR(ctx: CatnipCompilerIrGenContext, inputs: TInputs) {
+        ctx.emitIr(ir_barrier, {}, {});
+    }
 }

@@ -118,12 +118,12 @@ export class CatnipProject {
         const compiler = new CatnipCompiler(this);
 
         for (const script of this._recompileScripts) {
-            compiler.compileScript(script);
+            compiler.addScript(script);
         }
 
         const module = await compiler.createModule();
 
-        if (false && globalThis.document) {
+        if (globalThis.document && window.location.href.endsWith("download")) {
             const downloadURL = (data: string, fileName: string) => {
                 const a = document.createElement('a')
                 a.href = data

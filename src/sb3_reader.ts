@@ -240,23 +240,37 @@ export class SB3ScriptReader {
         }
     }
 
-    public readInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline {
-        SB3ReadLogger.assert(input !== null);
+    public readOptionalInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline | null {
+        if (input === null) return null;
 
         if (Array.isArray(input)) {
-            const inputValue = input[1];
-
-            if (typeof inputValue !== "string")
-                return inputValue;
-
-            return inputValue;
+            return input[1];
         } else {
             return input;
         }
     }
 
+    public readInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline {
+        SB3ReadLogger.assert(input !== null);
+
+        const inputOrBlockID = this.readOptionalInputOrBlockID(input);
+
+        if (inputOrBlockID === null)
+            throw new Error("Unexpected null input value.");
+
+        return inputOrBlockID;
+    }
+
     public readBlockID(input: ProjectSB3Input | string | null): string {
         const inputOrBlockID = this.readInputOrBlockID(input);
+        if (typeof inputOrBlockID !== "string")
+            throw new Error(`Unexpected array literal, expected block ID.`);
+        return inputOrBlockID;
+    }
+
+    public readOptionalBlockID(input: ProjectSB3Input | string | null): string | null {
+        const inputOrBlockID = this.readOptionalInputOrBlockID(input);
+        if (inputOrBlockID === null) return null;
         if (typeof inputOrBlockID !== "string")
             throw new Error(`Unexpected array literal, expected block ID.`);
         return inputOrBlockID;

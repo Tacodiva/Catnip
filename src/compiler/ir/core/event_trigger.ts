@@ -1,8 +1,10 @@
 import { CatnipScript } from "../../../runtime/CatnipScript";
 import { CatnipCompiler } from "../../CatnipCompiler";
+import { CatnipCompilerIrGenContext } from "../../CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../CatnipIr";
 import { CatnipIrScriptTriggerType } from "../../CatnipIrScriptTrigger";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
+import { ir_thread_terminate } from "./thread_terminate";
 
 export type CatnipEventID = string;
 
@@ -21,8 +23,10 @@ export class CatnipIrScriptEventTrigger<TInputs extends ir_event_trigger_inputs>
         return true;
     }
 
-    // public generateFunctions(): 
-
+    public postIR(ctx: CatnipCompilerIrGenContext, inputs: TInputs): void {
+        super.postIR(ctx, inputs);
+        ctx.emitIr(ir_thread_terminate, {}, {});
+    }
     
 }
 

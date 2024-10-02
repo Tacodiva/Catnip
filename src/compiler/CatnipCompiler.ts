@@ -1,5 +1,5 @@
 import { CatnipProject } from "../runtime/CatnipProject";
-import { CatnipScript } from "../runtime/CatnipScript";
+import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipProjectModule, CatnipProjectModuleEvent } from "./CatnipProjectModule";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
@@ -13,14 +13,15 @@ import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerSt
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreLoopPassAnalyzeFunctionCallers";
 import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
 import { ir_barrier } from "./ir/core/barrier";
-import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderExportFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType } from "wasm-spider";
+import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderExportFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipSpriteID } from "../runtime/CatnipSprite";
+import { CatnipSprite, CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipProcedureID, procedure_trigger, procedure_trigger_inputs } from "../ops/procedure/procedure_definition";
 import { CatnipIrScriptProcedureTrigger, ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedure/procedure_trigger";
 import { CatnipEventID, ir_event_trigger, ir_event_trigger_inputs } from "./ir/core/event_trigger";
 import { CatnipCompilerSubsystem, CatnipCompilerSubsystemClass } from "./CatnipCompilerSubsystem";
+import { CatnipCommandList } from "../ops";
 
 export class CatnipCompiler {
     public readonly project: CatnipProject;
@@ -33,12 +34,13 @@ export class CatnipCompiler {
     public readonly spiderModule: SpiderModule;
     public readonly spiderMemory: SpiderImportMemory;
     public readonly spiderIndirectFunctionTable: SpiderImportTable;
+    public readonly spiderIndirectFunctionType: SpiderTypeDefinition;
     private readonly _spiderFunctionNop: SpiderFunctionDefinition;
 
     private readonly _runtimeFuncs: ReadonlyMap<CatnipRuntimeModuleFunctionName, SpiderImportFunction>;
     private readonly _subsystems: Map<CatnipCompilerSubsystemClass, CatnipCompilerSubsystem>;
-    
-    private readonly _compiledFuncs: Map<CatnipScript, CatnipIr>;
+
+    private readonly _scripts: Map<CatnipSpriteID, Map<CatnipScriptID, CatnipIr>>;
 
     private readonly _freeFunctionTableIndices: number[];
     private _functionTableIndexCount: number;
@@ -64,11 +66,14 @@ export class CatnipCompiler {
             "env", "indirect_function_table",
             SpiderReferenceType.funcref, 0
         );
+        this.spiderIndirectFunctionType = this.spiderModule.createType(
+            [SpiderNumberType.i32]
+        );
         this._spiderFunctionNop = this.spiderModule.createFunction();
 
         const runtimeFuncs = new Map();
         this._runtimeFuncs = runtimeFuncs;
-        
+
         let funcName: CatnipRuntimeModuleFunctionName;
         for (funcName in CatnipRuntimeModuleFunctions) {
             const func = CatnipRuntimeModuleFunctions[funcName];
@@ -76,7 +81,7 @@ export class CatnipCompiler {
             runtimeFuncs.set(funcName, this.spiderModule.importFunction("catnip", funcName, funcType));
         }
 
-        this._compiledFuncs = new Map();
+        this._scripts = new Map();
 
         this._freeFunctionTableIndices = [];
         this._functionTableIndexCount = 1; // Starts at 1 because we never allocate function table index 0
@@ -104,17 +109,34 @@ export class CatnipCompiler {
         }
     }
 
-    public compileScript(script: CatnipScript) {
-        if (!script.recompile) return;
+    private *_enumerateScripts(): IterableIterator<CatnipIr> {
+        for (const spriteScripts of this._scripts.values()) {
+            yield* spriteScripts.values();
+        }
+    }
 
+    public addScript(script: CatnipScript): void {
         const ir = new CatnipIr(this, script);
-        this._compiledFuncs.set(script, ir);
 
-        const irGenCtx = new CatnipCompilerIrGenContext(ir);
+        let spriteScripts = this._scripts.get(ir.spriteID);
 
-        irGenCtx.emitCommands(script.commands);
-        irGenCtx.emitIr(ir_barrier, {}, {});
-        irGenCtx.emitIr(ir_thread_terminate, {}, {});
+        if (spriteScripts === undefined) {
+            spriteScripts = new Map();
+            this._scripts.set(ir.spriteID, spriteScripts);
+        }
+
+        if (spriteScripts.has(ir.scriptID))
+            this.removeScript(ir.spriteID, ir.scriptID);
+
+        spriteScripts.set(ir.scriptID, ir);
+    }
+
+    public removeScript(spriteID: CatnipSpriteID, scriptID: CatnipScriptID) {
+        throw new Error("Not supported.");
+    }
+
+    _createCommandIR(ir: CatnipIr) {
+        ir.createCommandIR();
 
         this._runPass(ir, CatnipCompilerStage.PASS_PRE_ANALYSIS_LOOP);
         this._runPass(ir, CatnipCompilerStage.PASS_ANALYSIS_LOOP);
@@ -122,23 +144,17 @@ export class CatnipCompiler {
         this._runPass(ir, CatnipCompilerStage.PASS_PRE_WASM_GEN);
 
         console.log("" + ir);
-
-        for (const func of ir.functions) {
-            const wasmGenCtx = new CatnipCompilerWasmGenContext(func);
-            wasmGenCtx.emitOps(func.body);
-            wasmGenCtx.finish();
-        }
-
-        script._onCompile();
-
-        return ir;
-    }
-
-    public removeScript(script: CatnipScript) {
-        throw new Error("Not supported.");
     }
 
     public async createModule(): Promise<CatnipProjectModule> {
+
+        for (const scriptIR of this._enumerateScripts()) {
+            if (!scriptIR.hasCommandIR)
+                this._createCommandIR(scriptIR);
+
+            scriptIR.createWASM();
+        }
+
         const eventFunctions = this._createEventFunctions();
         const functionsElement = this._createFunctionsElement();
 
@@ -168,7 +184,7 @@ export class CatnipCompiler {
         const spiderFns: SpiderFunctionDefinition[] = new Array(this._functionTableIndexCount);
         spiderFns.fill(this._spiderFunctionNop);
 
-        for (const ir of this._compiledFuncs.values()) {
+        for (const ir of this._enumerateScripts()) {
             for (const func of ir.functions) {
                 if (func.hasFunctionTableIndex) {
                     CatnipCompilerLogger.assert(spiderFns[func.functionTableIndex] === this._spiderFunctionNop);
@@ -188,9 +204,9 @@ export class CatnipCompiler {
 
     private _createEventFunctions(): Map<CatnipEventID, { func: SpiderFunctionDefinition, export: SpiderExportFunction }> {
         const eventFunctions: Map<CatnipEventID, { func: SpiderFunctionDefinition, export: SpiderExportFunction }> = new Map();
-        const eventMap: Map<CatnipEventID, { ir: CatnipIr, script: CatnipScript, priority: number }[]> = new Map();
+        const eventMap: Map<CatnipEventID, { ir: CatnipIr, priority: number }[]> = new Map();
 
-        for (const [script, ir] of this._compiledFuncs) {
+        for (const ir of this._enumerateScripts()) {
             if (ir.trigger.type === ir_event_trigger) {
                 const inputs = ir.trigger.inputs as ir_event_trigger_inputs;
                 const eventID = inputs.id;
@@ -201,7 +217,7 @@ export class CatnipCompiler {
                     eventMap.set(eventID, listeners);
                 }
 
-                listeners.push({ ir, script, priority: inputs.priority });
+                listeners.push({ ir, priority: inputs.priority });
             }
         }
 
@@ -219,7 +235,7 @@ export class CatnipCompiler {
 
             for (const listener of listeners) {
 
-                const sprite = listener.script.sprite;
+                const sprite = this.project.getSprite(listener.ir.spriteID)!;
                 const spritePtr = sprite.structWrapper.ptr;
                 const entrypointPtr = listener.ir.entrypoint.functionTableIndex;
 

@@ -23,6 +23,9 @@ export class CatnipIrProcedureBranch extends CatnipIrExternalBranch {
 
         if (procedureInfo === undefined) return null;
 
+        if (!procedureInfo.ir.hasCommandIR)
+            this.compiler._createCommandIR(procedureInfo.ir);
+
         return procedureInfo.ir.entrypoint.body;
     }
 }

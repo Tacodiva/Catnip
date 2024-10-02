@@ -2,7 +2,7 @@ import { CatnipCompilerStack } from "./CatnipCompilerStack";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIrFunction, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipReadonlyIrOp } from "./CatnipIrOp";
-import { CatnipIrBranchType } from "./CatnipIrBranch";
+import { CatnipIrBranch, CatnipIrBranchType } from "./CatnipIrBranch";
 
 export interface CatnipReadonlyIrBasicBlock {
     readonly isLoop: boolean;
@@ -97,40 +97,6 @@ export class CatnipIrBasicBlock implements CatnipReadonlyIrBasicBlock {
 
     public get isFuncBody() {
         return this._func !== null && this._func.body === this;
-    }
-
-    public getTails(): CatnipIrBasicBlock[] {
-        const tails: CatnipIrBasicBlock[] = [];
-        this._appendTails(tails, new Set());
-        return tails;
-    }
-
-    private _appendTails(tails: CatnipIrBasicBlock[], visited: Set<CatnipIrBasicBlock>) {
-        visited.add(this);
-
-        if (this.head === null) {
-            tails.push(this);
-            return;
-        }
-
-        const lastOp = this.tail!;
-        const lastOpBranchNames = Object.keys(lastOp.branches);
-
-        
-
-        if (lastOp.type.doesContinue(lastOp)) {
-            tails.push(this);
-            return;
-        }
-
-        for (const branchName of lastOpBranchNames) {
-            const branch = lastOp.branches[branchName];
-
-            if (visited.has(branch.body)) continue;
-
-            if (tails.indexOf(branch.body) === -1) // TODO Me thinks this check is not necesary
-                branch.body._appendTails(tails, visited);
-        }
     }
 
     public isYielding(visited?: Set<CatnipIrBasicBlock>): boolean {

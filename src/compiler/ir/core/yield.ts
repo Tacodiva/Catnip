@@ -38,7 +38,7 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
             true, "Non-tail-call yield branch function must have a function table index."
         );
 
-        ctx.prepareStackForCall(targetFunc, true);
+        ctx.prepareStackForCall(ir.branches.branch, true);
 
         if (ir.inputs.status !== CatnipWasmEnumThreadStatus.RUNNING) {
             ctx.emitWasmGetThread();

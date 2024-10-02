@@ -20,6 +20,7 @@ export enum CatnipIrExternalLocationType {
 export enum CatnipIrExternalValueSourceType {
     TRANSIENT_VARIABLE,
     PROCEDURE_INPUT,
+    RETURN_LOCATION
 }
 
 export interface CatnipIrExternalValue {
@@ -48,7 +49,11 @@ export interface CatnipIrExternalValueSourceProcedureInput {
     readonly index: number;
 }
 
-export type CatnipIrExternalValueSource = CatnipIrExternalValueSourceProcedureInput | CatnipIrExternalValueSourceTransientVariable;
+export interface CatnipIrExternalValueSourceReturnLocation {
+    readonly type: CatnipIrExternalValueSourceType.RETURN_LOCATION,
+}
+
+export type CatnipIrExternalValueSource = CatnipIrExternalValueSourceReturnLocation | CatnipIrExternalValueSourceProcedureInput | CatnipIrExternalValueSourceTransientVariable;
 
 
 export interface CatnipReadonlyIrFunction {
@@ -188,18 +193,26 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         let valueSource: CatnipIrExternalValueSource;
 
         if (this.isEntrypoint) {
+
             const trigger = this.ir.trigger;
-            if (trigger.type !== ir_procedure_trigger) throw new Error("Can only source arguments from procedures.");
-            const triggerInputs = trigger.inputs as ir_procedure_trigger_inputs;
 
-            const procedureArgIdx = triggerInputs.args.findIndex(arg => arg.variable === source.variable);
+            if (trigger.type.requiresReturnLocation(this.ir, trigger.inputs) && source.variable === this.ir.returnLocationVariable) {
+                valueSource = {
+                    type: CatnipIrExternalValueSourceType.RETURN_LOCATION
+                }
+            } else {
+                if (trigger.type !== ir_procedure_trigger) throw new Error("Can only source arguments from procedures.");
+                const triggerInputs = trigger.inputs as ir_procedure_trigger_inputs;
 
-            if (procedureArgIdx === -1) throw new Error("Cannot source transient from entrypoint.");
+                const procedureArgIdx = triggerInputs.args.findIndex(arg => arg.variable === source.variable);
 
-            valueSource = {
-                type: CatnipIrExternalValueSourceType.PROCEDURE_INPUT,
-                index: procedureArgIdx
-            };
+                if (procedureArgIdx === -1) throw new Error("Cannot source transient from entrypoint.");
+
+                valueSource = {
+                    type: CatnipIrExternalValueSourceType.PROCEDURE_INPUT,
+                    index: procedureArgIdx
+                };
+            }
         } else {
             valueSource = {
                 type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,

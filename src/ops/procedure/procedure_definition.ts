@@ -63,7 +63,10 @@ registerSB3HatBlock("procedures_definition", (ctx, block) => {
     for (const inputID in procPrototype.inputs) {
 
         const input = procPrototype.inputs[inputID];
-        const inputBlockID = ctx.readBlockID(input);
+        const inputBlockID = ctx.readOptionalBlockID(input);
+        
+        if (inputBlockID === null) continue;
+
         const inputBlock = ctx.getBlock(inputBlockID) as 
             ProjectSB3Block<"argument_reporter_string_number"> | ProjectSB3Block<"argument_reporter_boolean">;
 

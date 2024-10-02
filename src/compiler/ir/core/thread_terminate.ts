@@ -14,6 +14,7 @@ export const ir_thread_terminate = new class extends CatnipIrCommandOpType<{}> {
         ctx.emitWasmConst(SpiderNumberType.i32, CatnipWasmEnumThreadStatus.TERMINATED);
         ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("status"));
 
+        ctx.cleanStack();
         ctx.emitWasm(SpiderOpcodes.return);
     }
 

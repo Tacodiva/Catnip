@@ -146,7 +146,9 @@ export class CatnipCompilerWasmGenContext {
         if (branch.body.isFuncBody) {
             const targetFunc = branch.body.func;
 
-            this.prepareStackForCall(targetFunc, branch.body.isYielding());
+            const isYielding = branch.body.isYielding() || forceReturn;
+
+            this.prepareStackForCall(branch, isYielding);
 
             this.emitWasmGetThread();
 
@@ -162,7 +164,15 @@ export class CatnipCompilerWasmGenContext {
                     const localVar = this._getProcedureArg(argIdx);
                     this.emitWasm(SpiderOpcodes.local_get, localVar.ref);
 
-                } else throw new Error("Not reachable");
+                } else if (parameter.type === CatnipIrExternalValueSourceType.RETURN_LOCATION) {
+
+                    if (branch.branchType !== CatnipIrBranchType.EXTERNAL || branch.returnLocation === null)
+                        throw new Error("Cannot call function which requires return location, branch does not have a return location.");
+                    CatnipCompilerLogger.assert(branch.returnLocation.body.isFuncBody);
+
+                    this.emitWasmConst(SpiderNumberType.i32, branch.returnLocation.body.func.functionTableIndex);
+
+                } else throw new Error("Not reachable.");
             }
 
             if (targetFunc.isEntrypoint) {
@@ -175,8 +185,6 @@ export class CatnipCompilerWasmGenContext {
                     if (arg !== undefined) this.releaseLocal(arg);
                 }
             }
-
-            const isYielding = branch.body.isYielding() || forceReturn;
 
             if (isYielding && this.compiler.config.enable_tail_call) {
                 this.emitWasm(SpiderOpcodes.return_call, targetFunc.spiderFunction);
@@ -201,6 +209,7 @@ export class CatnipCompilerWasmGenContext {
             this.emitOps(branch.body);
 
             if (forceReturn && !branch.body.isYielding()) {
+                this.cleanStack();
                 this.emitWasm(SpiderOpcodes.return);
             }
         }
@@ -274,7 +283,14 @@ export class CatnipCompilerWasmGenContext {
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_end"));
     }
 
-    public prepareStackForCall(targetFunc: CatnipIrFunction, tailCall: boolean) {
+    public prepareStackForCall(branch: CatnipIrBranch, tailCall: boolean) {
+
+        if (branch.branchType === CatnipIrBranchType.EXTERNAL && branch.returnLocation !== null) {
+            this.prepareStackForCall(branch.returnLocation, tailCall);
+            tailCall = false;
+        }
+
+        const targetFunc = branch.body.func;
 
         let baseStackPtrVar: CatnipCompilerWasmLocal | null = null;
 
@@ -357,6 +373,16 @@ export class CatnipCompilerWasmGenContext {
                     this.emitWasm(SpiderOpcodes.local_get, localVar.ref);
                     valueType = localVar.type;
 
+                } else if (transientVariable.value.type === CatnipIrExternalValueSourceType.RETURN_LOCATION) {
+
+                    if (branch.branchType !== CatnipIrBranchType.EXTERNAL || branch.returnLocation === null)
+                        throw new Error("Cannot call function which requires return location, branch does not have a return location.");
+                    CatnipCompilerLogger.assert(branch.returnLocation.body.isFuncBody);
+
+                    this.emitWasmConst(SpiderNumberType.i32, branch.returnLocation.body.func.functionTableIndex);
+                    valueType = SpiderNumberType.i32;
+
+
                 } else throw new Error("Unreachable.")
 
 
@@ -385,6 +411,16 @@ export class CatnipCompilerWasmGenContext {
 
         if (baseStackPtrVar !== null) {
             this.releaseLocal(baseStackPtrVar);
+        }
+    }
+
+    public cleanStack() {
+        if (this._func.stackSize !== 0) {
+            this.emitWasmGetThread();
+            this.emitWasmGetStackPtr();
+            this.emitWasmConst(SpiderNumberType.i32, this._func.stackSize);
+            this.emitWasm(SpiderOpcodes.i32_sub);
+            this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
         }
     }
 

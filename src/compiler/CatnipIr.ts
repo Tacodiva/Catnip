@@ -11,17 +11,24 @@
  * 
  */
 
-import { CatnipScript } from "../runtime/CatnipScript";
+import { CatnipCommandList } from "../ops";
+import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipCompiler } from "./CatnipCompiler";
+import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
+import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
+import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipIrBranchType } from "./CatnipIrBranch";
 import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
+import { CatnipValueFormat } from "./CatnipValueFormat";
+import { ir_barrier } from "./ir/core/barrier";
+import { ir_thread_terminate } from "./ir/core/thread_terminate";
 
 export interface CatnipReadonlyIr {
     readonly compiler: CatnipCompiler;
@@ -37,23 +44,78 @@ export class CatnipIr implements CatnipReadonlyIr {
 
     public readonly compiler: CatnipCompiler;
     public readonly spriteID: CatnipSpriteID;
+    public readonly scriptID: CatnipScriptID;
+    public readonly commands: CatnipCommandList;
 
-    public readonly entrypoint: CatnipIrFunction;
+    private _entrypoint: CatnipIrFunction | null;
+
+    public get hasCommandIR(): boolean {
+        return this._entrypoint !== null;
+    }
+
+    public get entrypoint(): CatnipIrFunction {
+        if (this._entrypoint === null)
+            throw new Error("No IR generated for script.");
+        return this._entrypoint;
+    }
+
     private readonly _functions: CatnipIrFunction[];
     public get functions(): ReadonlyArray<CatnipIrFunction> { return this._functions; }
 
     private _transientVariableNames: Set<string>;
-
+    
     public readonly trigger: CatnipIrScriptTrigger;
+    
+    private _returnLocationVariable: CatnipIrTransientVariable | null;
+    
+    public get returnLocationVariable(): CatnipIrTransientVariable {
+        if (this._returnLocationVariable === null)
+            throw new Error("Function does not have a return location");
+        return this._returnLocationVariable;
+    }
 
     public constructor(compiler: CatnipCompiler, script: CatnipScript) {
         this.compiler = compiler;
-        this.entrypoint = new CatnipIrFunction(this, "idk_man");
-        this._functions = [this.entrypoint];
-        this._transientVariableNames = new Set();
+        this._entrypoint = null;
+        this._functions = [];
         this.spriteID = script.sprite.id;
+        this.scriptID = script.id;
+        this.commands = script.commands;
+
+        this._transientVariableNames = new Set();
 
         this.trigger = script.trigger.type.createTriggerIR(this, script.trigger.inputs);
+
+        if (this.trigger.type.requiresReturnLocation(this, this.trigger.inputs)) {
+            this._returnLocationVariable = new CatnipIrTransientVariable(this, CatnipValueFormat.I32, "Return Location");
+        } else {
+            this._returnLocationVariable = null;
+        }
+    }
+
+    public createCommandIR() {
+        if (this._entrypoint !== null) {
+            CatnipCompilerLogger.warn("IR created twice.");
+            return;
+        }
+
+        this._entrypoint = new CatnipIrFunction(this, "script_" + this.scriptID);
+        this._functions.push(this._entrypoint);
+
+        const ctx = new CatnipCompilerIrGenContext(this);
+
+        this.trigger.type.preIR(ctx, this.trigger.inputs);
+        ctx.emitCommands(this.commands);
+        this.trigger.type.postIR(ctx, this.trigger.inputs);
+        ctx.finish();
+    }
+
+    public createWASM() {
+        for (const func of this.functions) {
+            const wasmGenCtx = new CatnipCompilerWasmGenContext(func);
+            wasmGenCtx.emitOps(func.body);
+            wasmGenCtx.finish();
+        }
     }
 
     public createFunction(body?: CatnipIrBasicBlock): CatnipIrFunction {
@@ -163,6 +225,12 @@ export class CatnipIr implements CatnipReadonlyIr {
                                     string += subbranch.body.func.ir.entrypoint.name;
                                     string += "']"
                                 }
+                                if (subbranch.branchType === CatnipIrBranchType.EXTERNAL) {
+                                    string += " [RETURN ";
+                                    string += subbranch.returnLocation ? (`'${subbranch.returnLocation.body.func.name}' (fntbl ${subbranch.returnLocation.body.func.functionTableIndex})`) : "null";
+                                    string += "]"
+
+                                }
                                 string += "\n";
                             }
                         }
@@ -211,6 +279,9 @@ export class CatnipIr implements CatnipReadonlyIr {
                             break;
                         case CatnipIrExternalValueSourceType.PROCEDURE_INPUT:
                             string += "PROCEDURE_INPUT";
+                            break;
+                        case CatnipIrExternalValueSourceType.RETURN_LOCATION:
+                            string += "RETURN_LOCATION";
                             break;
                     }
                 }
