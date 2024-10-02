@@ -1,4 +1,5 @@
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
+import { CatnipIr } from "./CatnipIr";
 import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 
@@ -13,8 +14,12 @@ export type CatnipReadonlyIrBranch = CatnipReadonlyIrInternalBranch | CatnipRead
 
 abstract class CatnipIrBranchBase {
     abstract readonly branchType: CatnipIrBranchType;
-    abstract readonly resolved: boolean;
+    abstract readonly bodyResolved: boolean;
     abstract readonly body: CatnipIrBasicBlock;
+    abstract readonly isYielding: boolean;
+    abstract readonly isYieldingResolved: boolean;
+    abstract readonly ir: CatnipIr;
+    abstract readonly irResolved: boolean;
 
     public getTails(): CatnipIrBranch[] {
         const tails: CatnipIrBranch[] = [];
@@ -32,25 +37,55 @@ export interface CatnipReadonlyIrExternalBranch extends CatnipIrBranchBase {
 
 export abstract class CatnipIrExternalBranch extends CatnipIrBranchBase implements CatnipReadonlyIrExternalBranch {
     public readonly branchType = CatnipIrBranchType.EXTERNAL;
-    
+
     public returnLocation: CatnipIrBranch | null;
+
     private _body: CatnipIrBasicBlock | null;
 
-    public get resolved() {
+    public get bodyResolved(): boolean {
         if (this._body === null)
-            this._body = this._tryResolve();
+            this._body = this._tryResolveBlock();
         return this._body !== null;
-    } 
+    }
 
     public get body() {
-        if (!this.resolved)
-            throw new Error("External branch not resolved.");
+        if (!this.bodyResolved)
+            throw new Error("External branch body not resolved.");
         return this._body!;
+    }
+
+    private _isYielding: boolean | null;
+
+    public get isYieldingResolved(): boolean {
+        if (this._isYielding === null)
+            this._isYielding = this._tryResolveIsYielding();
+        return this._isYielding !== null;
+    }
+
+    public get isYielding(): boolean {
+        if (!this.isYieldingResolved)
+            throw new Error("External branch yielding not resolved.");
+        return this._isYielding!;
+    }
+
+    private _ir: CatnipIr | null;
+    public get irResolved(): boolean {
+        if (this._ir === null)
+            this._ir = this._tryResolveIR();
+        return this._ir !== null;
+    }
+
+    public get ir(): CatnipIr {
+        if (!this.irResolved)
+            throw new Error("External branch IR not resolved.");
+        return this._ir!;
     }
 
     public constructor() {
         super();
         this._body = null;
+        this._ir = null;
+        this._isYielding = null;
         this.returnLocation = null;
     }
 
@@ -64,19 +99,32 @@ export abstract class CatnipIrExternalBranch extends CatnipIrBranchBase implemen
         }
     }
 
-    protected abstract _tryResolve(): CatnipIrBasicBlock | null;
+    protected abstract _tryResolveIR(): CatnipIr | null;
+    protected abstract _tryResolveIsYielding(): boolean | null;
+    protected abstract _tryResolveBlock(): CatnipIrBasicBlock | null;
 }
 
 export interface CatnipReadonlyIrInternalBranch extends CatnipIrBranchBase {
     readonly branchType: CatnipIrBranchType.INTERNAL;
-    readonly resolved: true;
+    readonly bodyResolved: true;
+    readonly isYieldingResolved: true;
     readonly body: CatnipIrBasicBlock;
 }
 
 export class CatnipIrInternalBranch extends CatnipIrBranchBase implements CatnipReadonlyIrInternalBranch {
     public readonly branchType = CatnipIrBranchType.INTERNAL;
-    public readonly resolved = true;
+    public readonly bodyResolved = true;
+    public readonly isYieldingResolved = true;
+    public readonly irResolved = true;
     public body: CatnipIrBasicBlock;
+
+    public get isYielding(): boolean {
+        return this.body.isYielding();
+    }
+
+    public get ir(): CatnipIr {
+        return this.body.func.ir;
+    }
 
     public constructor(body: CatnipIrBasicBlock) {
         super();

@@ -2,27 +2,27 @@ import { SpiderNumberType } from "wasm-spider";
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
-import { ir_add } from "../../compiler/ir/operators/add";
 import { registerSB3InputBlock } from "../../sb3_ops";
+import { ir_lt } from "../../compiler/ir/operators/lt";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 
-export type add_inputs = { left: CatnipInputOp, right: CatnipInputOp };
+export type lt_inputs = { left: CatnipInputOp, right: CatnipInputOp };
 
-export const op_add = new class extends CatnipInputOpType<add_inputs> {
-    public *getInputsAndSubstacks(ir: CatnipIr, inputs: add_inputs): IterableIterator<CatnipOp> {
+export const op_lt = new class extends CatnipInputOpType<lt_inputs> {
+    public *getInputsAndSubstacks(ir: CatnipIr, inputs: lt_inputs): IterableIterator<CatnipOp> {
         yield inputs.left;
         yield inputs.right;
     }
 
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: add_inputs) {
+    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: lt_inputs) {
         ctx.emitInput(inputs.left, CatnipValueFormat.F64_NUMBER);
         ctx.emitInput(inputs.right, CatnipValueFormat.F64_NUMBER);
-        ctx.emitIr(ir_add, { type: SpiderNumberType.f64 }, {});
+        ctx.emitIr(ir_lt, {}, {});
     }
 }
 
-registerSB3InputBlock("operator_add", (ctx, block) => op_add.create({
-    left: ctx.readInput(block.inputs.NUM1),
-    right: ctx.readInput(block.inputs.NUM2),
+registerSB3InputBlock("operator_lt", (ctx, block) => op_lt.create({
+    left: ctx.readInput(block.inputs.OPERAND1),
+    right: ctx.readInput(block.inputs.OPERAND2),
 }));

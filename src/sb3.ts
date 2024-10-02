@@ -394,6 +394,12 @@ type SB3BlockTypeDefinition = {
             "NUM2": ProjectSB3Input,
         },
     },
+    "operator_lt": {
+        inputs: {
+            "OPERAND1": ProjectSB3Input,
+            "OPERAND2": ProjectSB3Input,
+        }
+    }
 
     "data_variable": {
         fields: {

@@ -1,12 +1,20 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { ir_if_else } from "../../compiler/ir/control/if_else";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
 import { registerSB3CommandBlock } from "../../sb3_ops";
+import { CatnipIr } from "../../compiler/CatnipIr";
 
 type if_else_inputs = { condition: CatnipInputOp, true_branch: CatnipCommandList, false_branch?: CatnipCommandList };
 
 export const op_if_else = new class extends CatnipCommandOpType<if_else_inputs> {
+    public *getInputsAndSubstacks(ir: CatnipIr, inputs: if_else_inputs): IterableIterator<CatnipOp | CatnipCommandList> {
+        yield inputs.condition;
+        yield inputs.true_branch;
+        if (inputs.false_branch)
+            yield inputs.false_branch;
+    }
+
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: if_else_inputs): void {
         ctx.emitInput(inputs.condition, CatnipValueFormat.I32_NUMBER);
         ctx.emitIr(

@@ -16,12 +16,12 @@ import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipVariable } from "../runtime/CatnipVariable";
-import { CatnipCompiler } from "./CatnipCompiler";
+import { CatnipCompiler, CatnipIrPreAnalysis } from "./CatnipCompiler";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
-import { CatnipIrBranchType } from "./CatnipIrBranch";
+import { CatnipIrBranchType, CatnipIrExternalBranch } from "./CatnipIrBranch";
 import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
@@ -39,6 +39,7 @@ export interface CatnipReadonlyIr {
     forEachOp(lambda: (op: CatnipReadonlyIrOp) => void): void;
     getUniqueTransientVariableName(name: string): string;
 }
+
 
 export class CatnipIr implements CatnipReadonlyIr {
 
@@ -63,17 +64,23 @@ export class CatnipIr implements CatnipReadonlyIr {
     public get functions(): ReadonlyArray<CatnipIrFunction> { return this._functions; }
 
     private _transientVariableNames: Set<string>;
-    
+
     public readonly trigger: CatnipIrScriptTrigger;
-    
+
     private _returnLocationVariable: CatnipIrTransientVariable | null;
-    
     public get returnLocationVariable(): CatnipIrTransientVariable {
         if (this._returnLocationVariable === null)
             throw new Error("Function does not have a return location");
         return this._returnLocationVariable;
     }
 
+    private _preAnalysis: Readonly<CatnipIrPreAnalysis> | null;
+    public get preAnalysis(): Readonly<CatnipIrPreAnalysis> {
+        if (this._preAnalysis === null)
+            throw new Error("IR does not have a pre analysis.");
+        return this._preAnalysis;
+    }
+    
     public constructor(compiler: CatnipCompiler, script: CatnipScript) {
         this.compiler = compiler;
         this._entrypoint = null;
@@ -91,6 +98,8 @@ export class CatnipIr implements CatnipReadonlyIr {
         } else {
             this._returnLocationVariable = null;
         }
+
+        this._preAnalysis = null;
     }
 
     public createCommandIR() {
@@ -170,8 +179,19 @@ export class CatnipIr implements CatnipReadonlyIr {
         }
     }
 
+    public setPreAnalysis(preAnalysis: CatnipIrPreAnalysis) {
+        if (this._preAnalysis !== null)
+            CatnipCompilerLogger.warn("IR already has a pre analysis.");
+        this._preAnalysis = preAnalysis;
+    }
+
     public toString(): string {
-        let string = "";
+        let string = "IR '" + this.scriptID + "'";
+
+        if (this._preAnalysis?.isYielding)
+            string += " (yielding)";
+
+        string += "\n\n";
 
         const stringifyIr = (block: CatnipIrBasicBlock, indent: string, visited: Set<CatnipIrBasicBlock>) => {
             visited.add(block);
@@ -206,7 +226,7 @@ export class CatnipIr implements CatnipReadonlyIr {
                         string += indent;
                         string += subbranchName;
 
-                        if (!subbranch.resolved) {
+                        if (!subbranch.bodyResolved) {
                             string += ": [UNRESOLVED]";
                         } else {
                             if (subbranch.body.func === block.func && !subbranch.body.isFuncBody) {

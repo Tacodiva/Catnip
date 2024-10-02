@@ -6,12 +6,19 @@ import { ir_transient_load } from "../../compiler/ir/core/transient_load";
 import { ir_transient_store } from "../../compiler/ir/core/transient_store";
 import { ir_sub } from "../../compiler/ir/operators/sub";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
 import { registerSB3CommandBlock } from "../../sb3_ops";
+import { CatnipIr } from "../../compiler/CatnipIr";
+import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 
 type repeat_inputs = { count: CatnipInputOp, loop: CatnipCommandList };
 
 export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
+    public *getInputsAndSubstacks(ir: CatnipIr, inputs: repeat_inputs): IterableIterator<CatnipOp | CatnipCommandList> {
+        yield inputs.count;
+        yield inputs.loop;
+    }
+
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: repeat_inputs): void {
         const loopCount = ctx.emitTransientCreate(CatnipValueFormat.I32_NUMBER, "Loop Count");
         ctx.emitInput(inputs.count, CatnipValueFormat.I32_NUMBER);

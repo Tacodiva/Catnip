@@ -55,21 +55,22 @@ export class CatnipCompilerIrGenContext {
             }
         }
 
-        const branchTails = this._branch.getTails();
-
+        
         let joinAfter = false;
         for (const branchName of opBranchNames) {
             const branch = op.branches[branchName];
-
-            if (branch.body.isYielding()) {
+            
+            if (branch.isYielding) {
                 joinAfter = true;
                 break;
             }
         }
+        
+        const branchTails = this._branch.getTails();
 
         let mergeBefore = false;
         for (const tailBranch of branchTails) {
-            if (tailBranch.branchType === CatnipIrBranchType.INTERNAL && tailBranch.body.funcNullable !== this._body.funcNullable) {
+            if (tailBranch.branchType === CatnipIrBranchType.EXTERNAL || tailBranch.body.funcNullable !== this._body.funcNullable) {
                 mergeBefore = true;
                 break;
             }
@@ -79,11 +80,19 @@ export class CatnipCompilerIrGenContext {
             this._switchToBlock(this.ir.createFunction().body);
 
             for (const tailBranch of branchTails) {
-                tailBranch.body.pushOp(this._createIr(
-                    ir_yield,
-                    { status: CatnipWasmEnumThreadStatus.RUNNING },
-                    { branch: new CatnipIrInternalBranch(this._body) }, [], tailBranch.body
-                ));
+                if (tailBranch.branchType === CatnipIrBranchType.EXTERNAL) {
+                    // Not sure what to do here.
+                    if (tailBranch.returnLocation !== null)
+                        throw new Error("Not implemented.");
+
+                    tailBranch.returnLocation = this._branch;
+                } else {
+                    tailBranch.body.pushOp(this._createIr(
+                        ir_yield,
+                        { status: CatnipWasmEnumThreadStatus.RUNNING },
+                        { branch: this._branch }, [], tailBranch.body
+                    ));
+                }
             }
 
             for (const branchName of opBranchNames) {
@@ -114,7 +123,7 @@ export class CatnipCompilerIrGenContext {
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
 
-                if (branch.body.isYielding()) {
+                if (branch.isYielding) {
                     for (const tail of branch.getTails()) {
                         if (tail.branchType === CatnipIrBranchType.EXTERNAL) {
                             yieldingExternalBrachTails.add(tail);

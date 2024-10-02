@@ -79,7 +79,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
     public isYielding(ir: CatnipIrOp<TInputs, TBranches>, visited: Set<CatnipIrBasicBlock>): boolean {
         for (const branchName in ir.branches) {
             const branch = ir.branches[branchName];
-            if (branch.body.isYielding(visited)) return true;
+            if (branch.isYielding) return true;
         }
         return false;
     }

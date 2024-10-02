@@ -1,9 +1,6 @@
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipProjectModule, CatnipProjectModuleEvent } from "./CatnipProjectModule";
-import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
-import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
-import { ir_thread_terminate } from "./ir/core/thread_terminate";
 import { CatnipCompilerConfig, catnipCreateDefaultCompilerConfig } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
@@ -12,16 +9,20 @@ import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunction
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreLoopPassAnalyzeFunctionCallers";
 import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
-import { ir_barrier } from "./ir/core/barrier";
 import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderExportFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipSprite, CatnipSpriteID } from "../runtime/CatnipSprite";
-import { CatnipProcedureID, procedure_trigger, procedure_trigger_inputs } from "../ops/procedure/procedure_definition";
-import { CatnipIrScriptProcedureTrigger, ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedure/procedure_trigger";
+import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipEventID, ir_event_trigger, ir_event_trigger_inputs } from "./ir/core/event_trigger";
 import { CatnipCompilerSubsystem, CatnipCompilerSubsystemClass } from "./CatnipCompilerSubsystem";
-import { CatnipCommandList } from "../ops";
+import { CatnipIrExternalBranch } from "./CatnipIrBranch";
+import { CatnipCommandList, CatnipOp } from "../ops";
+import { CatnipIrOp } from "./CatnipIrOp";
+
+export interface CatnipIrPreAnalysis {
+    isYielding: boolean;
+    externalBranches: CatnipIrExternalBranch[];
+}
 
 export class CatnipCompiler {
     public readonly project: CatnipProject;
@@ -147,6 +148,8 @@ export class CatnipCompiler {
     }
 
     public async createModule(): Promise<CatnipProjectModule> {
+
+        this._preAnalyzeIRs();
 
         for (const scriptIR of this._enumerateScripts()) {
             if (!scriptIR.hasCommandIR)
@@ -294,4 +297,54 @@ export class CatnipCompiler {
         return newSubsystem;
     }
 
+    private _preAnalyzeIRs() {
+
+        function analyzeOp(ir: CatnipIr, analysis: CatnipIrPreAnalysis, op: CatnipOp) {
+            for (const inputOrSubstack of op.type.getInputsAndSubstacks(ir, op.inputs)) {
+                if (Array.isArray(inputOrSubstack)) {
+                    for (const command of inputOrSubstack)
+                        analyzeOp(ir, analysis, command);
+                } else {
+                    analyzeOp(ir, analysis, inputOrSubstack);
+                }
+            }
+
+            analysis.externalBranches.push(...op.type.getExternalBranches(ir, op.inputs));
+            analysis.isYielding ||= op.type.isYielding(ir, op.inputs);
+        }
+
+        const analyses: Map<CatnipIr, CatnipIrPreAnalysis> = new Map();
+
+        for (const ir of this._enumerateScripts()) {
+            const analysis: CatnipIrPreAnalysis = {
+                isYielding: false,
+                externalBranches: []
+            }
+
+            analyses.set(ir, analysis);
+            ir.setPreAnalysis(analysis);
+
+            for (const command of ir.commands) {
+                analyzeOp(ir, analysis, command);
+            }
+        }
+
+        let modified = true;
+
+        while (modified) {
+            modified = false;
+
+            for (const [ir, analysis] of analyses) {
+                if (analysis.isYielding) continue;
+
+                for (const externalBranch of analysis.externalBranches) {
+                    if (externalBranch.isYielding) {
+                        analysis.isYielding = true;
+                        modified = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }

@@ -29,6 +29,7 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 
     while (thread->status == CATNIP_THREAD_STATUS_RUNNING) {
       thread->function(thread);
+      // catnip_hstring_print(catnip_numconv_stringify_f64((catnip_i32_t) thread->stack_ptr - (catnip_i32_t) thread->stack_start));
       if (++lc > 100000000)
         CATNIP_ASSERT(CATNIP_FALSE);
     }

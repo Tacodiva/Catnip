@@ -4,12 +4,18 @@ import { ir_set_var } from "../../compiler/ir/data/set_var";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipVariableID } from "../../runtime/CatnipVariable";
-import { CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
 import { registerSB3CommandBlock, registerSB3InputBlock } from "../../sb3_ops";
+import { CatnipIr } from "../../compiler/CatnipIr";
+import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 
 type set_var_inputs = { sprite: CatnipSpriteID, variable: CatnipVariableID, value: CatnipInputOp };
 
 export const op_set_var = new class extends CatnipCommandOpType<set_var_inputs> {
+    public *getInputsAndSubstacks(ir: CatnipIr, inputs: set_var_inputs): IterableIterator<CatnipOp> {
+        yield inputs.value;
+    }
+    
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: set_var_inputs): void {
         ctx.emitInput(inputs.value, CatnipValueFormat.F64);
 

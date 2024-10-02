@@ -4,28 +4,42 @@ import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
 import { CatnipIrExternalBranch } from "../../CatnipIrBranch";
 import { CatnipCompiler } from '../../CatnipCompiler';
 import { CatnipCompilerProcedureSubsystem } from '../../subsystems/CatnipCompilerProcedureSubsystem';
+import { CatnipIr } from "../../CatnipIr";
 
 export class CatnipIrProcedureBranch extends CatnipIrExternalBranch {
     public readonly compiler: CatnipCompiler;
     public readonly spriteID: CatnipSpriteID;
     public readonly procedureID: CatnipProcedureID;
-    
+
     public constructor(compiler: CatnipCompiler, spriteID: CatnipSpriteID, procedureID: CatnipProcedureID) {
         super();
         this.compiler = compiler;
         this.spriteID = spriteID;
         this.procedureID = procedureID;
     }
-    
-    protected _tryResolve(): CatnipIrBasicBlock | null {
+
+    protected _tryResolveIR(): CatnipIr | null {
         const procedureSubsystem = this.compiler.getSubsystem(CatnipCompilerProcedureSubsystem);
         const procedureInfo = procedureSubsystem.tryGetProcedureInfo(this.spriteID, this.procedureID);
 
         if (procedureInfo === undefined) return null;
 
-        if (!procedureInfo.ir.hasCommandIR)
-            this.compiler._createCommandIR(procedureInfo.ir);
+        return procedureInfo.ir;
+    }
 
-        return procedureInfo.ir.entrypoint.body;
+    protected _tryResolveIsYielding(): boolean | null {
+        const ir = this._tryResolveIR();
+        if (ir === null) return null;
+        return ir.preAnalysis.isYielding;
+    }
+
+    protected _tryResolveBlock(): CatnipIrBasicBlock | null {
+        const ir = this._tryResolveIR();
+        if (ir === null) return null;
+
+        if (!ir.hasCommandIR)
+            this.compiler._createCommandIR(ir);
+
+        return ir.entrypoint.body;
     }
 }
