@@ -1,16 +1,12 @@
 import { CatnipOpInputs, CatnipInputOp, CatnipCommandOp, CatnipCommandList } from "../ops";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { createLogger, Logger } from "../log";
-import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipIrTransientVariable } from './CatnipIrTransientVariable';
-import { CatnipVariable } from "../runtime/CatnipVariable";
-import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStackElement } from "./CatnipCompilerStack";
 import { CatnipIrBranch, CatnipIrBranchType, CatnipIrExternalBranch, CatnipIrInternalBranch } from "./CatnipIrBranch";
 import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType } from "./CatnipIrOp";
-import { ir_branch } from "./ir/core/branch";
 import { ir_yield } from "./ir/core/yield";
 import { ir_cast } from "./ir/core/cast";
 import { ir_loop_jmp } from "./ir/core/loop_jmp";
@@ -18,7 +14,6 @@ import { ir_if_else } from "./ir/control/if_else";
 import { ir_transient_create } from "./ir/core/transient_create";
 import { CatnipIr } from "./CatnipIr";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
-import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
@@ -43,7 +38,6 @@ export class CatnipCompilerIrGenContext {
         TOpType extends CatnipIrOpType<TInputs, TBranches>,
         TOp extends CatnipIrOp<TInputs, TBranches, TOpType>
     >(op: TOp): TOp {
-        if (!this._body.doesContinue()) return op;
 
         const opBranchNames = Object.keys(op.branches);
 
@@ -60,7 +54,7 @@ export class CatnipCompilerIrGenContext {
         for (const branchName of opBranchNames) {
             const branch = op.branches[branchName];
             
-            if (branch.isYielding) {
+            if (branch.isYielding()) {
                 joinAfter = true;
                 break;
             }
@@ -85,12 +79,12 @@ export class CatnipCompilerIrGenContext {
                     if (tailBranch.returnLocation !== null)
                         throw new Error("Not implemented.");
 
-                    tailBranch.returnLocation = this._branch;
+                    tailBranch.returnLocation = new CatnipIrInternalBranch(this._body);
                 } else {
                     tailBranch.body.pushOp(this._createIr(
                         ir_yield,
                         { status: CatnipWasmEnumThreadStatus.RUNNING },
-                        { branch: this._branch }, [], tailBranch.body
+                        { branch: new CatnipIrInternalBranch(this._body) }, [], tailBranch.body
                     ));
                 }
             }
@@ -113,7 +107,6 @@ export class CatnipCompilerIrGenContext {
         }
 
         if (joinAfter) {
-
             // Branches which when executed will fall through this operation
             let nonYieldingBraches: Set<CatnipIrBasicBlock> = new Set();
             // The tails of branches which when executed will yield somewhere else
@@ -123,7 +116,7 @@ export class CatnipCompilerIrGenContext {
             for (const branchName of opBranchNames) {
                 const branch = op.branches[branchName];
 
-                if (branch.isYielding) {
+                if (branch.isYielding()) {
                     for (const tail of branch.getTails()) {
                         if (tail.branchType === CatnipIrBranchType.EXTERNAL) {
                             yieldingExternalBrachTails.add(tail);
@@ -166,7 +159,6 @@ export class CatnipCompilerIrGenContext {
                     }
 
                     if (yieldingExternalBrachTails.size !== 0) {
-                        newFuncBody.func.assignFunctionTableIndex();
                         for (const externalBranchTail of yieldingExternalBrachTails) {
                             // Not sure what to do here.
                             if (externalBranchTail.returnLocation !== null)
@@ -201,8 +193,6 @@ export class CatnipCompilerIrGenContext {
         inputs: TInputs,
         branches: CatnipIrOpBranches<TBranches>
     ) {
-        if (!this._body.doesContinue()) return null;
-
         const operandCount = type.getOperandCount(inputs, branches);
         const operands = this._body.stack.pop(operandCount);
 
@@ -293,26 +283,28 @@ export class CatnipCompilerIrGenContext {
         }
     }
 
-    public emitJump(block: CatnipIrBasicBlock) {
-        if (this._body.funcNullable === block.funcNullable) {
+    public emitJump(block: CatnipIrBasicBlock, status?: CatnipWasmEnumThreadStatus) {
+        if (status === undefined && this._body.funcNullable === block.funcNullable) {
             block.isLoop = true;
-            this.emitIr(ir_loop_jmp, {}, { branch: this.emitBranch(block) })
+            this.emitIr(ir_loop_jmp, {}, { branch: new CatnipIrInternalBranch(block, true) })
         } else {
+            if (status === undefined) status = CatnipWasmEnumThreadStatus.RUNNING;
             this._createBlockFunction(block);
-            this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch: this.emitBranch(block) });
+            this.emitIr(ir_yield, { status }, { branch: new CatnipIrInternalBranch(block, true) });
         }
     }
 
-    public emitConditionalJump(block: CatnipIrBasicBlock) {
+    public emitConditionalJump(block: CatnipIrBasicBlock, status?: CatnipWasmEnumThreadStatus) {
         const sourceBlock = this._body;
         this.emitIr(ir_if_else, {}, {
             true_branch: this.emitBranch(() => {
-                if (sourceBlock.funcNullable === block.funcNullable) {
+                if (status === undefined && sourceBlock.funcNullable === block.funcNullable) {
                     block.isLoop = true;
-                    this.emitIr(ir_loop_jmp, {}, { branch: this.emitBranch(block) })
+                    this.emitIr(ir_loop_jmp, {}, { branch: new CatnipIrInternalBranch(block, true) })
                 } else {
+                    if (status === undefined) status = CatnipWasmEnumThreadStatus.RUNNING;
                     this._createBlockFunction(block);
-                    this.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.RUNNING }, { branch: this.emitBranch(block) });
+                    this.emitIr(ir_yield, { status }, { branch: new CatnipIrInternalBranch(block, true) });
                 }
             }),
             false_branch: this.emitBranch(),
@@ -330,6 +322,9 @@ export class CatnipCompilerIrGenContext {
 
     public emitBranch(arg?: null | CatnipIrBasicBlock | CatnipCommandList | ((block: CatnipIrBasicBlock) => void)): CatnipIrBranch {
         let body: CatnipIrBasicBlock;
+
+        let didContinue = this._body.doesContinue();
+        let oldLastOp = this._body.tail?.type.name;
 
         if (arg instanceof CatnipIrBasicBlock) {
             body = arg;

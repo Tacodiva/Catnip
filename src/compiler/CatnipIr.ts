@@ -247,7 +247,7 @@ export class CatnipIr implements CatnipReadonlyIr {
                                 }
                                 if (subbranch.branchType === CatnipIrBranchType.EXTERNAL) {
                                     string += " [RETURN ";
-                                    string += subbranch.returnLocation ? (`'${subbranch.returnLocation.body.func.name}' (fntbl ${subbranch.returnLocation.body.func.functionTableIndex})`) : "null";
+                                    string += subbranch.returnLocation ? (`'${subbranch.returnLocation.body.func.name}' (fntbl ${subbranch.returnLocation.body.func.hasFunctionTableIndex ? subbranch.returnLocation.body.func.functionTableIndex : "[NONE!]"})`) : "null";
                                     string += "]"
 
                                 }
@@ -271,14 +271,17 @@ export class CatnipIr implements CatnipReadonlyIr {
             if (func.body.isYielding()) string += "(yielding) ";
             if (func.stackSize !== 0) string += `(${func.stackSize} byte stack) `;
             if (func.hasFunctionTableIndex) string += `(fntbl ${func.functionTableIndex}) `;
+            if (func.body.func !== func) string += `(BODY FUNC MISMATCH!!) `
 
             let hasTransients = false;
-            for (const variableInfo of func.transientVariables) {
+            for (const variableInfo of func.transientVariables) { 
                 hasTransients = true;
                 string += "\n  <'";
                 string += variableInfo.variable.name;
                 string += "'";
-                if (variableInfo.source !== null) {
+                if (variableInfo.source === null) {
+                    string += " DECLARED";
+                } else {
                     string += " ";
                     switch (variableInfo.source.location.type) {
                         case CatnipIrExternalLocationType.PARAMETER:

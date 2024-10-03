@@ -48,5 +48,6 @@ struct catnip_target {
 };
 
 catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *sprite);
+void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList);
 
 #endif

@@ -15,8 +15,6 @@ typedef catnip_ui32_t catnip_thread_status;
 struct catnip_thread;
 typedef struct catnip_thread catnip_thread;
 
-typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
-
 struct catnip_thread {
 
   catnip_runtime *runtime;
@@ -33,4 +31,5 @@ catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entr
 void catnip_thread_yield(catnip_thread *thread, catnip_thread_fnptr dst);
 void catnip_thread_terminate(catnip_thread *thread);
 void catnip_thread_resize_stack(catnip_thread *thread, catnip_ui32_t extraCapacity);
+void *catnip_thread_allocate_stack(catnip_thread *thread, catnip_ui32_t capacity);
 #endif

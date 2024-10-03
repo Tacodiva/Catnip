@@ -36,6 +36,19 @@ void catnip_thread_terminate(catnip_thread *thread) {
   thread->status = CATNIP_THREAD_STATUS_TERMINATED;
 }
 
+void *catnip_thread_allocate_stack(catnip_thread *thread, catnip_ui32_t capacity) {
+  void *newStackPtr = thread->stack_ptr + capacity;
+
+  if (thread->stack_end < newStackPtr) {
+    catnip_thread_resize_stack(thread, capacity);
+    newStackPtr = thread->stack_ptr + capacity;
+  }
+
+  void *stackPtr = thread->stack_ptr;
+  thread->stack_ptr = newStackPtr;
+  return stackPtr;
+}
+
 void catnip_thread_resize_stack(catnip_thread *thread, catnip_ui32_t extraCapacity) {
   CATNIP_ASSERT(thread != CATNIP_NULL);
 

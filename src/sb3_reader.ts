@@ -227,7 +227,7 @@ export class SB3ScriptReader {
             case ProjectSB3InputValueType.COLOR:
                 throw new Error("Not supported.");
             case ProjectSB3InputValueType.BROADCAST:
-                throw new Error("Cannot create input from broadcast.");
+                return CatnipOps.core_const.create({ value: array[1] });
             case ProjectSB3InputValueType.VARIABLE: {
                 const variableInfo = this.meta.getVariable(array[2]);
                 return CatnipOps.data_get_var.create({

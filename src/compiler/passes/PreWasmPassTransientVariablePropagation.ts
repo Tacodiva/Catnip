@@ -15,12 +15,16 @@ export const PreWasmPassTransientVariablePropagation: CatnipCompilerPass = {
         ir.forEachOp(op => {
             if (op.type === ir_transient_create) {
                 op.block.func.createTransientVariable(op.inputs.transient);
-            } else if (op.type === ir_transient_load || op.type === ir_transient_store || op.type === ir_transient_tee) {
-                op.block.func.sourceExternalValue({
-                    type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,
-                    variable: op.inputs.transient
-                });
-            } 
+            } else {
+
+                for (const transient of op.type.getTransientVariables(op)) {
+                    op.block.func.sourceExternalValue({
+                        type: CatnipIrExternalValueSourceType.TRANSIENT_VARIABLE,
+                        variable: transient
+                    });
+                }
+                
+            }
         });
     }
 }

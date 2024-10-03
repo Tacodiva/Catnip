@@ -54,3 +54,18 @@ void *catnip_mem_move(void *dst, const void *src, catnip_ui32_t n) {
   return dst;
 #endif
 }
+
+catnip_i32_t catnip_mem_cmp(const void *buf1, const void *buf2, catnip_ui32_t len) {
+  const catnip_uchar_t *buf1Ptr = buf1;
+  const catnip_uchar_t *buf2Ptr = buf2;
+
+  for (catnip_ui32_t i = 0; i < len; i++, buf1Ptr++, buf2Ptr++) {
+    if (*buf1Ptr < *buf2Ptr)
+      return -1;
+    
+    if (*buf1Ptr > *buf2Ptr)
+      return 1;
+  }
+
+  return 0;
+}

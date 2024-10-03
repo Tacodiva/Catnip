@@ -351,6 +351,11 @@ type SB3BlockTypeDefinition = {
             "BROADCAST_INPUT": ProjectSB3Input
         }
     },
+    "event_broadcastandwait": {
+        inputs: {
+            "BROADCAST_INPUT": ProjectSB3Input
+        }
+    },
     "event_whenbroadcastreceived": {
         fields: {
             "BROADCAST_OPTION": ProjectSB3Field<string>

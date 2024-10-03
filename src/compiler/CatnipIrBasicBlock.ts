@@ -80,6 +80,9 @@ export class CatnipIrBasicBlock implements CatnipReadonlyIrBasicBlock {
 
     public setFunction(func: CatnipIrFunction) {
         if (this._func === func) return;
+        
+        if (this.isFuncBody)
+            throw new Error("Cannot set the function of a func body.");
 
         const oldFunc = this._func;
         this._func = func;
@@ -88,8 +91,11 @@ export class CatnipIrBasicBlock implements CatnipReadonlyIrBasicBlock {
         while (op !== null) {
             for (const branchName in op.branches) {
                 const branch = op.branches[branchName];
-                if (branch.body._func === oldFunc)
+                if (branch.body._func === oldFunc) {
+                    if (branch.branchType === CatnipIrBranchType.INTERNAL && branch.isLoop)
+                        continue;
                     branch.body.setFunction(this._func);
+                }
             }
             op = op.next;
         }

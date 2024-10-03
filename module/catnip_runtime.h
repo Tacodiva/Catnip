@@ -9,7 +9,7 @@ struct catnip_runtime {
     catnip_ui32_t sprite_count;
     catnip_sprite **sprites;
 
-    catnip_list targets; // list of catnip_target*
+    catnip_target *targets; // head of linked list
     catnip_list threads; // list of catnip_thread*
 
 };

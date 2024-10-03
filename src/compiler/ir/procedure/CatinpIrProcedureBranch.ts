@@ -7,6 +7,7 @@ import { CatnipCompilerProcedureSubsystem } from '../../subsystems/CatnipCompile
 import { CatnipIr } from "../../CatnipIr";
 
 export class CatnipIrProcedureBranch extends CatnipIrExternalBranch {
+
     public readonly compiler: CatnipCompiler;
     public readonly spriteID: CatnipSpriteID;
     public readonly procedureID: CatnipProcedureID;
@@ -27,9 +28,10 @@ export class CatnipIrProcedureBranch extends CatnipIrExternalBranch {
         return procedureInfo.ir;
     }
 
-    protected _tryResolveIsYielding(): boolean | null {
+    protected _isYielding(visited: Set<CatnipIrBasicBlock>): boolean {
         const ir = this._tryResolveIR();
-        if (ir === null) return null;
+        if (ir === null) throw new Error("IR not resolved.");
+        if (ir.hasCommandIR) return ir.entrypoint.body.isYielding(visited);
         return ir.preAnalysis.isYielding;
     }
 

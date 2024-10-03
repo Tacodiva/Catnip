@@ -1,4 +1,4 @@
-import { SpiderExpression, SpiderLocalReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
+import { SpiderExpression, SpiderLocal, SpiderLocalReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipRuntimeModuleFunctionName } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType } from './CatnipIrFunction';
@@ -15,6 +15,7 @@ import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedur
 import { CatnipProcedureID } from "../ops/procedure/procedure_definition";
 import { CatnipIrBranch, CatnipIrBranchType } from "./CatnipIrBranch";
 import { CatnipCompilerProcedureSubsystem } from "./subsystems/CatnipCompilerProcedureSubsystem";
+import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 
 export interface CatnipCompilerWasmLocal {
     ref: SpiderLocalReference,
@@ -238,10 +239,15 @@ export class CatnipCompilerWasmGenContext {
         TInputs extends CatnipOpInputs,
         TBranches extends CatnipIrOpBranches,
         TOpType extends CatnipIrOpType<TInputs, TBranches>
-    >(op: CatnipIrOp<TInputs, TBranches, TOpType>, branch: CatnipIrBasicBlock) {
-        op.type.generateWasm(this, op, branch);
+    >(op: CatnipIrOp<TInputs, TBranches, TOpType>, block: CatnipIrBasicBlock) {
+        op.type.generateWasm(this, op, block);
 
-        const operands = this._stack.pop(op.type.getOperandCount(op.inputs, op.branches));
+        const opernadCount = op.type.getOperandCount(op.inputs, op.branches);
+
+        if (this._stack.length < opernadCount)
+            throw new Error(`Not enough values on stack for op ${op.type.name}`);
+
+        const operands = this._stack.pop(opernadCount);
 
         if (op.type.isInput) {
             this._stack.push({
@@ -470,6 +476,10 @@ export class CatnipCompilerWasmGenContext {
         }
 
         locals.push(local);
+    }
+
+    public getTransientVariableRef(variable: CatnipIrTransientVariable): SpiderLocalReference {
+        return this.func.getTransientVariableRef(variable);
     }
 
     public finish() {

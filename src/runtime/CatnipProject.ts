@@ -47,7 +47,14 @@ export class CatnipProject {
         return sprite;
     }
 
-    public getSprite(id: CatnipSpriteID): CatnipSprite | undefined {
+    public getSprite(id: CatnipSpriteID): CatnipSprite {
+        const sprite = this.tryGetSprite(id);
+        if (sprite === undefined)
+            throw new Error(`No such sprite with id '${id}'.`);
+        return sprite;
+    }
+
+    public tryGetSprite(id: CatnipSpriteID): CatnipSprite | undefined {
         return this._sprites.get(id);
     }
 

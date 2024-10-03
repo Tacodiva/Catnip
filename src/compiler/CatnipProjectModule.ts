@@ -2,7 +2,7 @@ import { createLogger, Logger } from "../log";
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipEventID } from "./ir/core/event_trigger";
 
-export type CatnipProjectModuleEvent = { id: CatnipEventID, exportName: string };
+export type CatnipProjectModuleEvent = { id: string, exportName: string };
 type CatnipProjectEventLambda = (runtimePtr: number, threadListPtr: number) => void;
 
 export class CatnipProjectModule {

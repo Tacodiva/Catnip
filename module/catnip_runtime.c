@@ -8,7 +8,7 @@ catnip_runtime *catnip_runtime_new() {
   rt->sprite_count = 0;
   rt->sprites = CATNIP_NULL;
 
-  CATNIP_LIST_INIT(&rt->targets, catnip_target *, 8);
+  rt->targets = CATNIP_NULL;
   CATNIP_LIST_INIT(&rt->threads, catnip_thread *, 8);
 
   return rt;
@@ -25,11 +25,15 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
       thread->status = CATNIP_THREAD_STATUS_RUNNING;
     }
 
+    if (thread->status == CATNIP_THREAD_STATUS_YIELD_TICK) {
+      thread->status = CATNIP_THREAD_STATUS_RUNNING;
+    }
+
     catnip_i32_t lc = 0;
 
     while (thread->status == CATNIP_THREAD_STATUS_RUNNING) {
       thread->function(thread);
-      // catnip_hstring_print(catnip_numconv_stringify_f64((catnip_i32_t) thread->stack_ptr - (catnip_i32_t) thread->stack_start));
+
       if (++lc > 100000000)
         CATNIP_ASSERT(CATNIP_FALSE);
     }

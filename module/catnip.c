@@ -72,6 +72,10 @@ catnip_target *CATNIP_EXPORT(catnip_target_new)(catnip_runtime *runtime, catnip_
   return catnip_target_new(runtime, sprite);
 }
 
+void CATNIP_EXPORT(catnip_target_start_new_thread)(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
+  catnip_target_start_new_thread(target, entrypoint, threadList);
+}
+
 
 catnip_thread *CATNIP_EXPORT(catnip_thread_new)(catnip_target *target, catnip_thread_fnptr fnptr) {
   return catnip_thread_new(target, fnptr);
@@ -88,6 +92,14 @@ void CATNIP_EXPORT(catnip_thread_terminate)(catnip_thread *thread) {
 
 void CATNIP_EXPORT(catnip_blockutil_debug_log)(catnip_hstring *str) {
   catnip_blockutil_debug_log(str);
+}
+
+catnip_thread_status CATNIP_EXPORT(catnip_blockutil_wait_for_threads)(catnip_list *threadList) {
+  return catnip_blockutil_wait_for_threads(threadList);
+}
+
+catnip_i32_t CATNIP_EXPORT(catnip_blockutil_strcmp)(catnip_hstring *a, catnip_hstring *b) {
+  return catnip_blockutil_strcmp(a, b);
 }
 
 

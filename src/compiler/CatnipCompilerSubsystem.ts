@@ -6,6 +6,7 @@ export interface CatnipCompilerSubsystemClass<TSubsystem extends CatnipCompilerS
 
 export interface CatnipCompilerSubsystem {
 
+    addEvents?(): void;
     
 }
 

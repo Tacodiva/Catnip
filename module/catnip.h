@@ -50,6 +50,8 @@ void catnip_assert(catnip_bool_t assertion, const char* name, const char* line, 
 typedef struct catnip_runtime catnip_runtime;
 typedef struct catnip_target catnip_target;
 typedef struct catnip_sprite catnip_sprite;
+typedef struct catnip_thread catnip_thread;
+typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 
 #include "./catnip_util.h"
 #include "./catnip_list.h"

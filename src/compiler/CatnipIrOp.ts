@@ -4,6 +4,7 @@ import { CatnipCompilerStackElement, CatnipCompilerValue } from "../compiler/Cat
 import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
+import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
@@ -79,7 +80,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
     public isYielding(ir: CatnipIrOp<TInputs, TBranches>, visited: Set<CatnipIrBasicBlock>): boolean {
         for (const branchName in ir.branches) {
             const branch = ir.branches[branchName];
-            if (branch.isYielding) return true;
+            if (branch.isYielding(visited)) return true;
         }
         return false;
     }
@@ -94,6 +95,8 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         }
         return false;
     }
+
+    public *getTransientVariables(ir: CatnipReadonlyIrOp<TInputs, TBranches>): IterableIterator<CatnipIrTransientVariable> {}
 
     public applyState(ir: CatnipReadonlyIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
 }
