@@ -58,8 +58,12 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32], undefined),
     catnip_blockutil_wait_for_threads: fn<[SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32], SpiderNumberType.i32),
-    catnip_blockutil_strcmp: fn<[SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32>
+    catnip_blockutil_hstring_cmp: fn<[SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_blockutil_value_cmp: fn<[SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32),
+    catnip_blockutil_value_eq: fn<[SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32),
 
     catnip_list_new: fn<[itemSize: SpiderNumberType.i32, capacity: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32)

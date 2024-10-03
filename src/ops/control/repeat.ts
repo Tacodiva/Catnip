@@ -10,6 +10,7 @@ import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp, CatnipOp } from 
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
+import { ir_i32_sub } from "../../compiler/ir/operators/i32_sub";
 
 type repeat_inputs = { count: CatnipInputOp, loop: CatnipCommandList };
 
@@ -29,7 +30,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
                 branch: ctx.emitBranch((loopHead) => {
                     ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
                     ctx.emitIr<typeof ir_const>(ir_const, { value: "1", format: CatnipValueFormat.I32_NUMBER }, {});
-                    ctx.emitIr(ir_sub, { type: SpiderNumberType.i32 }, {});
+                    ctx.emitIr(ir_i32_sub, { }, {});
                     ctx.emitIr(ir_transient_store, { transient: loopCount }, {});
 
                     ctx.emitCommands(inputs.loop);

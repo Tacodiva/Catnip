@@ -1,39 +1,29 @@
-import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompilerIrGenContext } from "../../../compiler/CatnipCompilerIrGenContext";
+import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
+import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
+import { Cast } from "../../cast";
+import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 
-export type sub_ir_inputs = { type: SpiderNumberType };
-
-export const ir_sub = new class extends CatnipIrInputOpType<sub_ir_inputs> {
+export const ir_sub = new class extends CatnipIrInputOpType {
     public constructor() { super("operators_sub"); }
 
-    public getOperandCount(): number { return 2; }
-
-    public getResult(inputs: sub_ir_inputs): CatnipCompilerValue {
-        switch (inputs.type) {
-            case SpiderNumberType.f64:
-                return { isConstant: false, format: CatnipValueFormat.F64_NUMBER_OR_NAN };
-            case SpiderNumberType.i32:
-                return { isConstant: false, format: CatnipValueFormat.I32_NUMBER };
-            default:
-                CatnipCompilerWasmGenContext.logger.assert(false, true, `'${inputs.type}' type not supported by operation.`);
-        }
+    public getOperandCount(): number {
+        return 2;
     }
 
-    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<sub_ir_inputs>): void {
-        switch (ir.inputs.type) {
-            case SpiderNumberType.f64:
-                ctx.emitWasm(SpiderOpcodes.f64_sub);
-                break;
-            case SpiderNumberType.i32:
-                ctx.emitWasm(SpiderOpcodes.i32_sub);
-                break;
-            default:
-                CatnipCompilerWasmGenContext.logger.assert(false, true, `'${ir.inputs.type}' type not supported by operation.`);
+    public getResult(inputs: {}, branches: {}, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue {
+        if (operands[0].isConstant && operands[1].isConstant) {
+            const value = Cast.toNumber(operands[0].value) - Cast.toNumber(operands[1].value);
+            return { isConstant: true, value, format: CatnipValueFormatUtils.getNumberFormat(value) }
         }
+
+        return { isConstant: false, format: CatnipValueFormat.F64_NUMBER_OR_NAN };
+    }
+
+    public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp): void {
+        ctx.emitWasm(SpiderOpcodes.f64_sub);
     }
 }
 

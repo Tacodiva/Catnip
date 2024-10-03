@@ -98,8 +98,16 @@ catnip_thread_status CATNIP_EXPORT(catnip_blockutil_wait_for_threads)(catnip_lis
   return catnip_blockutil_wait_for_threads(threadList);
 }
 
-catnip_i32_t CATNIP_EXPORT(catnip_blockutil_strcmp)(catnip_hstring *a, catnip_hstring *b) {
-  return catnip_blockutil_strcmp(a, b);
+catnip_i32_t CATNIP_EXPORT(catnip_blockutil_hstring_cmp)(catnip_hstring *a, catnip_hstring *b) {
+  return catnip_blockutil_hstring_cmp(a, b);
+}
+
+catnip_i32_t CATNIP_EXPORT(catnip_blockutil_value_cmp)(catnip_f64_t a, catnip_f64_t b) {
+  return catnip_blockutil_value_cmp(CATNIP_VALUE_FROM_F64(a), CATNIP_VALUE_FROM_F64(b));
+}
+
+catnip_bool_t CATNIP_EXPORT(catnip_blockutil_value_eq)(catnip_f64_t a, catnip_f64_t b) {
+  return catnip_blockutil_value_eq(CATNIP_VALUE_FROM_F64(a), CATNIP_VALUE_FROM_F64(b));
 }
 
 

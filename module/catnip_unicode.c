@@ -196,3 +196,23 @@ catnip_bool_t catnip_unicode_is_whitespace(catnip_codepoint_t cp) {
 
   return CATNIP_FALSE;
 }
+
+catnip_codepoint_t catnip_unicode_to_lowercase(catnip_codepoint_t codepoint) {
+
+  /** ASCII */
+  if (codepoint < 0x80) {
+
+    if (codepoint >= 'A' && codepoint <= 'Z') {
+      codepoint = codepoint - 'A' + 'a';
+    }
+  }
+
+  /** 
+   * TODO 
+   * There's a whole bunch of languages which are not english and need their case stuff too.
+   * Duktape handles it like this:
+   * https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_unicode_support.c#L876
+   */
+
+  return codepoint;
+}

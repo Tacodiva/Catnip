@@ -814,6 +814,7 @@ zero_skip:
 catnip_f64_t catnip_numconv_parse(catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
+  // TODO Account for scratch's broken trim polyfill
   str = catnip_str_trim(str);
 
   catnip_ui32_t p_bytelen = str->bytelen;

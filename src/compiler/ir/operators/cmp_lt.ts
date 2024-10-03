@@ -1,12 +1,11 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
+import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
+import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../CatnipCompilerStack";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 
-// TODO Very temporary implementation, This needs to support strings as well
-export const ir_lt = new class extends CatnipIrInputOpType<{}> {
-    public constructor() { super("operators_lt"); }
+export const ir_cmp_lt = new class extends CatnipIrInputOpType<{}> {
+    public constructor() { super("operators_cmp_lt"); }
 
     public getOperandCount(inputs: {}, branches: {}): number {
         return 2;
@@ -17,7 +16,9 @@ export const ir_lt = new class extends CatnipIrInputOpType<{}> {
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<{}>): void {
-        ctx.emitWasm(SpiderOpcodes.f64_lt);
+        ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp");
+        ctx.emitWasmConst(SpiderNumberType.i32, 0);
+        ctx.emitWasm(SpiderOpcodes.i32_lt_s);
     }
 }
 

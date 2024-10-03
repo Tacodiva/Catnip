@@ -13,13 +13,13 @@ export const op_log = new class extends CatnipCommandOpType<log_inputs> {
     }
 
     public isYielding(): boolean { // TODO Get rid of this
-        return true;
-        // return false;
+        // return true;
+        return false;
     }
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: log_inputs): void {
         ctx.emitInput(inputs.msg, CatnipValueFormat.I32_HSTRING);
         ctx.emitIr(ir_log, {}, {});
-        ctx.emitYield();
+        // ctx.emitYield();
     }
 }

@@ -9,7 +9,7 @@ import { ir_transient_load } from "../../compiler/ir/core/transient_load";
 import { ir_transient_tee } from "../../compiler/ir/core/transient_tee";
 import { ir_wait_for_threads } from "../../compiler/ir/core/wait_for_threads";
 import { ir_broadcast } from "../../compiler/ir/event/broadcast";
-import { ir_i32_eq } from "../../compiler/ir/operators/i32_eq";
+import { ir_i32_cmp_eq } from "../../compiler/ir/operators/i32_cmp_eq";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
@@ -45,18 +45,16 @@ export const op_event_broadcast_and_wait = new class extends CatnipCommandOpType
                         true_branch: ctx.emitBranch(() => {
                             ctx.emitIr(ir_transient_load, { transient: threadStatusVariable }, {});
                             ctx.emitIr<typeof ir_const>(ir_const, { value: "" + CatnipWasmEnumThreadStatus.YIELD, format: CatnipValueFormat.I32_NUMBER }, {});
-                            ctx.emitIr(ir_i32_eq, {}, {});
+                            ctx.emitIr(ir_i32_cmp_eq, {}, {});
                             
                             ctx.emitIr(ir_if_else, {}, {
                                 true_branch: ctx.emitBranch(() => ctx.emitJump(loopHead, CatnipWasmEnumThreadStatus.YIELD)),
                                 false_branch: ctx.emitBranch(() => ctx.emitJump(loopHead, CatnipWasmEnumThreadStatus.YILED_TICK))
                             });
-                            console.log("A");
                             
                         }),
                         false_branch: ctx.emitBranch(),
                     });
-                    console.log("B");
                 })
             }
         )

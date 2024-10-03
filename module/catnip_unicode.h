@@ -17,6 +17,8 @@ catnip_unicode_decode_utf8_checked(const catnip_char_t **ptr,
                                    const catnip_char_t *ptr_start,
                                    const catnip_char_t *ptr_end);
 
+catnip_codepoint_t catnip_unicode_to_lowercase(catnip_codepoint_t codepoint);
+
 /* Uppercase A is 0x41, lowercase a is 0x61; OR 0x20 to convert uppercase
  * to lowercase.
  */

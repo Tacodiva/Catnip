@@ -164,9 +164,9 @@ export class CatnipProject {
             console.time(""+tick);
             this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
             console.timeEnd(""+tick);
-            if (printVariable !== undefined) {
-                console.log("nth = " + printVariable.sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(printVariable._index).getMemberWrapper(0).get());
-            }
+            // if (printVariable !== undefined) {
+            //     console.log("nth = " + printVariable.sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(printVariable._index).getMemberWrapper(0).get());
+            // }
         }
     }
 }

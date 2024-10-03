@@ -6,9 +6,6 @@ import { SpiderFunction, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcod
 import { CatnipWasmStructRuntime } from "../../wasm-interop/CatnipWasmStructRuntime";
 import { CatnipWasmStructTarget } from "../../wasm-interop/CatnipWasmStructTarget";
 
-// TODO This all should be case insensitive
-//  Putting this off because I don't have the utils in C to make that happen rn.
-
 class BroadcastInfo {
     public readonly name: string;
     public readonly subsystem: CatnipCompilerBroadcastSubsystem;
@@ -108,6 +105,7 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
     }
 
     private _getBroadcastInfo(name: string) {
+        name = name.toLowerCase();
         let broadcastInfo = this._broadcastTriggers.get(name);
 
         if (broadcastInfo === undefined) {
@@ -146,7 +144,7 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
             );
             this._broadcastGeneric.body.emit(
                 SpiderOpcodes.call,
-                this.compiler.getRuntimeFunction("catnip_blockutil_strcmp")
+                this.compiler.getRuntimeFunction("catnip_blockutil_hstring_cmp")
             );
             this._broadcastGeneric.body.emit(SpiderOpcodes.i32_eqz);
 

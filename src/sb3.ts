@@ -404,7 +404,19 @@ type SB3BlockTypeDefinition = {
             "OPERAND1": ProjectSB3Input,
             "OPERAND2": ProjectSB3Input,
         }
-    }
+    },
+    "operator_gt": {
+        inputs: {
+            "OPERAND1": ProjectSB3Input,
+            "OPERAND2": ProjectSB3Input,
+        }
+    },
+    "operator_equals": {
+        inputs: {
+            "OPERAND1": ProjectSB3Input,
+            "OPERAND2": ProjectSB3Input,
+        }
+    },
 
     "data_variable": {
         fields: {
