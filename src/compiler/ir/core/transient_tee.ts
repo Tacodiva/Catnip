@@ -2,8 +2,8 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
-import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../CatnipCompilerStack";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpType, CatnipReadonlyIrInputOp, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 
 export type ir_transient_tee_inputs = { transient: CatnipIrTransientVariable };
 
@@ -12,8 +12,8 @@ export const ir_transient_tee = new class extends CatnipIrInputOpType<ir_transie
 
     public getOperandCount(): number { return 1; }
 
-    public getResult(inputs: ir_transient_tee_inputs, branches: {}, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue {
-        return operands[0];
+    public getResult(ir: CatnipReadonlyIrInputOp<ir_transient_tee_inputs>): CatnipCompilerValue {
+        return ir.operands[0];
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<ir_transient_tee_inputs>): void {

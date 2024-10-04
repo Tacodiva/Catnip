@@ -30,9 +30,6 @@ export class CatnipValueFormatUtils {
         if (CatnipValueFormatUtils.isAlways(inputFormat, CatnipValueFormat.F64))
             return SpiderNumberType.f64;
 
-        if (CatnipValueFormatUtils.isAlways(inputFormat, CatnipValueFormat.I64))
-            return SpiderNumberType.i64;
-
         throw new Error(`Cannot store value of type '${inputFormat}'`)
     }
 }

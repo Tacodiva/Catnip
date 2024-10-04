@@ -44,7 +44,7 @@ export const op_event_broadcast_and_wait = new class extends CatnipCommandOpType
                     ctx.emitIr(ir_if_else, {}, {
                         true_branch: ctx.emitBranch(() => {
                             ctx.emitIr(ir_transient_load, { transient: threadStatusVariable }, {});
-                            ctx.emitIr<typeof ir_const>(ir_const, { value: "" + CatnipWasmEnumThreadStatus.YIELD, format: CatnipValueFormat.I32_NUMBER }, {});
+                            ctx.emitIr<typeof ir_const>(ir_const, { value: CatnipWasmEnumThreadStatus.YIELD, format: CatnipValueFormat.I32_NUMBER }, {});
                             ctx.emitIr(ir_i32_cmp_eq, {}, {});
                             
                             ctx.emitIr(ir_if_else, {}, {

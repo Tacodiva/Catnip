@@ -4,9 +4,9 @@ import { createLogger, Logger } from "../log";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipIrTransientVariable } from './CatnipIrTransientVariable';
-import { CatnipCompilerReadonlyStack, CatnipCompilerStackElement } from "./CatnipCompilerStack";
+import { CatnipCompilerReadonlyStack } from "./CatnipCompilerStack";
 import { CatnipIrBranch, CatnipIrBranchType, CatnipIrExternalBranch, CatnipIrInternalBranch } from "./CatnipIrBranch";
-import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType } from "./CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { ir_yield } from "./ir/core/yield";
 import { ir_cast } from "./ir/core/cast";
 import { ir_loop_jmp } from "./ir/core/loop_jmp";
@@ -16,6 +16,7 @@ import { CatnipIr } from "./CatnipIr";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { ir_external_callback_command } from "./ir/core/external_callback_command";
 import { ir_external_callback_input } from "./ir/core/external_callback_input";
+import { CatnipCompilerValue } from "./CatnipCompilerValue";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
@@ -98,10 +99,10 @@ export class CatnipCompilerIrGenContext {
         this._body.pushOp(op);
 
         if (op.type.isInput) {
-            this._body.stack.push({
-                ...op.type.getResult(op.inputs, op.branches, op.operands),
-                source: op as CatnipIrInputOp<TInputs, CatnipIrOpBranches<TBranches>>
-            });
+            this._body.stack.push(
+                op.type.getResult(op as CatnipReadonlyIrOp<TInputs, TBranches, CatnipIrInputOpType<TInputs, CatnipIrOpBranchesDefinition>>),
+                op as CatnipIrInputOp
+            );
         }
 
         if (joinAfter) {
@@ -210,7 +211,7 @@ export class CatnipCompilerIrGenContext {
         type: TOpType,
         inputs: TInputs,
         branches: CatnipIrOpBranches<TBranches>,
-        operands: CatnipCompilerStackElement[],
+        operands: CatnipCompilerValue[],
         block?: CatnipIrBasicBlock
     ): CatnipIrOp<TInputs, TBranches, TOpType> {
         return {
@@ -272,9 +273,9 @@ export class CatnipCompilerIrGenContext {
 
     public emitCast(format: CatnipValueFormat) {
         if (!this._body.doesContinue()) return;
-        const operand = this.stack.peek();
+        const operand = this.stack.peekDetailed();
 
-        if (operand.format !== format) {
+        if (operand.value.format !== format) {
             if (!operand.source.type.tryCast(operand.source, format)) {
                 this.emitIr(ir_cast, { format }, {});
             }

@@ -113,12 +113,12 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
     public get stackSize(): number { return this._stackSize; }
 
     private readonly _externalValues: CatnipIrExternalValue[];
-    public get externalValues(): ReadonlyArray<Readonly<CatnipIrExternalValue>> {
+    public get externalValues(): readonly Readonly<CatnipIrExternalValue>[] {
         return this._externalValues;
     }
 
     private readonly _parameters: CatnipIrExternalValueSource[];
-    public get parameters(): ReadonlyArray<Readonly<CatnipIrExternalValueSource>> {
+    public get parameters(): readonly Readonly<CatnipIrExternalValueSource>[] {
         return this._parameters;
     }
 

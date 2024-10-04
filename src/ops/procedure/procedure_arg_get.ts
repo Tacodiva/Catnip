@@ -1,8 +1,6 @@
 
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCompilerLogger } from "../../compiler/CatnipCompilerLogger";
-import { CatnipIr } from "../../compiler/CatnipIr";
-import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { ir_const } from "../../compiler/ir/core/const";
 import { ir_transient_load } from "../../compiler/ir/core/transient_load";
@@ -39,7 +37,7 @@ export const op_procedure_arg_get = new class extends CatnipInputOpType<procedur
             CatnipCompilerLogger.warn(`Can't find procedure argument with name '${inputs.argName}'`);
 
             if (inputs.type === CatnipProcedureTriggerArgType.BOOLEAN) {
-                ctx.emitIr<typeof ir_const>(ir_const, { value: "false", format: CatnipValueFormat.I32_BOOLEAN }, {});
+                ctx.emitIr<typeof ir_const>(ir_const, { value: false, format: CatnipValueFormat.I32_BOOLEAN }, {});
             } else {
                 SB3ReadLogger.assert(inputs.type === CatnipProcedureTriggerArgType.STRING_OR_NUMBER);
                 ctx.emitIr<typeof ir_const>(ir_const, { value: "", format: CatnipValueFormat.I32_HSTRING }, {});

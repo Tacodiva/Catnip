@@ -14,7 +14,7 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
     public getOperandCount(): number { return 1; }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<ir_broadcast_inputs>): void {
-        const broadcastName = ctx.stack.peek();
+        const broadcastName = ir.operands[0];
 
         ctx.emitWasmGetThread();
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("runtime"));
@@ -32,7 +32,7 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
         if (broadcastName.isConstant) {
             ctx.emitWasm(
                 SpiderOpcodes.call,
-                ctx.compiler.getSubsystem(CatnipCompilerBroadcastSubsystem).getBroadcastFunction("" + broadcastName.value)
+                ctx.compiler.getSubsystem(CatnipCompilerBroadcastSubsystem).getBroadcastFunction(broadcastName.asConstantString())
             );
         } else {
             ctx.emitWasm(

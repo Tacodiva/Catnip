@@ -6,7 +6,7 @@ import { createLogger, Logger } from "../log";
 import { CatnipWasmStructThread } from "../wasm-interop/CatnipWasmStructThread";
 import { CatnipCompilerReadonlyStack, CatnipCompilerStack } from "./CatnipCompilerStack";
 import { CatnipOpInputs } from "../ops";
-import { CatnipIrInputOp, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpType } from "./CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpType, CatnipReadonlyIrInputOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
@@ -250,10 +250,10 @@ export class CatnipCompilerWasmGenContext {
         const operands = this._stack.pop(opernadCount);
 
         if (op.type.isInput) {
-            this._stack.push({
-                ...op.type.getResult(op.inputs, op.branches, operands),
-                source: op as CatnipIrInputOp<TInputs, TBranches>
-            });
+            this._stack.push(
+                op.type.getResult(op as CatnipReadonlyIrOp<TInputs, TBranches, CatnipIrInputOpType<TInputs, CatnipIrOpBranchesDefinition>>),
+                op as CatnipIrInputOp
+            );
         }
     }
 

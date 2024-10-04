@@ -1,4 +1,10 @@
 
+export type catnip_compiler_constant = string | number | boolean;
+
+/** 
+ * Stolen from https://github.com/TurboWarp/scratch-vm/blob/fed099c4ccb1ae59a8a7fe2ae14fa4ef4b85bd01/src/util/cast.js
+ */
+
 /**
  * @fileoverview
  * Utilities for casting and comparing Scratch data-types.
@@ -10,12 +16,13 @@
  * Use when coercing a value before computation.
  */
 
+
 /**
  * Used internally by compare()
  * @param val A value that evaluates to 0 in JS string-to-number conversation such as empty string, 0, or tab.
  * @returns {boolean} True if the value should not be treated as the number zero.
  */
-const isNotActuallyZero = (val: string | number): boolean => {
+const isNotActuallyZero = (val: catnip_compiler_constant): boolean => {
     if (typeof val !== 'string') return false;
     for (let i = 0; i < val.length; i++) {
         const code = val.charCodeAt(i);
@@ -39,7 +46,7 @@ export class Cast {
      * @param {*} value Value to cast to number.
      * @return {number} The Scratch-casted number value.
      */
-    static toNumber(value: string | number): number {
+    static toNumber(value: catnip_compiler_constant): number {
         // If value is already a number we don't need to coerce it with
         // Number().
         if (typeof value === 'number') {
@@ -66,7 +73,7 @@ export class Cast {
      * @param {*} value Value to cast to boolean.
      * @return {boolean} The Scratch-casted boolean value.
      */
-    static toBoolean(value: string | number) {
+    static toBoolean(value: catnip_compiler_constant) {
         // Already a boolean?
         if (typeof value === 'boolean') {
             return value;
@@ -90,7 +97,7 @@ export class Cast {
      * @param {*} value Value to cast to string.
      * @return {string} The Scratch-casted string value.
      */
-    static toString(value: string | number) {
+    static toString(value: catnip_compiler_constant) {
         return String(value);
     }
 
@@ -99,7 +106,7 @@ export class Cast {
      * @param {*} val value to check.
      * @return {boolean} True if the argument is all white spaces or null / empty.
      */
-    static isWhiteSpace(val: string | number) {
+    static isWhiteSpace(val: catnip_compiler_constant) {
         return val === null || (typeof val === 'string' && val.trim().length === 0);
     }
 
@@ -110,7 +117,7 @@ export class Cast {
      * @param {*} v2 Second value to compare.
      * @returns {number} Negative number if v1 < v2; 0 if equal; positive otherwise.
      */
-    static compare(v1: string | number, v2: string | number) {
+    static compare(v1: catnip_compiler_constant, v2: catnip_compiler_constant) {
         let n1 = Number(v1);
         let n2 = Number(v2);
         if (n1 === 0 && isNotActuallyZero(v1)) {

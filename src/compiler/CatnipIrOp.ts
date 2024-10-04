@@ -1,6 +1,6 @@
 import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
-import { CatnipCompilerStackElement, CatnipCompilerValue } from "../compiler/CatnipCompilerStack";
+import { CatnipCompilerValue } from "./CatnipCompilerValue";
 import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
@@ -29,7 +29,7 @@ export interface CatnipReadonlyIrOp<
     readonly branches: CatnipReadonlyIrOpBranches<TBranches>;
     readonly block: CatnipReadonlyIrBasicBlock;
 
-    readonly operands: ReadonlyArray<CatnipCompilerStackElement>;
+    readonly operands: readonly CatnipCompilerValue[];
 
     readonly next: CatnipReadonlyIrOp | null;
     readonly prev: CatnipReadonlyIrOp | null;
@@ -46,7 +46,7 @@ export interface CatnipIrOp<
     readonly branches: CatnipIrOpBranches<TBranches>;
     block: CatnipIrBasicBlock;
 
-    operands: CatnipCompilerStackElement[];
+    operands: CatnipCompilerValue[];
 
     next: CatnipIrOp | null;
     prev: CatnipIrOp | null;
@@ -77,7 +77,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
 
     public abstract getOperandCount(inputs: TInputs, branches: CatnipReadonlyIrOpBranches<TBranches>): number;
 
-    public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<TInputs, TBranches>, branch: CatnipIrBasicBlock): void;
+    public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<TInputs, TBranches>, block: CatnipIrBasicBlock): void;
 
     public isYielding(ir: CatnipIrOp<TInputs, TBranches>, visited: Set<CatnipIrBasicBlock>): boolean {
         for (const branchName in ir.branches) {
@@ -124,7 +124,7 @@ export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {},
 
     public readonly isInput: true = true;
 
-    public abstract getResult(inputs: TInputs, branches: CatnipReadonlyIrOpBranches<TBranches>, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue;
+    public abstract getResult(ir: CatnipReadonlyIrInputOp<TInputs, CatnipIrOpBranches<TBranches>, this>, state?: CatnipCompilerState): CatnipCompilerValue;
 
     public tryCast(ir: CatnipReadonlyIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
         return false;

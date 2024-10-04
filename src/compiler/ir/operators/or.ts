@@ -1,7 +1,7 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../CatnipCompilerStack";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { Cast } from "../../cast";
 
@@ -12,13 +12,13 @@ export const ir_or = new class extends CatnipIrInputOpType {
         return 2;
     }
 
-    public getResult(inputs: {}, branches: {}, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue {
-        if (operands[0].isConstant && operands[1].isConstant) {
-            const value = Cast.toBoolean(operands[0].value) || Cast.toBoolean(operands[1].value);
-            return { isConstant: true, value: ""+value, format: CatnipValueFormat.I32_BOOLEAN }
+    public getResult(ir: CatnipReadonlyIrInputOp): CatnipCompilerValue {
+        if (ir.operands[0].isConstant && ir.operands[1].isConstant) {
+            const value = ir.operands[0].asConstantBoolean() || ir.operands[1].asConstantBoolean();
+            return CatnipCompilerValue.constant(value, CatnipValueFormat.I32_BOOLEAN);
         }
 
-        return { isConstant: false, format: CatnipValueFormat.I32_BOOLEAN };
+        return CatnipCompilerValue.dynamic(CatnipValueFormat.I32_BOOLEAN);
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp): void {

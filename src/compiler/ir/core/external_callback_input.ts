@@ -1,7 +1,7 @@
 import { SpiderImportFunction, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrCommandOpType, CatnipIrInputOpType, CatnipIrOp, CatnipReadonlyIrOpBranches } from "../../CatnipIrOp";
-import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../CatnipCompilerStack";
+import { CatnipIrCommandOpType, CatnipIrInputOpType, CatnipIrOp, CatnipReadonlyIrInputOp, CatnipReadonlyIrOpBranches } from "../../CatnipIrOp";
+import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export type ir_external_callback_input_inputs = {
@@ -14,8 +14,8 @@ export type ir_external_callback_input_inputs = {
 export const ir_external_callback_input = new class extends CatnipIrInputOpType<ir_external_callback_input_inputs> {
     public constructor() { super("core_external_callback_input"); }
     
-    public getResult(inputs: ir_external_callback_input_inputs, branches: CatnipReadonlyIrOpBranches<{}>, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue {
-        return { format: inputs.resultFormat, isConstant: false };
+    public getResult(ir: CatnipReadonlyIrInputOp<ir_external_callback_input_inputs>): CatnipCompilerValue {
+        return CatnipCompilerValue.dynamic(ir.inputs.resultFormat);
     }
 
     public getOperandCount(inputs: ir_external_callback_input_inputs): number {

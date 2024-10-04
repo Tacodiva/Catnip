@@ -1,14 +1,13 @@
 import { SpiderMemoryDefinition, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompilerValue } from "../../../compiler/CatnipCompilerStack";
+import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 
 export type cast_ir_inputs = {
     format: CatnipValueFormat,
-    flags: CatnipValueFormat
 };
 
 export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
@@ -17,24 +16,16 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
     public getOperandCount(): number { return 1; }
 
-    public getResult(inputs: cast_ir_inputs, branches: {}, operands: ReadonlyArray<CatnipCompilerValue>): CatnipCompilerValue {
+    public getResult(ir: CatnipReadonlyIrInputOp<cast_ir_inputs>): CatnipCompilerValue {
 
-        if (operands[0].isConstant) {
-            return {
-                isConstant: true,
-                format: inputs.format,
-                value: operands[0].value
-            }
-        }
+        if (ir.operands[0].isConstant)
+            return CatnipCompilerValue.constant(ir.operands[0].constantValue, ir.inputs.format);
 
-        return {
-            isConstant: false,
-            format: inputs.format
-        };
+        return CatnipCompilerValue.dynamic(ir.inputs.format);
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<cast_ir_inputs>): void {
-        const srcFormat = ctx.stack.peek().format;
+        const srcFormat = ir.operands[0].format;
         const dstFormat = ir.inputs.format;
 
         this._convert(ctx, srcFormat, dstFormat);
@@ -188,7 +179,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     const falseExpr = ctx.popExpression();
 
                     ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
-                    
+
                     this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
                     return;
                 }

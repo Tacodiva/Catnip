@@ -1,7 +1,7 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
-import { CatnipCompilerStackElement, CatnipCompilerValue } from "../../CatnipCompilerStack";
+import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export const ir_cmp_eq = new class extends CatnipIrInputOpType<{}> {
@@ -11,8 +11,8 @@ export const ir_cmp_eq = new class extends CatnipIrInputOpType<{}> {
         return 2;
     }
 
-    public getResult(inputs: {}, branches: {}, operands: ReadonlyArray<CatnipCompilerStackElement>): CatnipCompilerValue {
-        return { isConstant: false, format: CatnipValueFormat.I32_BOOLEAN };
+    public getResult(): CatnipCompilerValue {
+        return CatnipCompilerValue.dynamic(CatnipValueFormat.I32_BOOLEAN);
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<{}>): void {

@@ -17,7 +17,7 @@ import { CatnipValueFormat } from "./CatnipValueFormat";
 export interface CatnipReadonlyIr {
     readonly compiler: CatnipCompiler;
     readonly entrypoint: CatnipReadonlyIrFunction;
-    readonly functions: ReadonlyArray<CatnipReadonlyIrFunction>;
+    readonly functions: readonly CatnipReadonlyIrFunction[];
     readonly trigger: CatnipIrScriptTrigger;
 
     forEachOp(lambda: (op: CatnipReadonlyIrOp) => void): void;
@@ -45,7 +45,7 @@ export class CatnipIr implements CatnipReadonlyIr {
     }
 
     private readonly _functions: CatnipIrFunction[];
-    public get functions(): ReadonlyArray<CatnipIrFunction> { return this._functions; }
+    public get functions(): readonly CatnipIrFunction[] { return this._functions; }
 
     private _transientVariableNames: Set<string>;
 

@@ -1,7 +1,7 @@
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
 import { CatnipIrInputOpType, CatnipIrOp } from "../../CatnipIrOp";
-import { CatnipCompilerValue } from "../../CatnipCompilerStack";
+import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export const ir_wait_for_threads = new class extends CatnipIrInputOpType<{}> {
@@ -10,7 +10,7 @@ export const ir_wait_for_threads = new class extends CatnipIrInputOpType<{}> {
     public getOperandCount(): number { return 1; }
 
     public getResult(): CatnipCompilerValue {
-        return { format: CatnipValueFormat.I32_NUMBER, isConstant: false };
+        return CatnipCompilerValue.dynamic(CatnipValueFormat.I32_NUMBER);
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext): void {

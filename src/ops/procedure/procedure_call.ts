@@ -59,7 +59,7 @@ registerSB3CommandBlock("procedures_call", (ctx, block) => {
 
         if (argInputBlock === undefined) {
             if (argInfo.type === CatnipProcedureTriggerArgType.BOOLEAN) {
-                argInput = op_const.create({ value: "false" });
+                argInput = op_const.create({ value: false });
             } else {
                 SB3ReadLogger.assert(argInfo.type === CatnipProcedureTriggerArgType.STRING_OR_NUMBER);
                 argInput = op_const.create({ value: "" });

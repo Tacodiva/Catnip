@@ -190,6 +190,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
     stage: CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP,
 
     run(ir: CatnipReadonlyIr): void {
+        console.log("INLINING!");
 
         function optimizeFunction(func: CatnipReadonlyIrFunction) {
 
