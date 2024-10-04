@@ -5,6 +5,7 @@ import looks from "./looks";
 import event from "./event";
 import control from "./control";
 import operators from "./operators";
+import sensing from "./sensing";
 import data from "./data";
 import procedure from "./procedure";
 
@@ -13,6 +14,7 @@ type Ops = typeof core &
     typeof event &
     typeof control &
     typeof operators &
+    typeof sensing &
     typeof data & 
     typeof procedure;
 
@@ -21,6 +23,7 @@ Object.assign(CatnipOps, looks);
 Object.assign(CatnipOps, control);
 Object.assign(CatnipOps, event);
 Object.assign(CatnipOps, operators);
+Object.assign(CatnipOps, sensing);
 Object.assign(CatnipOps, data);
 Object.assign(CatnipOps, procedure);
 

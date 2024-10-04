@@ -9,7 +9,7 @@ import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunction
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreLoopPassAnalyzeFunctionCallers";
 import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
-import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderExportFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition } from "wasm-spider";
+import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderExportFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
@@ -18,10 +18,25 @@ import { CatnipCompilerSubsystem, CatnipCompilerSubsystemClass } from "./CatnipC
 import { CatnipIrExternalBranch } from "./CatnipIrBranch";
 import { CatnipCommandList, CatnipOp } from "../ops";
 import { CatnipIrOp } from "./CatnipIrOp";
+import { CatnipValueFormat } from "./CatnipValueFormat";
+import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
+import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
+import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
     externalBranches: CatnipIrExternalBranch[];
+}
+
+export type generic_callback = (...args: any[]) => void | number | string;
+type wasm_callback = (...args: number[]) => void | number;
+
+interface CallbackInfo {
+    name: string;
+    import: SpiderImportFunction;
+    callback: wasm_callback;
+    argFormats: CatnipValueFormat[];
+    returnFormat: CatnipValueFormat | null;
 }
 
 export class CatnipCompiler {
@@ -41,6 +56,7 @@ export class CatnipCompiler {
     private readonly _runtimeFuncs: ReadonlyMap<CatnipRuntimeModuleFunctionName, SpiderImportFunction>;
     private readonly _subsystems: Map<CatnipCompilerSubsystemClass, CatnipCompilerSubsystem>;
     private readonly _events: { id: string, export: SpiderExportFunction, func: SpiderFunctionDefinition }[];
+    private readonly _callbacks: Map<generic_callback, CallbackInfo>;
 
     private readonly _scripts: Map<CatnipSpriteID, Map<CatnipScriptID, CatnipIr>>;
 
@@ -91,6 +107,8 @@ export class CatnipCompiler {
 
         this._subsystems = new Map();
         this._events = [];
+
+        this._callbacks = new Map();
     }
 
     public addPass(pass: CatnipCompilerPass) {
@@ -175,6 +193,12 @@ export class CatnipCompiler {
             this.runtimeModule.indirectFunctionTable.grow(largetFunctionElement - this.runtimeModule.indirectFunctionTable.length);
         }
 
+        const callbacks: Record<string, wasm_callback> = {};
+
+        for (const callback of this._callbacks.values()) {
+            callbacks[callback.name] = callback.callback;
+        }
+
         const module = await compileModule(this.spiderModule);
 
         const instance = await WebAssembly.instantiate(module, {
@@ -182,7 +206,8 @@ export class CatnipCompiler {
                 memory: this.runtimeModule.imports.env.memory,
                 indirect_function_table: this.runtimeModule.indirectFunctionTable
             },
-            catnip: this.runtimeModule.functions
+            catnip: this.runtimeModule.functions,
+            catnip_callbacks: callbacks
         });
 
         const events: CatnipProjectModuleEvent[] = [];
@@ -365,5 +390,77 @@ export class CatnipCompiler {
                 }
             }
         }
+    }
+
+    public createCallback(
+        name: string,
+        callback: generic_callback,
+        argFormats: CatnipValueFormat[],
+        returnFormat: CatnipValueFormat | null
+    ): SpiderImportFunction {
+        let callbackInfo = this._callbacks.get(callback);
+
+        if (callbackInfo !== undefined) return callbackInfo.import;
+
+        const parameterValueTypes: SpiderValueType[] = [];
+        const returnValueType: SpiderValueType[] = [];
+
+        for (const argFormat of argFormats)
+            parameterValueTypes.push(CatnipValueFormatUtils.getFormatSpiderType(argFormat));
+
+        if (returnFormat !== null)
+            returnValueType.push(CatnipValueFormatUtils.getFormatSpiderType(returnFormat));
+
+        callbackInfo = {
+            name,
+            callback: (...args: number[]) => {
+
+                if (args.length !== argFormats.length)
+                    throw new Error("Wrong callback arg types.");
+
+                const convertedArgs: (number | string)[] = [];
+
+                for (let i = 0; i < args.length; i++) {
+                    const argFormat = argFormats[i];
+                    const argValue = args[i];
+
+                    if (CatnipValueFormatUtils.isAlways(argFormat, CatnipValueFormat.I32_HSTRING)) {
+                        const bytes = argValue + CatnipWasmStructHeapString.size;
+                        const byteLength = CatnipWasmStructHeapString.getMember(argValue, this.runtimeModule.memory, "bytelen");
+
+                        const stringValue = CatnipRuntimeModule.TEXT_DECODER.decode(this.runtimeModule.memory.buffer.slice(bytes, bytes + byteLength));
+
+                        convertedArgs.push(stringValue);
+                    } else {
+                        convertedArgs.push(argValue);
+                    }
+                }
+
+                const returnValue = callback(...convertedArgs);
+
+                if (returnFormat !== null) {
+                    if (returnValue === undefined)
+                        throw new Error("Callback must return a value.");
+
+                    if (CatnipValueFormatUtils.isAlways(returnFormat, CatnipValueFormat.I32_HSTRING)) {
+                        return this.runtimeModule.allocateHeapString(""+returnValue);
+                    } else {
+                        if (typeof returnValue !== "number")
+                            throw new Error("Expected callback return of type number.");
+                        return returnValue;
+                    }
+                }
+            },
+            import: this.spiderModule.importFunction(
+                "catnip_callbacks",
+                name,
+                this.spiderModule.createType(parameterValueTypes, ...returnValueType)
+            ),
+            argFormats,
+            returnFormat
+        };
+
+        this._callbacks.set(callback, callbackInfo);
+        return callbackInfo.import;
     }
 }

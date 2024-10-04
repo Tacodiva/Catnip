@@ -381,6 +381,12 @@ type SB3BlockTypeDefinition = {
             "SUBSTACK": ProjectSB3Input,
         },
     },
+    "control_repeat_until": {
+        inputs: {
+            "CONDITION": ProjectSB3Input,
+            "SUBSTACK": ProjectSB3Input,
+        }
+    },
     "control_forever": {
         inputs: {
             "SUBSTACK": ProjectSB3Input,
@@ -399,6 +405,12 @@ type SB3BlockTypeDefinition = {
             "NUM2": ProjectSB3Input,
         },
     },
+    "operator_multiply": {
+        inputs: {
+            "NUM1": ProjectSB3Input,
+            "NUM2": ProjectSB3Input,
+        },
+    }
     "operator_lt": {
         inputs: {
             "OPERAND1": ProjectSB3Input,
@@ -417,6 +429,14 @@ type SB3BlockTypeDefinition = {
             "OPERAND2": ProjectSB3Input,
         }
     },
+    "operator_or": {
+        inputs: {
+            "OPERAND1": ProjectSB3Input,
+            "OPERAND2": ProjectSB3Input,
+        }
+    },
+
+    "sensing_dayssince2000": {},
 
     "data_variable": {
         fields: {
@@ -431,6 +451,14 @@ type SB3BlockTypeDefinition = {
             "VARIABLE": ProjectSB3Field<string>
         },
     },
+    "data_changevariableby": {
+        inputs: {
+            "VALUE": ProjectSB3Input
+        },
+        fields: {
+            "VARIABLE": ProjectSB3Field<string>
+        },
+    }
 
     "procedures_definition": {
         inputs: {

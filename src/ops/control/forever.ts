@@ -1,6 +1,7 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { ir_branch } from "../../compiler/ir/core/branch";
+import { ir_nop } from "../../compiler/ir/core/nop";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipCommandList, CatnipCommandOpType, CatnipOp } from "../CatnipOp";
 
@@ -12,6 +13,7 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
     }
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: forever_inputs): void {
+        ctx.emitIr(ir_nop, { comment: "Before" }, {});
         ctx.emitIr(
             ir_branch, {},
             {
@@ -21,6 +23,7 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
                 })
             }
         );
+        ctx.emitIr(ir_nop, { comment: "After" }, {});
     }
 }
 

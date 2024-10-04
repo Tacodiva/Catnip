@@ -13,6 +13,7 @@ import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipIrProcedureBranch } from "../../compiler/ir/procedure/CatinpIrProcedureBranch";
 import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 import { CatnipIr } from "../../compiler/CatnipIr";
+import { op_nop } from "../core/nop";
 
 type procedure_call_inputs = { sprite: CatnipSpriteID, procedure: CatnipProcedureID, args: { input: CatnipInputOp, format: CatnipValueFormat }[] };
 
@@ -41,6 +42,11 @@ export const op_procedure_call = new class extends CatnipCommandOpType<procedure
 registerSB3CommandBlock("procedures_call", (ctx, block) => {
     const proccode = block.mutation.proccode;
     const procedureInfo = ctx.meta.getProcedure(proccode);
+
+    if (procedureInfo === null) {
+        CatnipCompilerLogger.warn(`Unknown procedure opcode '${proccode}'.`);
+        return op_nop.create({});
+    }
 
     const argInfos = procedureInfo.args;
     const args: { input: CatnipInputOp, format: CatnipValueFormat }[] = [];

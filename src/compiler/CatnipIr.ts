@@ -208,22 +208,17 @@ export class CatnipIr implements CatnipReadonlyIr {
                 string += op.type.name;
                 if (Object.keys(op.inputs).length !== 0) {
                     string += " ";
-                    string += JSON.stringify(op.inputs, (key: string, value: any) => {
-                        if (value instanceof CatnipVariable) {
-                            return `<VARIABLE '${value.id}'>`;
-                        } else if (value instanceof CatnipTarget) {
-                            return `<TARGET '${value.sprite.id}'>`;
-                        } else if (value instanceof CatnipIrTransientVariable) {
-                            return `<TRANSIENT '${value.name}'>`;
-                        }
-                        return value;
-                    });
+                    string += op.type.stringifyInputs(op.inputs);
                 }
                 if (Object.keys(op.branches).length !== 0) {
                     for (const subbranchName in op.branches) {
                         const subbranch = op.branches[subbranchName];
                         string += "\n  ";
                         string += indent;
+                        
+                        if (subbranch.branchType === CatnipIrBranchType.INTERNAL && subbranch.isLoop)
+                            string += "(loop) ";
+
                         string += subbranchName;
 
                         if (!subbranch.bodyResolved) {

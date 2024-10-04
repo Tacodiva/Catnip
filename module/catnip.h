@@ -51,6 +51,7 @@ typedef struct catnip_runtime catnip_runtime;
 typedef struct catnip_target catnip_target;
 typedef struct catnip_sprite catnip_sprite;
 typedef struct catnip_thread catnip_thread;
+typedef struct catnip_costume catnip_costume;
 typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 
 #include "./catnip_util.h"

@@ -122,13 +122,16 @@ export class CatnipProject {
     private async _recompile(): Promise<void> {
         if (this._recompileScripts.size === 0) return;
 
+        
         const compiler = new CatnipCompiler(this);
-
+        
+        console.time("compile");
         for (const script of this._recompileScripts) {
             compiler.addScript(script);
         }
 
         const module = await compiler.createModule();
+        console.timeEnd("compile");
 
         if (globalThis.document && window.location.href.endsWith("download")) {
             const downloadURL = (data: string, fileName: string) => {
@@ -160,7 +163,7 @@ export class CatnipProject {
         const printVariable = stage.getVariable("2");
         module.triggerEvent("when_flag_clicked");
 
-        for (let tick = 1; tick <= 10; tick++) {
+        for (let tick = 1; tick <= 20; tick++) {
             console.time(""+tick);
             this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
             console.timeEnd(""+tick);

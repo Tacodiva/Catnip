@@ -5,6 +5,8 @@ import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
+import { CatnipVariable } from "../runtime/CatnipVariable";
+import { CatnipTarget } from "../runtime/CatnipTarget";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
@@ -99,6 +101,19 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
     public *getTransientVariables(ir: CatnipReadonlyIrOp<TInputs, TBranches>): IterableIterator<CatnipIrTransientVariable> {}
 
     public applyState(ir: CatnipReadonlyIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
+
+    public stringifyInputs(inputs: TInputs): string {
+        return JSON.stringify(inputs, (key: string, value: any) => {
+            if (value instanceof CatnipVariable) {
+                return `<VARIABLE '${value.id}'>`;
+            } else if (value instanceof CatnipTarget) {
+                return `<TARGET '${value.sprite.id}'>`;
+            } else if (value instanceof CatnipIrTransientVariable) {
+                return `<TRANSIENT '${value.name}'>`;
+            }
+            return value;
+        })
+    }
 }
 
 export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranchesDefinition = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {

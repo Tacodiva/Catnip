@@ -82,9 +82,9 @@ export class SB3ReadMetadata {
         return procedureID;
     }
 
-    public getProcedure(proccode: string): SB3ProcedureInfo {
+    public getProcedure(proccode: string): SB3ProcedureInfo | null {
         const procedureInfo = this._procedureMap.get(proccode);
-        if (procedureInfo === undefined) throw new Error(`Unknown procedure proccode '${proccode}'`);
+        if (procedureInfo === undefined) return null;
         return procedureInfo;
     }
 

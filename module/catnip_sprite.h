@@ -14,6 +14,9 @@ struct catnip_sprite {
     // All the targets assosiated with this sprite.
     // Must be sorted in layer order
     catnip_target *target;
+
+    catnip_ui32_t costume_count;
+    catnip_costume *costumes;
         
 };
 

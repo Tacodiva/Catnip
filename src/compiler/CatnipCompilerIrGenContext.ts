@@ -14,6 +14,8 @@ import { ir_if_else } from "./ir/control/if_else";
 import { ir_transient_create } from "./ir/core/transient_create";
 import { CatnipIr } from "./CatnipIr";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
+import { ir_external_callback_command } from "./ir/core/external_callback_command";
+import { ir_external_callback_input } from "./ir/core/external_callback_input";
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
@@ -32,12 +34,45 @@ export class CatnipCompilerIrGenContext {
         this._branch = new CatnipIrInternalBranch(ir.entrypoint.body);
     }
 
+    private _mergeTails() {
+        const branchTails = this._branch.getTails();
+
+        let mergeBefore = false;
+        for (const tailBranch of branchTails) {
+            if (tailBranch.branchType === CatnipIrBranchType.EXTERNAL || tailBranch.body.funcNullable !== this._body.funcNullable) {
+                mergeBefore = true;
+                break;
+            }
+        }
+
+        if (!mergeBefore) return;
+        this._switchToBlock(this.ir.createFunction().body);
+
+        for (const tailBranch of branchTails) {
+            if (tailBranch.branchType === CatnipIrBranchType.EXTERNAL) {
+                // Not sure what to do here.
+                if (tailBranch.returnLocation !== null)
+                    throw new Error("Not implemented.");
+
+                tailBranch.returnLocation = new CatnipIrInternalBranch(this._body);
+            } else {
+                tailBranch.body.pushOp(this._createIr(
+                    ir_yield,
+                    { status: CatnipWasmEnumThreadStatus.RUNNING },
+                    { branch: new CatnipIrInternalBranch(this._body) }, [], tailBranch.body
+                ));
+            }
+        }
+    }
+
     private _emitIr<
         TInputs extends CatnipIrOpInputs,
         TBranches extends CatnipIrOpBranchesDefinition,
         TOpType extends CatnipIrOpType<TInputs, TBranches>,
         TOp extends CatnipIrOp<TInputs, TBranches, TOpType>
     >(op: TOp): TOp {
+
+        this._mergeTails();
 
         const opBranchNames = Object.keys(op.branches);
 
@@ -49,50 +84,13 @@ export class CatnipCompilerIrGenContext {
             }
         }
 
-        
         let joinAfter = false;
         for (const branchName of opBranchNames) {
             const branch = op.branches[branchName];
-            
+
             if (branch.isYielding()) {
                 joinAfter = true;
                 break;
-            }
-        }
-        
-        const branchTails = this._branch.getTails();
-
-        let mergeBefore = false;
-        for (const tailBranch of branchTails) {
-            if (tailBranch.branchType === CatnipIrBranchType.EXTERNAL || tailBranch.body.funcNullable !== this._body.funcNullable) {
-                mergeBefore = true;
-                break;
-            }
-        }
-
-        if (mergeBefore) {
-            this._switchToBlock(this.ir.createFunction().body);
-
-            for (const tailBranch of branchTails) {
-                if (tailBranch.branchType === CatnipIrBranchType.EXTERNAL) {
-                    // Not sure what to do here.
-                    if (tailBranch.returnLocation !== null)
-                        throw new Error("Not implemented.");
-
-                    tailBranch.returnLocation = new CatnipIrInternalBranch(this._body);
-                } else {
-                    tailBranch.body.pushOp(this._createIr(
-                        ir_yield,
-                        { status: CatnipWasmEnumThreadStatus.RUNNING },
-                        { branch: new CatnipIrInternalBranch(this._body) }, [], tailBranch.body
-                    ));
-                }
-            }
-
-            for (const branchName of opBranchNames) {
-                const branch = op.branches[branchName];
-                if (branch.branchType === CatnipIrBranchType.INTERNAL)
-                    branch.body.setFunction(this._body.func);
             }
         }
 
@@ -284,6 +282,7 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitJump(block: CatnipIrBasicBlock, status?: CatnipWasmEnumThreadStatus) {
+        this._mergeTails();
         if (status === undefined && this._body.funcNullable === block.funcNullable) {
             block.isLoop = true;
             this.emitIr(ir_loop_jmp, {}, { branch: new CatnipIrInternalBranch(block, true) })
@@ -295,6 +294,7 @@ export class CatnipCompilerIrGenContext {
     }
 
     public emitConditionalJump(block: CatnipIrBasicBlock, status?: CatnipWasmEnumThreadStatus) {
+        this._mergeTails();
         const sourceBlock = this._body;
         this.emitIr(ir_if_else, {}, {
             true_branch: this.emitBranch(() => {
@@ -323,9 +323,6 @@ export class CatnipCompilerIrGenContext {
     public emitBranch(arg?: null | CatnipIrBasicBlock | CatnipCommandList | ((block: CatnipIrBasicBlock) => void)): CatnipIrBranch {
         let body: CatnipIrBasicBlock;
 
-        let didContinue = this._body.doesContinue();
-        let oldLastOp = this._body.tail?.type.name;
-
         if (arg instanceof CatnipIrBasicBlock) {
             body = arg;
         } else {
@@ -353,8 +350,28 @@ export class CatnipCompilerIrGenContext {
         return transient;
     }
 
+    public emitCallback(name: string, callback: (...args: any[]) => void | number | string, argTypes: CatnipValueFormat[], returnType: CatnipValueFormat | null) {
+        const callbackImport = this.compiler.createCallback(
+            name, callback, argTypes, returnType
+        );
+
+        if (returnType === null) {
+            this.emitIr(ir_external_callback_command, {
+                name,
+                callback: callbackImport,
+                operandCount: argTypes.length
+            }, {});
+        } else {
+            this.emitIr(ir_external_callback_input, {
+                name,
+                callback: callbackImport,
+                operandCount: argTypes.length,
+                resultFormat: returnType
+            }, {});
+        }
+    }
+
     public finish() {
 
     }
-
 }
