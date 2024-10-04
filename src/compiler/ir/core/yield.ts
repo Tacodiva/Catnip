@@ -53,11 +53,9 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
         ctx.emitWasm(SpiderOpcodes.return);
     }
 
-    public isYielding(): boolean {
-        return true;
-    }
+    public isYielding() { return true; }
     
-    public doesContinue(): boolean {
-        return false;
-    }
+    public doesContinue() {return false; }
+
+    public isBarrier() { return true; }
 }

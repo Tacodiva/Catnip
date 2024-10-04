@@ -37,11 +37,9 @@ export const ir_return = new class extends CatnipIrCommandOpType<{}, {}> {
         ctx.releaseLocal(returnLocation);
     }
 
-    public isYielding(): boolean {
-        return true;
-    }
+    public isYielding() { return true; }
 
-    public doesContinue(): boolean {
-        return false;
-    }
+    public doesContinue() { return false; }
+
+    public isBarrier() { return true; }
 }

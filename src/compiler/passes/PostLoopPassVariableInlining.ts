@@ -6,7 +6,6 @@ import { CatnipReadonlyIrBasicBlock } from "../CatnipIrBasicBlock";
 import { CatnipReadonlyIrFunction } from "../CatnipIrFunction";
 import { CatnipReadonlyIrOp } from "../CatnipIrOp";
 import { CatnipIrTransientVariable } from "../CatnipIrTransientVariable";
-import { ir_barrier } from "../ir/core/barrier";
 import { ir_transient_create } from "../ir/core/transient_create";
 import { ir_transient_load } from "../ir/core/transient_load";
 import { ir_transient_store } from "../ir/core/transient_store";
@@ -216,7 +215,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                     const branchNames = Object.keys(op.branches);
                     let doesSync = false;
 
-                    if (op.type === ir_barrier) {
+                    if (op.type.isBarrier(op)) {
                         doesSync = true;
                     } else {
                         for (const branchName of branchNames) {
@@ -243,7 +242,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                             const branchName = branchNames[i];
                             const subbranch = op.branches[branchName];
 
-                            if (subbranch.branchType === CatnipIrBranchType.INTERNAL) {
+                            if (subbranch.branchType === CatnipIrBranchType.INTERNAL && subbranch.body.func === func) {
                                 const branchNode = createBranchVariableCfg(subbranch.body);
                                 node.pushNode(branchNode.head);
 

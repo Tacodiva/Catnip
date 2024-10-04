@@ -114,6 +114,10 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
             return value;
         })
     }
+
+    public isBarrier(ir: CatnipReadonlyIrOp<TInputs, TBranches>): boolean {
+        return false;
+    }
 }
 
 export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranchesDefinition = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {

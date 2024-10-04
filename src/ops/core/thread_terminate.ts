@@ -1,5 +1,4 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 import { ir_thread_terminate } from "../../compiler/ir/core/thread_terminate";
 import { CatnipCommandOpType, CatnipOp } from "../CatnipOp";
 

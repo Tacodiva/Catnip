@@ -1,34 +1,18 @@
 
-/**
- * The Plan:
- * 
- *  - Each IR tracks a list of its script dependencies
- *  - We figure out script dependencies by inspecting the ops
- *  - No compilation is done when we add the script to the compiler
- *      -> Only the IR is created and dependencies are found (but not resolved)
- *      -> 
- *  - Th
- * 
- */
-
 import { CatnipCommandList } from "../ops";
 import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
-import { CatnipTarget } from "../runtime/CatnipTarget";
-import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipCompiler, CatnipIrPreAnalysis } from "./CatnipCompiler";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
-import { CatnipIrBranchType, CatnipIrExternalBranch } from "./CatnipIrBranch";
+import { CatnipIrBranchType } from "./CatnipIrBranch";
 import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipValueFormat } from "./CatnipValueFormat";
-import { ir_barrier } from "./ir/core/barrier";
-import { ir_thread_terminate } from "./ir/core/thread_terminate";
 
 export interface CatnipReadonlyIr {
     readonly compiler: CatnipCompiler;

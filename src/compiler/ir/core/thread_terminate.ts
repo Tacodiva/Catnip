@@ -18,7 +18,7 @@ export const ir_thread_terminate = new class extends CatnipIrCommandOpType<{}> {
         ctx.emitWasm(SpiderOpcodes.return);
     }
 
-    public doesContinue(): boolean {
-        return false;
-    }
+    public doesContinue() { return false; }
+    
+    public isBarrier() { return true; }
 }
