@@ -5,15 +5,51 @@ export class CatnipValueFormatUtils {
 
     private constructor() { throw new Error("unreachable."); }
 
-    static isAlways(x: CatnipValueFormat, y: CatnipValueFormat): boolean {
+    public static stringify(format: CatnipValueFormat): string {
+        let formatFlags: CatnipValueFormat[] = [];
+
+        for (const enumValue in CatnipValueFormat) {
+            const testFormat = Number(enumValue);
+
+            if (isNaN(testFormat))
+                continue;
+
+            if (this.isAlways(testFormat, format)) {
+                for (const existingFormat of formatFlags) {
+                    if (this.isAlways(testFormat, existingFormat))
+                        continue;
+                }
+
+                formatFlags = formatFlags.filter(value => !this.isAlways(value, testFormat));
+                formatFlags.push(testFormat);
+            }
+        }
+
+        let str: string | null = null;
+
+        for (const formatFlag of formatFlags) {
+            if (str !== null) {
+                str = `${str} | ${CatnipValueFormat[formatFlag]}`;
+            } else {
+                str = CatnipValueFormat[formatFlag];
+            }
+        }
+
+        if (str === null)
+            return "INVALID";
+
+        return str;
+    }
+
+    public static isAlways(x: CatnipValueFormat, y: CatnipValueFormat): boolean {
         return (x & y) === x;
     }
 
-    static isSometimes(x: CatnipValueFormat, y: CatnipValueFormat): boolean {
+    public static isSometimes(x: CatnipValueFormat, y: CatnipValueFormat): boolean {
         return (x & y) !== 0;
     }
 
-    static getNumberFormat(number: number): CatnipValueFormat {
+    public static getNumberFormat(number: number): CatnipValueFormat {
         if (number === Infinity) return CatnipValueFormat.F64_POS_INF;
         if (number === -Infinity) return CatnipValueFormat.F64_NEG_INF;
         if (number < 0) return Number.isInteger(number) ? CatnipValueFormat.F64_NEG_INT : CatnipValueFormat.F64_NEG_FRACT;
@@ -23,7 +59,7 @@ export class CatnipValueFormatUtils {
         return CatnipValueFormat.F64_ZERO;
     }
 
-    static getFormatSpiderType(inputFormat: CatnipValueFormat): SpiderNumberType {
+    public static getFormatSpiderType(inputFormat: CatnipValueFormat): SpiderNumberType {
         if (CatnipValueFormatUtils.isAlways(inputFormat, CatnipValueFormat.I32))
             return SpiderNumberType.i32;
 

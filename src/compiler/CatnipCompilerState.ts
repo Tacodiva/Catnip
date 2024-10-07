@@ -1,102 +1,73 @@
-import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipVariable } from "../runtime/CatnipVariable";
-import { CatnipCompilerStack } from "./CatnipCompilerStack";
+import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipCompilerValue } from "./CatnipCompilerValue";
-import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
+import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
-import { CatnipIrFunction } from "./CatnipIrFunction";
-
-function doTypeAnalysis(func: CatnipIrFunction) {
-
-    const stack = new CatnipCompilerStack();
-
-    let op = func.body.head;
-    let modified = false;
-
-    while (op !== null) {
-
-        const operandConut = op.type.getOperandCount(op.inputs, op.branches);
-        const newOperands = stack.pop(operandConut);
-        const oldOperands = op.operands;
-
-        for (let i = 0; i < operandConut; i++) {
-            const newOperand = newOperands[i];
-            const oldOperand = oldOperands[i];
-
-            const combinedOperand = newOperand.or(oldOperand);
-
-            if (!combinedOperand.equals(oldOperand))
-                modified = true;
-
-            op.operands[i] = newOperand;
-        }
-
-
-        op = op.next;
-    }
-
-}
 
 export class CatnipCompilerState {
-    // public readonly stack: CatnipCompilerStack;
 
-    // private _variables: Map<CatnipVariable, CatnipCompilerValue>;
-    // private _transientVariable: Map<CatnipIrTransientVariable, CatnipCompilerValue>;
+    private readonly _variables: Map<CatnipVariable, CatnipCompilerValue>;
 
-    // public constructor(clone?: CatnipCompilerState) {
-    //     if (clone === undefined) {
-    //         this.stack = new CatnipCompilerStack();
-    //         this._variables = new Map();
-    //         this._transientVariable = new Map();
-    //     } else {
-    //         this.stack = clone.stack.clone();
-    //         this._variables = new Map(clone._variables);
-    //         this._transientVariable = new Map(clone._transientVariable);
-    //     }
-    // }
+    public constructor(clone?: CatnipCompilerState) {
+        if (clone === undefined) {
+            this._variables = new Map();
+        } else {
+            this._variables = new Map(clone._variables);
+        }
+    }
 
-    // public clone(): CatnipCompilerState {
-    //     return new CatnipCompilerState(this);
-    // }
+    public clone(): CatnipCompilerState {
+        return new CatnipCompilerState(this);
+    }
 
-    // public or(other: CatnipCompilerState) {
-        
-    // }
+    private *_enumerateVariables(other: CatnipCompilerState): IterableIterator<CatnipVariable> {
+        yield* this._variables.keys();
+        for (const variable of other._variables.keys()) {
+            if (!this._variables.has(variable))
+                yield variable;
+        }
+    }
 
-    // public getVariableValue(variable: CatnipVariable): CatnipCompilerValue {
-    //     let value = this._variables.get(variable);
+    public isSubsetOf(other: CatnipCompilerState): boolean {
+        for (const variable of this._enumerateVariables(other)) {
+            const thisType = this.getVariableValue(variable);
+            const otherType = other.getVariableValue(variable);
 
-    //     if (value === undefined) {
-    //         value = { isConstant: false, format: CatnipValueFormat.F64 }
-    //     }
+            if (!thisType.isSubsetOf(otherType))
+                return false;
+        }
 
-    //     return value;
-    // }
+        return true;
+    }
 
-    // public setVariableValue(variable: CatnipVariable, value: CatnipCompilerValue) {
-    //     if (!CatnipValueFormatUtils.isAlways(value.format, CatnipValueFormat.F64)) {
-    //         value = {
-    //             ...value,
-    //             format: CatnipValueFormat.F64
-    //         };
-    //     }
+    public or(other: CatnipCompilerState): CatnipCompilerState {
+        const newState = new CatnipCompilerState();
 
-    //     this._variables.set(variable, value);
-    // }
+        for (const variable of this._enumerateVariables(other)) {
+            const thisType = this.getVariableValue(variable);
+            const otherType = other.getVariableValue(variable);
 
-    // public getTransientValue(variable: CatnipIrTransientVariable): CatnipCompilerValue {
-    //     let value = this._transientVariable.get(variable);
+            newState._variables.set(variable, thisType.or(otherType));
+        }
 
-    //     if (value === undefined)
-    //         throw new Error("No value for transient.");
+        return newState;
+    }
 
-    //     return value;
-    // }
+    public getVariableValue(variable: CatnipVariable): CatnipCompilerValue {
+        let value = this._variables.get(variable);
 
-    // public setTransientValue(variable: CatnipIrTransientVariable, value: CatnipCompilerValue) {
-    //     if (value.format !== variable.format)
-    //         throw new Error("Cannot set transient. Wrong format.");
+        if (value === undefined)
+            value = CatnipCompilerValue.dynamic(CatnipValueFormat.F64);
 
-    //     this._transientVariable.set(variable, value);
-    // }
+        return value;
+    }
+
+    public setVariableValue(variable: CatnipVariable, value: CatnipCompilerValue) {
+        CatnipCompilerLogger.assert(
+            CatnipValueFormatUtils.isAlways(value.format, CatnipValueFormat.F64),
+            true, "Cannot set variable to non-F64 type."
+        );
+
+        this._variables.set(variable, value);
+    }
 }

@@ -25,12 +25,12 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
     private _getFormat(inputs: const_ir_inputs): CatnipValueFormat {
         if (inputs.format === undefined) {
             if (this._isValidNumber(inputs))
-                return CatnipValueFormat.F64_NUMBER_OR_NAN;
+                return CatnipValueFormatUtils.getNumberFormat(+inputs.value);
 
             return CatnipValueFormat.I32_HSTRING;
         } else if (inputs.format === CatnipValueFormat.F64) {
             if (this._isValidNumber(inputs))
-                return CatnipValueFormat.F64_NUMBER_OR_NAN;
+                return CatnipValueFormatUtils.getNumberFormat(+inputs.value);
 
             return CatnipValueFormat.F64_BOXED_I32_HSTRING;
         } else {

@@ -4,7 +4,7 @@ import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
 export const LoopPassConstantFolding: CatnipCompilerPass = {
 
-    stage: CatnipCompilerStage.PASS_ANALYSIS_LOOP,
+    stage: CatnipCompilerStage.PASS_ANALYSIS,
 
     run(ir: CatnipReadonlyIr): void {
 

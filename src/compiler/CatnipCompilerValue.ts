@@ -1,5 +1,6 @@
 import { Cast, catnip_compiler_constant } from "./cast";
 import { CatnipValueFormat } from "./CatnipValueFormat";
+import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
 export class CatnipCompilerValue {
     public static constant(value: catnip_compiler_constant, format: CatnipValueFormat) {
@@ -62,5 +63,22 @@ export class CatnipCompilerValue {
             return this._constantValue === other._constantValue;
 
         return this.isConstant === other.isConstant;
+    }
+
+    public isSubsetOf(other: CatnipCompilerValue): boolean {
+        if (!CatnipValueFormatUtils.isAlways(this.format, other.format))
+            return false;
+
+        if (other.isConstant) {
+            if (!this.isConstant) return false;
+            if (this._constantValue !== other._constantValue) return false;
+        }
+
+        return true;
+    }
+
+    public toString(): string {
+        if (this.isConstant) return `['${this.asConstantString()}' ${CatnipValueFormatUtils.stringify(this.format)}]`;
+        else return `[${CatnipValueFormatUtils.stringify(this.format)}]`;
     }
 }

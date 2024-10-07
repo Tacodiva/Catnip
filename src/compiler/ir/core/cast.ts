@@ -21,7 +21,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         if (ir.operands[0].isConstant)
             return CatnipCompilerValue.constant(ir.operands[0].constantValue, ir.inputs.format);
 
-        return CatnipCompilerValue.dynamic(ir.inputs.format);
+        return CatnipCompilerValue.dynamic(this._convert(null, ir.operands[0].format, ir.inputs.format));
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<cast_ir_inputs>): void {
@@ -31,13 +31,13 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         this._convert(ctx, srcFormat, dstFormat);
     }
 
-    private _convert(ctx: CatnipCompilerWasmGenContext, src: CatnipValueFormat, dst: CatnipValueFormat) {
+    private _convert(ctx: CatnipCompilerWasmGenContext | null, src: CatnipValueFormat, dst: CatnipValueFormat): CatnipValueFormat {
 
         if (CatnipValueFormatUtils.isAlways(src, dst))
-            return;
+            return src;
 
         function notSupported(): never {
-            throw new Error(`Conversion from '${src}' -> '${dst}' not supported.`);
+            throw new Error(`Conversion from '${CatnipValueFormatUtils.stringify(src)}' -> '${CatnipValueFormatUtils.stringify(dst)}' not supported.`);
         }
 
         if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.F64)) {
@@ -46,35 +46,111 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
                 if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.F64_NUMBER)) {
 
-                    const local = ctx.createLocal(SpiderNumberType.f64);
-                    ctx.emitWasm(SpiderOpcodes.local_tee, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
-                    ctx.emitWasm(SpiderOpcodes.f64_eq);
+                    if (CatnipValueFormatUtils.isSometimes(src, CatnipValueFormat.F64_NAN) && !CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NAN)) {
+                        if (ctx !== null) {
+                            const local = ctx.createLocal(SpiderNumberType.f64);
+                            ctx.emitWasm(SpiderOpcodes.local_tee, local.ref);
+                            ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            ctx.emitWasm(SpiderOpcodes.f64_eq);
 
-                    ctx.pushExpression();
-                    ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
-                    const trueExpr = ctx.popExpression();
+                            ctx.pushExpression();
+                            ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            const trueExpr = ctx.popExpression();
 
-                    ctx.pushExpression();
-                    ctx.emitWasm(SpiderOpcodes.f64_const, 0);
-                    const falseExpr = ctx.popExpression();
+                            ctx.pushExpression();
+                            ctx.emitWasm(SpiderOpcodes.f64_const, 0);
+                            const falseExpr = ctx.popExpression();
 
-                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
-                    ctx.releaseLocal(local);
+                            ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
+                            ctx.releaseLocal(local);
+                        }
 
-                    return;
+                        return src & (~CatnipValueFormat.F64_NAN);
+                    }
+
+                    if (dst === CatnipValueFormat.F64_INT) {
+                        if (ctx !== null) {
+                            // https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_bi_math.c#L146
+                            const local = ctx.createLocal(SpiderNumberType.f64);
+                            ctx.emitWasm(SpiderOpcodes.local_tee, local.ref);
+
+                            ctx.emitWasmConst(SpiderNumberType.f64, 0.5);
+                            ctx.emitWasm(SpiderOpcodes.f64_lt);
+
+                            ctx.pushExpression();
+                            // The value is less than 0.5
+                            ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            ctx.emitWasmConst(SpiderNumberType.f64, -0.5);
+                            ctx.emitWasm(SpiderOpcodes.f64_lt);
+                            ctx.emitWasm(SpiderOpcodes.i32_eqz);
+
+                            ctx.pushExpression();
+                            // The value is < 0.5 and >= -0.5
+                            ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            ctx.emitWasmConst(SpiderNumberType.f64, 0);
+                            ctx.emitWasm(SpiderOpcodes.f64_lt);
+
+                            ctx.pushExpression();
+                            // The value is < 0 and >= -0.5
+                            ctx.emitWasmConst(SpiderNumberType.f64, -0);
+                            const trueExpression2 = ctx.popExpression();
+
+                            ctx.pushExpression();
+                            // The value is >= 0 and < 0.5
+                            ctx.emitWasmConst(SpiderNumberType.f64, 0);
+                            const falseExpression2 = ctx.popExpression();
+
+                            ctx.emitWasm(SpiderOpcodes.if, trueExpression2, falseExpression2, SpiderNumberType.f64);
+                            const trueExpression1 = ctx.popExpression();
+
+                            ctx.pushExpression();
+                            // The value is < -0.5
+                            ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            ctx.emitWasm(SpiderOpcodes.f64_floor);
+                            const falseExpression1 = ctx.popExpression();
+
+                            ctx.emitWasm(SpiderOpcodes.if, trueExpression1, falseExpression1, SpiderNumberType.f64);
+                            const trueExpression0 = ctx.popExpression();
+
+                            ctx.pushExpression();
+                            // Value is >= 0.5
+                            ctx.emitWasm(SpiderOpcodes.local_get, local.ref);
+                            ctx.emitWasmConst(SpiderNumberType.f64, 0.5);
+                            ctx.emitWasm(SpiderOpcodes.f64_add);
+                            ctx.emitWasm(SpiderOpcodes.f64_floor);
+                            const falseExpression0 = ctx.popExpression();
+
+                            ctx.emitWasm(SpiderOpcodes.if, trueExpression0, falseExpression0, SpiderNumberType.f64);
+                            ctx.releaseLocal(local);
+                        }
+
+                        return CatnipValueFormat.F64_INT;
+                    }
+
+                    notSupported();
                 }
 
                 if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.I32_HSTRING)) {
                     // Convert from a number to a string
-                    ctx.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
-                    return;
+                    if (ctx !== null) {
+                        ctx.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
+                    }
+
+                    return CatnipValueFormat.I32_HSTRING;
                 }
 
                 if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
-                    this._convert(ctx, src, CatnipValueFormat.I32_HSTRING);
-                    this._convert(ctx, CatnipValueFormat.I32_HSTRING, CatnipValueFormat.F64_BOXED_I32_HSTRING);
-                    return;
+                    return this._convert(ctx, this._convert(ctx, src, CatnipValueFormat.I32_HSTRING), CatnipValueFormat.F64_BOXED_I32_HSTRING);
+                }
+
+
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
+                    if (ctx !== null) {
+                        this._convert(ctx, src, CatnipValueFormat.F64_INT);
+                        ctx.emitWasm(SpiderOpcodes.i32_trunc_f64_u);
+                    }
+
+                    return CatnipValueFormat.I32_NUMBER;
                 }
 
                 notSupported();
@@ -82,77 +158,86 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
 
-                // Unbox the pointer from the F64
-                ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
-                ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                if (ctx !== null) {
+                    // Unbox the pointer from the F64
+                    ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                }
 
-                this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
-                return;
+                return this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
             }
 
-            if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
+            if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER_OR_NAN | CatnipValueFormat.I32_NUMBER)) {
                 // Convert from an F64 that may be a boxed hstring or a number into a number
 
-                const value = ctx.createLocal(SpiderNumberType.f64);
-                ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
+                if (ctx !== null) {
 
-                ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
-                ctx.emitWasm(SpiderOpcodes.i64_const, 32);
-                ctx.emitWasm(SpiderOpcodes.i64_shr_u);
-                ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
-                ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
-                ctx.emitWasm(SpiderOpcodes.i32_eq);
+                    const value = ctx.createLocal(SpiderNumberType.f64);
+                    ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
 
-                // Executed if the value is a string
-                ctx.pushExpression();
-                ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
-                this._convert(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst);
-                const trueExpr = ctx.popExpression();
+                    ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
+                    ctx.emitWasm(SpiderOpcodes.i64_const, 32);
+                    ctx.emitWasm(SpiderOpcodes.i64_shr_u);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                    ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
+                    ctx.emitWasm(SpiderOpcodes.i32_eq);
 
-                // Executed if the value is a double already
-                ctx.pushExpression();
-                ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
-                this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
-                const falseExpr = ctx.popExpression();
+                    // Executed if the value is a string
+                    ctx.pushExpression();
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    let type = this._convert(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst);
+                    const trueExpr = ctx.popExpression();
 
-                ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
-                ctx.releaseLocal(value);
-                return;
+                    // Executed if the value is a double already
+                    ctx.pushExpression();
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    type |= this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                    const falseExpr = ctx.popExpression();
+
+                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
+                    ctx.releaseLocal(value);
+
+                    return type;
+                } else {
+                    return this._convert(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst) | this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                }
             }
 
             if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_HSTRING)) {
-                // Convert from an F64 that may be a boxed hstring or a number to an hstring
+                if (ctx !== null) {
+                    // Convert from an F64 that may be a boxed hstring or a number to an hstring
+                    const value = ctx.createLocal(SpiderNumberType.i64);
+                    ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
+                    ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
 
-                const value = ctx.createLocal(SpiderNumberType.i64);
-                ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
-                ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
+                    ctx.emitWasm(SpiderOpcodes.i64_const, 32);
+                    ctx.emitWasm(SpiderOpcodes.i64_shr_u);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                    ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
+                    ctx.emitWasm(SpiderOpcodes.i32_eq);
 
-                ctx.emitWasm(SpiderOpcodes.i64_const, 32);
-                ctx.emitWasm(SpiderOpcodes.i64_shr_u);
-                ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
-                ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
-                ctx.emitWasm(SpiderOpcodes.i32_eq);
+                    // Executed if the value is a string
+                    ctx.pushExpression();
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
 
-                // Executed if the value is a string
-                ctx.pushExpression();
-                ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    // Should really be i64 -> F64_BOXED_I32_HSTRING -> CatnipValueFormat.I32_HSTRING
+                    //  but we can go directly from i64 -> CatnipValueFormat.I32_HSTRING
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
 
-                // Should really be i64 -> F64_BOXED_I32_HSTRING -> CatnipValueFormat.I32_HSTRING
-                //  but we can go directly from i64 -> CatnipValueFormat.I32_HSTRING
-                ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                    const trueExpr = ctx.popExpression();
 
-                const trueExpr = ctx.popExpression();
+                    // Executed if the value is a double already
+                    ctx.pushExpression();
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
+                    this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_HSTRING);
+                    const falseExpr = ctx.popExpression();
 
-                // Executed if the value is a double already
-                ctx.pushExpression();
-                ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
-                ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
-                this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_HSTRING);
-                const falseExpr = ctx.popExpression();
+                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
+                    ctx.releaseLocal(value);
+                }
 
-                ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
-                ctx.releaseLocal(value);
-                return;
+                return CatnipValueFormat.I32_HSTRING;
             }
 
             notSupported();
@@ -161,46 +246,60 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32)) {
 
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_HSTRING)) {
-                ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
-                this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
-                return;
+                if (ctx !== null) {
+                    ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
+                }
+                return this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
             }
 
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_BOOLEAN)) {
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_HSTRING | CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
                     // boolean -> string
 
-                    ctx.pushExpression();
-                    ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("true"));
-                    const trueExpr = ctx.popExpression();
+                    if (ctx !== null) {
+                        ctx.pushExpression();
+                        ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("true"));
+                        const trueExpr = ctx.popExpression();
 
-                    ctx.pushExpression();
-                    ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("false"));
-                    const falseExpr = ctx.popExpression();
+                        ctx.pushExpression();
+                        ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("false"));
+                        const falseExpr = ctx.popExpression();
 
-                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
+                        ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
+                    }
 
-                    this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
-                    return;
+                    return this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
                 }
 
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
-                    ctx.emitWasmConst(SpiderNumberType.i32, 0);
-                    ctx.emitWasm(SpiderOpcodes.i32_ne);
-                    return;
+                    if (ctx !== null) {
+                        ctx.emitWasmConst(SpiderNumberType.i32, 0);
+                        ctx.emitWasm(SpiderOpcodes.i32_ne);
+                    }
+                    return CatnipValueFormat.I32_NUMBER;
                 }
 
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER)) {
-                    ctx.emitWasmConst(SpiderNumberType.i32, 0);
-                    ctx.emitWasm(SpiderOpcodes.i32_ne);
-                    ctx.emitWasm(SpiderOpcodes.f64_convert_i32_u);
-
-                    this._convert(ctx, CatnipValueFormat.F64_ZERO | CatnipValueFormat.F64_POS_INT, dst);
-                    return;
+                    if (ctx !== null) {
+                        ctx.emitWasmConst(SpiderNumberType.i32, 0);
+                        ctx.emitWasm(SpiderOpcodes.i32_ne);
+                        ctx.emitWasm(SpiderOpcodes.f64_convert_i32_u);
+                    }
+                    return this._convert(ctx, CatnipValueFormat.F64_ZERO | CatnipValueFormat.F64_POS_INT, dst);
                 }
+            }
+
+            if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_NUMBER)) {
+                if (ctx !== null) {
+                    ctx.emitWasm(SpiderOpcodes.f64_convert_i32_s);
+                }
+
+                return this._convert(ctx, CatnipValueFormat.F64_INT, dst);
             }
 
             notSupported();
         }
+
+        notSupported();
     }
 }

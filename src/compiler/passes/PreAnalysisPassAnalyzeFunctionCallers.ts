@@ -6,7 +6,7 @@ import { CatnipCompilerPass } from "./CatnipCompilerPass";
 
 export const PreLoopPassAnalyzeFunctionCallers: CatnipCompilerPass = {
 
-    stage: CatnipCompilerStage.PASS_PRE_ANALYSIS_LOOP,
+    stage: CatnipCompilerStage.PASS_PRE_ANALYSIS,
 
     run(ir: CatnipReadonlyIr): void {
         ir.forEachOp(op => {

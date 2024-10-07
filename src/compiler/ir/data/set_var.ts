@@ -2,10 +2,11 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipVariable } from "../../../runtime/CatnipVariable";
-import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipTarget } from "../../../runtime/CatnipTarget";
+import { CatnipCompilerState } from "../../CatnipCompilerState";
 
 export type set_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable };
 
@@ -13,6 +14,10 @@ export const ir_set_var = new class extends CatnipIrCommandOpType<set_var_ir_inp
     public constructor() { super("data_set_var"); }
 
     public getOperandCount(): number { return 1; }
+
+    public applyState(ir: CatnipReadonlyIrOp<set_var_ir_inputs>, state: CatnipCompilerState): void {
+        state.setVariableValue(ir.inputs.variable, ir.operands[0]);
+    }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<set_var_ir_inputs>): void {
 

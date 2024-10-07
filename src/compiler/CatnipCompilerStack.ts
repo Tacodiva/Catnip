@@ -11,12 +11,14 @@ export interface CatnipCompilerReadonlyStack {
 
 export interface CatnipCompilerStackEntry {
     readonly value: CatnipCompilerValue;
-    readonly source: CatnipIrInputOp;
+    readonly source: CatnipIrInputOp | null;
 }
 
 export class CatnipCompilerStack implements CatnipCompilerReadonlyStack {
 
     private readonly _stack: CatnipCompilerStackEntry[];
+
+    public get values(): readonly CatnipCompilerStackEntry[] { return this._stack; }
 
     public get length() { return this._stack.length; }
 
@@ -82,7 +84,40 @@ export class CatnipCompilerStack implements CatnipCompilerReadonlyStack {
         return this._stack[this._stack.length - (offset + 1)];
     }
 
-    public push(value: CatnipCompilerValue, source: CatnipIrInputOp) {
+    public push(value: CatnipCompilerValue, source: CatnipIrInputOp | null) {
         this._stack.push({ value, source });
+    }
+
+    public isSubsetOf(other: CatnipCompilerStack): boolean {
+        if (this.length !== other.length) return false;
+
+        for (let i = 0; i < this.length; i++) {
+            const ourEntry = this._stack[i];
+            const otherEntry = other._stack[i];
+
+            if (!ourEntry.value.isSubsetOf(otherEntry.value))
+                return false;
+        }
+
+        return true;
+    }
+
+    public or(other: CatnipCompilerStack): CatnipCompilerStack {
+        if (this.length !== other.length)
+            throw new Error("Incompatible stack length.");
+
+        const newStack = new CatnipCompilerStack();
+
+        for (let i = 0; i < this.length; i++) {
+            const ourEntry = this._stack[i];
+            const otherEntry = other._stack[i];
+
+            newStack.push(
+                ourEntry.value.or(otherEntry.value),
+                null
+            );
+        }
+
+        return newStack;
     }
 }

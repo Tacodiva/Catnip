@@ -187,11 +187,9 @@ class FunctionState {
 }
 
 export const LoopPassVariableInlining: CatnipCompilerPass = {
-    stage: CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP,
+    stage: CatnipCompilerStage.PASS_POST_ANALYSIS,
 
     run(ir: CatnipReadonlyIr): void {
-        console.log("INLINING!");
-
         function optimizeFunction(func: CatnipReadonlyIrFunction) {
 
             const visitedBranches: Map<CatnipReadonlyIrBasicBlock, VariableCfgNode> = new Map();

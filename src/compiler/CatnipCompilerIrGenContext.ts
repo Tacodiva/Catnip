@@ -192,6 +192,7 @@ export class CatnipCompilerIrGenContext {
         inputs: TInputs,
         branches: CatnipIrOpBranches<TBranches>
     ) {
+
         const operandCount = type.getOperandCount(inputs, branches);
         const operands = this._body.stack.pop(operandCount);
 
@@ -275,7 +276,7 @@ export class CatnipCompilerIrGenContext {
         if (!this._body.doesContinue()) return;
         const operand = this.stack.peekDetailed();
 
-        if (operand.value.format !== format) {
+        if (operand.source !== null && operand.value.format !== format) {
             if (!operand.source.type.tryCast(operand.source, format)) {
                 this.emitIr(ir_cast, { format }, {});
             }

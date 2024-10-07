@@ -3,23 +3,25 @@ import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWa
 import { CatnipVariable } from "../../../runtime/CatnipVariable";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
-import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
 import { CatnipTarget } from '../../../runtime/CatnipTarget';
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
+import { CatnipCompilerState } from "../../CatnipCompilerState";
 
 export type get_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable };
 
 export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_inputs> {
 
-    constructor() { super("data_get_value"); }
+    constructor() { super("data_get_var"); }
 
     public getOperandCount(): number { return 0; }
 
-    public getResult(): CatnipCompilerValue {
-        return CatnipCompilerValue.dynamic(CatnipValueFormat.F64);
-    }
+    public getResult(ir: CatnipReadonlyIrOp<get_var_ir_inputs>, state?: CatnipCompilerState): CatnipCompilerValue {
+        if (state === undefined) return CatnipCompilerValue.dynamic(CatnipValueFormat.F64);
+        return state.getVariableValue(ir.inputs.variable);
+    }    
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<get_var_ir_inputs>, branch: CatnipIrBasicBlock): void {
         const variable = ir.inputs.variable;
@@ -31,5 +33,6 @@ export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_input
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("variable_table"));
         ctx.emitWasm(SpiderOpcodes.f64_load, 3, variableOffset);
     }
+
 }
 

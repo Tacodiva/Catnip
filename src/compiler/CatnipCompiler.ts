@@ -4,10 +4,10 @@ import { CatnipProjectModule, CatnipProjectModuleEvent } from "./CatnipProjectMo
 import { CatnipCompilerConfig, catnipCreateDefaultCompilerConfig } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
-import { LoopPassVariableInlining } from "./passes/PostLoopPassVariableInlining";
+import { LoopPassVariableInlining } from "./passes/PostAnalysisPassVariableInlining";
 import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunctionIndexAllocation";
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
-import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreLoopPassAnalyzeFunctionCallers";
+import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreAnalysisPassAnalyzeFunctionCallers";
 import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
 import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderExportFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
@@ -22,6 +22,7 @@ import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
 import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
+import { LoopPassTypeAnalysis } from "./passes/AnalysisPassTypeAnalysis";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -74,6 +75,9 @@ export class CatnipCompiler {
 
         if (this.config.enable_optimization_variable_inlining)
             this.addPass(LoopPassVariableInlining);
+
+        if (this.config.enable_optimization_type_analysis)
+            this.addPass(LoopPassTypeAnalysis)
 
         this.addPass(PreWasmPassTransientVariablePropagation);
         this.addPass(PreWasmPassFunctionIndexAllocation);
@@ -159,9 +163,9 @@ export class CatnipCompiler {
     _createCommandIR(ir: CatnipIr) {
         ir.createCommandIR();
 
-        this._runPass(ir, CatnipCompilerStage.PASS_PRE_ANALYSIS_LOOP);
-        this._runPass(ir, CatnipCompilerStage.PASS_ANALYSIS_LOOP);
-        this._runPass(ir, CatnipCompilerStage.PASS_POST_ANALYSIS_LOOP);
+        this._runPass(ir, CatnipCompilerStage.PASS_PRE_ANALYSIS);
+        this._runPass(ir, CatnipCompilerStage.PASS_ANALYSIS);
+        this._runPass(ir, CatnipCompilerStage.PASS_POST_ANALYSIS);
         this._runPass(ir, CatnipCompilerStage.PASS_PRE_WASM_GEN);
 
         console.log("" + ir);

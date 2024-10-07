@@ -277,6 +277,8 @@ export class SB3ScriptReader {
     }
 
     public readStack(stack: ProjectSB3Input | string | null): CatnipCommandList {
+        if (stack === null) return [];
+        
         let stackID: string | null = this.readBlockID(stack);
         const stackCommands: CatnipCommandList = [];
 
