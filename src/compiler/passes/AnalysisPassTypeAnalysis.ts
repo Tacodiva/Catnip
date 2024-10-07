@@ -67,6 +67,15 @@ export function doTypeAnalysis(func: CatnipIrFunction) {
                         const branch = op.branches[branchName];
 
                         if (branch.branchType === CatnipIrBranchType.EXTERNAL || branch.body.func !== func) {
+
+                            if (branchesExitState === null) {
+                                branchesExitState = {
+                                    stack: stack.clone(),
+                                    state: new CatnipCompilerState()
+                                }
+                            } else {
+                                branchesExitState.state = new CatnipCompilerState();
+                            }
                             // Clear the state, we don't know who we're calling.
                             continue;
                         }

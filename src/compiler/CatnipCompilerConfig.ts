@@ -5,6 +5,8 @@ export interface CatnipCompilerConfig {
     /** Slows execution down, but useful for testing variable inlining */
     enable_optimization_variable_inlining_force?: boolean;
     enable_optimization_type_analysis?: boolean;
+
+    enable_warp_timer?: boolean;
 }
 
 export function catnipCreateDefaultCompilerConfig(): CatnipCompilerConfig {
@@ -13,5 +15,6 @@ export function catnipCreateDefaultCompilerConfig(): CatnipCompilerConfig {
         enable_optimization_variable_inlining: true,
         enable_optimization_variable_inlining_force: false,
         enable_optimization_type_analysis: true,
+        enable_warp_timer: false,
     }
 }

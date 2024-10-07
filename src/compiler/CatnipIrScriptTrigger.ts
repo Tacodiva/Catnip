@@ -32,4 +32,8 @@ export abstract class CatnipIrScriptTriggerType<TInputs extends CatnipIrScriptTr
     public postIR(ctx: CatnipCompilerIrGenContext, inputs: TInputs) {
         ctx.emitIr(ir_barrier, {}, {});
     }
+
+    public isWarp(ir: CatnipReadonlyIr, inputs: TInputs): boolean {
+        return false;
+    }
 }

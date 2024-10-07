@@ -17,6 +17,7 @@ export interface CatnipIrProcedureTriggerArg {
 export type ir_procedure_trigger_inputs = {
     readonly id: CatnipProcedureID;
     readonly args: CatnipIrProcedureTriggerArg[];
+    readonly warp: boolean;
 };
 
 export const ir_procedure_trigger = new class extends CatnipIrScriptTriggerType<ir_procedure_trigger_inputs> {
@@ -26,20 +27,27 @@ export const ir_procedure_trigger = new class extends CatnipIrScriptTriggerType<
         ir.compiler.getSubsystem(CatnipCompilerProcedureSubsystem).registerProcedure(trigger);
         return trigger;
     }
-    
+
     public requiresFunctionIndex(): boolean {
         return false;
     }
 
-    public requiresReturnLocation(): boolean {
-        return true;
+    public requiresReturnLocation(ir: CatnipReadonlyIr, inputs: ir_procedure_trigger_inputs): boolean {
+        return ir.preAnalysis.isYielding;
+    }
+    
+    public isWarp(ir: CatnipReadonlyIr, inputs: ir_procedure_trigger_inputs): boolean {
+        return inputs.warp;
     }
 
     public postIR(ctx: CatnipCompilerIrGenContext, inputs: ir_procedure_trigger_inputs): void {
         super.postIR(ctx, inputs);
-        ctx.emitIr(ir_transient_load, { transient: ctx.ir.returnLocationVariable }, {});
-        ctx.emitIr(ir_return, {}, {});
+        if (ctx.ir.preAnalysis.isYielding) {
+            ctx.emitIr(ir_transient_load, { transient: ctx.ir.returnLocationVariable }, {});
+            ctx.emitIr(ir_return, {}, {});
+        }
     }
+
 }
 
 export type CatnipIrScriptProcedureTrigger = CatnipIrScriptTrigger<ir_procedure_trigger_inputs, typeof ir_procedure_trigger>;

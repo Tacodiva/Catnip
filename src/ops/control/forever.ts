@@ -12,6 +12,10 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
         yield inputs.loop;
     }
 
+    public isYielding(ir: CatnipIr): boolean {
+        return ir.compiler.config.enable_warp_timer || !ir.isWarp;
+    }
+
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: forever_inputs): void {
         ctx.emitIr(ir_nop, { comment: "Before" }, {});
         ctx.emitIr(
@@ -19,6 +23,7 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
             {
                 branch: ctx.emitBranch((loopHead) => {
                     ctx.emitCommands(inputs.loop);
+                    ctx.emitLoopYield();
                     ctx.emitJump(loopHead);
                 })
             }

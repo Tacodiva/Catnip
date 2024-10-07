@@ -19,6 +19,7 @@ export interface CatnipReadonlyIr {
     readonly entrypoint: CatnipReadonlyIrFunction;
     readonly functions: readonly CatnipReadonlyIrFunction[];
     readonly trigger: CatnipIrScriptTrigger;
+    readonly preAnalysis: Readonly<CatnipIrPreAnalysis>;
 
     forEachOp(lambda: (op: CatnipReadonlyIrOp) => void): void;
     getUniqueTransientVariableName(name: string): string;
@@ -51,10 +52,19 @@ export class CatnipIr implements CatnipReadonlyIr {
 
     public readonly trigger: CatnipIrScriptTrigger;
 
+    public get hasReturnLocation(): boolean {
+        return this.trigger.type.requiresReturnLocation(this, this.trigger.inputs);
+    }
+
     private _returnLocationVariable: CatnipIrTransientVariable | null;
     public get returnLocationVariable(): CatnipIrTransientVariable {
-        if (this._returnLocationVariable === null)
-            throw new Error("Function does not have a return location");
+        if (this._returnLocationVariable === null) {
+            if (this.hasReturnLocation) {
+                throw new Error("Function does not have a return location");
+            } else {
+                this._returnLocationVariable = new CatnipIrTransientVariable(this, CatnipValueFormat.I32, "Return Location");
+            }
+        }
         return this._returnLocationVariable;
     }
 
@@ -64,7 +74,9 @@ export class CatnipIr implements CatnipReadonlyIr {
             throw new Error("IR does not have a pre analysis.");
         return this._preAnalysis;
     }
-    
+
+    public readonly isWarp: boolean;
+
     public constructor(compiler: CatnipCompiler, script: CatnipScript) {
         this.compiler = compiler;
         this._entrypoint = null;
@@ -77,11 +89,8 @@ export class CatnipIr implements CatnipReadonlyIr {
 
         this.trigger = script.trigger.type.createTriggerIR(this, script.trigger.inputs);
 
-        if (this.trigger.type.requiresReturnLocation(this, this.trigger.inputs)) {
-            this._returnLocationVariable = new CatnipIrTransientVariable(this, CatnipValueFormat.I32, "Return Location");
-        } else {
-            this._returnLocationVariable = null;
-        }
+        this._returnLocationVariable = null;
+        this.isWarp = this.trigger.type.isWarp(this, this.trigger.inputs);
 
         this._preAnalysis = null;
     }
@@ -199,7 +208,7 @@ export class CatnipIr implements CatnipReadonlyIr {
                         const subbranch = op.branches[subbranchName];
                         string += "\n  ";
                         string += indent;
-                        
+
                         if (subbranch.branchType === CatnipIrBranchType.INTERNAL && subbranch.isLoop)
                             string += "(loop) ";
 
@@ -224,7 +233,7 @@ export class CatnipIr implements CatnipReadonlyIr {
                                     string += subbranch.body.func.ir.entrypoint.name;
                                     string += "']"
                                 }
-                                if (subbranch.branchType === CatnipIrBranchType.EXTERNAL) {
+                                if (subbranch.branchType === CatnipIrBranchType.EXTERNAL && subbranch.isYielding()) {
                                     string += " [RETURN ";
                                     string += subbranch.returnLocation ? (`'${subbranch.returnLocation.body.func.name}' (fntbl ${subbranch.returnLocation.body.func.hasFunctionTableIndex ? subbranch.returnLocation.body.func.functionTableIndex : "[NONE!]"})`) : "null";
                                     string += "]"
@@ -253,7 +262,7 @@ export class CatnipIr implements CatnipReadonlyIr {
             if (func.body.func !== func) string += `(BODY FUNC MISMATCH!!) `
 
             let hasTransients = false;
-            for (const variableInfo of func.transientVariables) { 
+            for (const variableInfo of func.transientVariables) {
                 hasTransients = true;
                 string += "\n  <'";
                 string += variableInfo.variable.name;

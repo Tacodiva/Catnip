@@ -15,15 +15,9 @@ export const op_log = new class extends CatnipCommandOpType<log_inputs> {
         yield inputs.msg;
     }
 
-    public isYielding(): boolean { // TODO Get rid of this
-        return true;
-        // return false;
-    }
-
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: log_inputs): void {
         ctx.emitInput(inputs.msg, CatnipValueFormat.I32_HSTRING);
 
         ctx.emitCallback("log", (msg: string) => this._logger.log(msg), [CatnipValueFormat.I32_HSTRING], null);
-        ctx.emitYield();
     }
 }

@@ -21,6 +21,10 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
         yield inputs.loop;
     }
 
+    public isYielding(ir: CatnipIr): boolean {
+        return ir.compiler.config.enable_warp_timer || !ir.isWarp;
+    }
+
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: repeat_inputs): void {
         const loopCount = ctx.emitTransientCreate(CatnipValueFormat.I32_NUMBER, "Loop Count");
 
@@ -39,6 +43,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
                     ctx.emitIr(ir_transient_store, { transient: loopCount }, {});
 
                     ctx.emitCommands(inputs.loop);
+                    ctx.emitLoopYield();
 
                     ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
                     ctx.emitConditionalJump(loopHead);

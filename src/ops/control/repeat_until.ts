@@ -15,6 +15,10 @@ export const op_repeat_until = new class extends CatnipCommandOpType<repeat_unti
         yield inputs.loop;
     }
 
+    public isYielding(ir: CatnipIr): boolean {
+        return ir.compiler.config.enable_warp_timer || !ir.isWarp;
+    }
+
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: repeat_until_inputs): void {
         ctx.emitIr(
             ir_branch, {},
@@ -26,6 +30,7 @@ export const op_repeat_until = new class extends CatnipCommandOpType<repeat_unti
                     ctx.emitIr(ir_if_else, {}, {
                         true_branch: ctx.emitBranch(() => {
                             ctx.emitCommands(inputs.loop);
+                            ctx.emitLoopYield();
                             ctx.emitJump(loopHead);
                         }),
                         false_branch: ctx.emitBranch()

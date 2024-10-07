@@ -25,6 +25,7 @@ export interface SB3ProcedureArgumentInfo {
 }
 
 export interface SB3ProcedureInfo {
+    readonly warp: boolean;
     readonly procedureID: CatnipProcedureID;
     readonly args: readonly SB3ProcedureArgumentInfo[];
 }
@@ -73,11 +74,12 @@ export class SB3ReadMetadata {
         return (this._procedureCount++) + "_" + proccode;
     }
 
-    public addProcedure(proccode: string, args: readonly SB3ProcedureArgumentInfo[]): CatnipProcedureID {
+    public addProcedure(proccode: string, args: readonly SB3ProcedureArgumentInfo[], warp: boolean): CatnipProcedureID {
         const procedureID = this._assignProcedureID(proccode);
         this._procedureMap.set(proccode, {
             procedureID,
-            args
+            args,
+            warp
         });
         return procedureID;
     }

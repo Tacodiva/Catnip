@@ -24,6 +24,7 @@ export class CatnipCompilerIrGenContext {
     public readonly ir: CatnipIr;
     public get compiler() { return this.ir.compiler; }
     public get project() { return this.compiler.project; }
+    public get isWarp() { return this.ir.isWarp; }
 
     private _branch: CatnipIrInternalBranch;
     private get _body() { return this._branch.body; }
@@ -370,6 +371,14 @@ export class CatnipCompilerIrGenContext {
                 operandCount: argTypes.length,
                 resultFormat: returnType
             }, {});
+        }
+    }
+
+    public emitLoopYield() {
+        if (!this.isWarp) {
+            this.emitYield();
+        } else if (this.compiler.config.enable_warp_timer) {
+            // TODO Warp timer
         }
     }
 

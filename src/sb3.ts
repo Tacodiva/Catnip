@@ -106,7 +106,7 @@ export interface ProjectSB3MutationProcedure extends ProjectSB3MutationBase {
     /** A string which contains a JSON array of the ids of the arguments; these can also be found in the input property of the main block. */
     argumentids: string;
     /** True if this block runs without screen refresh. */
-    warp: boolean;
+    warp: "true" | "false";
 }
 
 export interface ProjectSB3MutationProcedurePrototype extends ProjectSB3MutationProcedure {

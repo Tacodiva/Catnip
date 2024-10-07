@@ -398,7 +398,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                 if (node.sync !== null) {
 
                     for (const [variable, variableState] of state.variables) {
-                        if (!variableState.isDefinitlySynced || !variableState.isDefinitlyInitizlied) {
+                        if (!variableState.isDefinitlySynced) { // why did we have `|| !variableState.isDefinitlyInitizlied` here?
                             modified = true;
 
                             variableState.isDefinitlySynced = true;

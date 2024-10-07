@@ -22,7 +22,8 @@ export interface CatinpProcedureTriggerArg {
 
 export type procedure_trigger_inputs = {
     id: CatnipProcedureID,
-    args: CatinpProcedureTriggerArg[]
+    args: CatinpProcedureTriggerArg[],
+    warp: boolean,
 }
 
 export const procedure_trigger = new class extends CatnipScriptTriggerType<procedure_trigger_inputs> {
@@ -41,7 +42,8 @@ export const procedure_trigger = new class extends CatnipScriptTriggerType<proce
 
         return ir_procedure_trigger.create(ir, {
             id: inputs.id,
-            args
+            args,
+            warp: inputs.warp
         });
     }
 
@@ -94,13 +96,17 @@ registerSB3HatBlock("procedures_definition", (ctx, block) => {
         });
     }
 
+    const warp = procPrototype.mutation.warp === "true";
+
     const procedureID = ctx.meta.addProcedure(
         proccode,
-        sb3Args
-    )
+        sb3Args,
+        warp
+    );
 
     return procedure_trigger.create({
         id: procedureID,
-        args: catnipArgs
+        args: catnipArgs,
+        warp
     });
 });

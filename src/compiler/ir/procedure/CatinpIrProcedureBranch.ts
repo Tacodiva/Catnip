@@ -31,7 +31,6 @@ export class CatnipIrProcedureBranch extends CatnipIrExternalBranch {
     protected _isYielding(visited: Set<CatnipIrBasicBlock>): boolean {
         const ir = this._tryResolveIR();
         if (ir === null) throw new Error("IR not resolved.");
-        if (ir.hasCommandIR) return ir.entrypoint.body.isYielding(visited);
         return ir.preAnalysis.isYielding;
     }
 

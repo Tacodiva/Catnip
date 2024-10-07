@@ -192,15 +192,14 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
 
         let valueSource: CatnipIrExternalValueSource;
 
-        if (this.isEntrypoint) {
-
-            const trigger = this.ir.trigger;
-
-            if (trigger.type.requiresReturnLocation(this.ir, trigger.inputs) && source.variable === this.ir.returnLocationVariable) {
+        if (this.isEntrypoint) {            
+            if (this.ir.hasReturnLocation && source.variable === this.ir.returnLocationVariable) {
                 valueSource = {
                     type: CatnipIrExternalValueSourceType.RETURN_LOCATION
                 }
             } else {
+                const trigger = this.ir.trigger;
+
                 if (trigger.type !== ir_procedure_trigger) throw new Error("Can only source arguments from procedures.");
                 const triggerInputs = trigger.inputs as ir_procedure_trigger_inputs;
 
