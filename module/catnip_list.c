@@ -40,16 +40,20 @@ catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const
   CATNIP_ASSERT_LIST_VALID(list);
   CATNIP_ASSERT(item != CATNIP_NULL);
 
+  catnip_ui32_t item_index = list->length;
+  ++list->length;
+
   if (list->length == list->capacity) {
-    list->capacity *= 2;
-    void *new_data = catnip_mem_alloc(list->capacity * item_size);
+    catnip_ui32_t new_capacity = list->capacity * 2;
+    void *new_data = catnip_mem_alloc(new_capacity * item_size);
     catnip_mem_copy(new_data, list->data, list->capacity * item_size);
     catnip_mem_free(list->data);
+    list->capacity = new_capacity;
     list->data = new_data;
   }
 
-  catnip_mem_copy(&list->data[list->length * item_size], item, item_size);
-  return list->length++;
+  catnip_mem_copy(&list->data[item_index * item_size], item, item_size);
+  return list->length;
 }
 
 void *catnip_list_get(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index) {
