@@ -7,7 +7,7 @@ import { CatnipScriptTriggerType } from "../CatnipScriptTrigger";
 export const when_flag_clicked_trigger = new class extends CatnipScriptTriggerType<{}> {
     public createTriggerIR(ir: CatnipIr): CatnipIrScriptTrigger {
         return ir_event_trigger.create(ir, {
-            id: "when_flag_clicked",
+            id: "PROJECT_START",
             priority: 0,
         })
     }

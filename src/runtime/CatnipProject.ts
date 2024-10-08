@@ -8,9 +8,16 @@ import { CatnipScript } from "./CatnipScript";
 import { CatnipSprite, CatnipSpriteDesc, CatnipSpriteID } from "./CatnipSprite";
 import { CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
 import { CatnipWasmUnionValue } from "../wasm-interop/CatnipWasmStructValue";
+import { CatnipEventArgs, CatnipEventID, CatnipEventListener } from "../CatnipEvents";
+import { CatnipProjectModule } from "../compiler/CatnipProjectModule";
 
 export interface CatnipProjectDesc {
     sprites: CatnipSpriteDesc[];
+}
+
+interface EventInfo<TEventID extends CatnipEventID = CatnipEventID> {
+    rawListeners: ((...args: any[]) => void)[];
+    jsListeners: CatnipEventListener<TEventID>[];
 }
 
 export class CatnipProject {
@@ -18,22 +25,29 @@ export class CatnipProject {
     public readonly runtimeModule: CatnipRuntimeModule;
     public readonly runtimeInstance: WasmStructWrapper<typeof CatnipWasmStructRuntime>;
 
+    private _projectModule: CatnipProjectModule | null;
+
     private readonly _sprites: Map<CatnipSpriteID, CatnipSprite>;
     private _rewriteSpritesList: boolean;
     private _rewriteSprites: Set<CatnipSprite>;
+
+    private readonly _events: Map<CatnipEventID, EventInfo>;
 
     private _recompileScripts: Set<CatnipScript>;
 
     /** @internal */
     public constructor(runtime: CatnipRuntimeModule, desc: CatnipProjectDesc) {
         this.runtimeModule = runtime;
-        this._sprites = new Map();
-
         this.runtimeInstance = this.runtimeModule.createRuntimeInstance();
+
+        this._sprites = new Map();
+        this._projectModule = null;
 
         this._rewriteSpritesList = true;
         this._rewriteSprites = new Set();
         this._recompileScripts = new Set();
+
+        this._events = new Map();
 
         for (const spriteDesc of desc.sprites)
             this.createSprite(spriteDesc);
@@ -69,6 +83,49 @@ export class CatnipProject {
 
     public rewrite(): Promise<void> {
         return this._rewrite();
+    }
+
+    private _getEventInfo<TEventID extends CatnipEventID>(event: TEventID): EventInfo<TEventID> {
+        let eventInfo = this._events.get(event);
+        if (eventInfo === undefined) {
+            eventInfo = {
+                jsListeners: [],
+                rawListeners: []
+            };
+            this._events.set(event, eventInfo);
+        }
+        return eventInfo as EventInfo<TEventID>;
+    }
+
+    public registerEventListener<TEventID extends CatnipEventID>(event: TEventID, listener: CatnipEventListener<TEventID>) {
+        this._getEventInfo(event).jsListeners.push(listener);
+    }
+
+    public registerRawEventListener<TEventID extends CatnipEventID>(event: TEventID, listener: (...args: any[]) => void) {
+        this._getEventInfo(event).rawListeners.push(listener);
+    }
+
+    public getEventIDs(): IterableIterator<CatnipEventID> {
+        return this._events.keys();
+    }
+
+    public hasEventListeners(event: CatnipEventID): boolean {
+        const info = this._events.get(event);
+        if (info === undefined) return false;
+        return info.jsListeners.length !== 0 || info.rawListeners.length !== 0;
+    }
+
+    public getEventListeners<TEventID extends CatnipEventID>(event: TEventID): readonly CatnipEventListener<TEventID>[] {
+        return this._events.get(event)?.jsListeners ?? [];
+    }
+
+    public getRawEventListeners<TEventID extends CatnipEventID>(event: TEventID): readonly ((...args: any[]) => void)[] {
+        return this._events.get(event)?.rawListeners ?? [];
+    }
+
+    public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>): void {
+        if (this._projectModule === null) this.rewrite();
+        this._projectModule!.triggerEvent(event, ...args);
     }
 
     /** @internal */
@@ -122,15 +179,15 @@ export class CatnipProject {
     private async _recompile(): Promise<void> {
         if (this._recompileScripts.size === 0) return;
 
-        
+
         const compiler = new CatnipCompiler(this);
-        
+
         console.time("compile");
         for (const script of this._recompileScripts) {
             compiler.addScript(script);
         }
 
-        const module = await compiler.createModule();
+        this._projectModule = await compiler.createModule();
         console.timeEnd("compile");
 
         if (globalThis.document && window.location.href.endsWith("download")) {
@@ -161,12 +218,12 @@ export class CatnipProject {
 
         const stage = [...this._sprites.values()][0];
         const printVariable = stage.getVariable("2");
-        module.triggerEvent("when_flag_clicked");
+        this._projectModule.triggerEvent("PROJECT_START");
 
         for (let tick = 1; tick <= 20; tick++) {
-            console.time(""+tick);
+            console.time("" + tick);
             this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-            console.timeEnd(""+tick);
+            console.timeEnd("" + tick);
             // if (printVariable !== undefined) {
             //     console.log("nth = " + printVariable.sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(printVariable._index).getMemberWrapper(0).get());
             // }

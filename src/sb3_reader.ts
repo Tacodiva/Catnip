@@ -1,4 +1,3 @@
-import { CatnipEventID } from "./compiler/ir/core/event_trigger";
 import { createLogger, Logger } from "./log";
 import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./ops";
 import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
@@ -40,9 +39,6 @@ export class SB3ReadMetadata {
     private _variableMap: Map<string, SB3VariableInfo>;
     private _variableCount: number;
 
-    private _broadcastMap: Map<string, CatnipEventID>;
-    private _broadcastCount: number;
-
     public constructor() {
         this._spriteCount = 0;
         this._scriptCount = 0;
@@ -50,8 +46,6 @@ export class SB3ReadMetadata {
         this._variableMap = new Map();
         this._procedureCount = 0;
         this._procedureMap = new Map();
-        this._broadcastCount = 0;
-        this._broadcastMap = new Map();
     }
 
     private _assignVariableID(): CatnipVariableID {
@@ -90,25 +84,12 @@ export class SB3ReadMetadata {
         return procedureInfo;
     }
 
-    public getBroadcast(id: string, name: string): CatnipEventID {
-        let broadcastEvent = this._broadcastMap.get(id);
-        if (broadcastEvent === undefined) {
-            broadcastEvent = this._assignBroadcastID(name);
-            this._broadcastMap.set(id, broadcastEvent);
-        }
-        return broadcastEvent;
-    }
-
     public assignSpriteID(): CatnipSpriteID {
         return (this._spriteCount++) + "";
     }
 
     public assignScriptID(): CatnipScriptID {
         return (this._scriptCount++) + "";
-    }
-
-    private _assignBroadcastID(name: string): CatnipEventID {
-        return name + "_" + (this._broadcastCount++);
     }
 }
 

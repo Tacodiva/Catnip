@@ -16,8 +16,16 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<ir_broadcast_inputs>): void {
         const broadcastName = ir.operands[0];
 
-        ctx.emitWasmGetThread();
-        ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("runtime"));
+        const broadcastEventFunc = ctx.compiler.getEventFunction("PROJECT_BROADCAST");
+        const broadcastNameVariable = ctx.createLocal(SpiderNumberType.i32);
+
+        if (broadcastEventFunc !== null) {
+            if (broadcastName.isConstant) {
+                ctx.emitWasm(SpiderOpcodes.local_set, broadcastNameVariable.ref);
+            } else {
+                ctx.emitWasm(SpiderOpcodes.local_tee, broadcastNameVariable.ref);
+            }
+        }
 
         if (ir.inputs.threadListVariable === null) {
             ctx.emitWasmConst(SpiderNumberType.i32, 0);
@@ -25,7 +33,7 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
             ctx.emitWasmConst(SpiderNumberType.i32, CatnipWasmPtrThread.size);
             ctx.emitWasmConst(SpiderNumberType.i32, 4);
             ctx.emitWasmRuntimeFunctionCall("catnip_list_new");
-            
+
             ctx.emitWasm(SpiderOpcodes.local_tee, ctx.getTransientVariableRef(ir.inputs.threadListVariable));
         }
 
@@ -34,6 +42,10 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
                 SpiderOpcodes.call,
                 ctx.compiler.getSubsystem(CatnipCompilerBroadcastSubsystem).getBroadcastFunction(broadcastName.asConstantString())
             );
+
+            if (broadcastEventFunc === null) {
+                ctx.emitWasm(SpiderOpcodes.drop);
+            }
         } else {
             ctx.emitWasm(
                 SpiderOpcodes.call,
@@ -41,6 +53,19 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
             );
         }
 
+        if (broadcastEventFunc !== null) {
+            ctx.emitWasm(SpiderOpcodes.local_get, broadcastNameVariable.ref);
+
+            if (ir.inputs.threadListVariable === null) {
+                ctx.emitWasmConst(SpiderNumberType.i32, 0);
+            } else {
+                ctx.emitWasm(SpiderOpcodes.local_get, ctx.getTransientVariableRef(ir.inputs.threadListVariable));
+            }
+
+            ctx.emitWasm(SpiderOpcodes.call, broadcastEventFunc);
+        }
+
+        ctx.releaseLocal(broadcastNameVariable);
     }
 
     public *getTransientVariables(ir: CatnipReadonlyIrOp<ir_broadcast_inputs>): IterableIterator<CatnipIrTransientVariable> {

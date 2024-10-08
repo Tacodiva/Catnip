@@ -17,7 +17,6 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
     }
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: forever_inputs): void {
-        ctx.emitIr(ir_nop, { comment: "Before" }, {});
         ctx.emitIr(
             ir_branch, {},
             {
@@ -28,7 +27,6 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
                 })
             }
         );
-        ctx.emitIr(ir_nop, { comment: "After" }, {});
     }
 }
 

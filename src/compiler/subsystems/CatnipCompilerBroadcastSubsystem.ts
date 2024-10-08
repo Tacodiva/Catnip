@@ -33,12 +33,11 @@ class BroadcastInfo {
     }
 
     public createEventFunction(): SpiderFunctionDefinition {
-        const runtimePtrVarRef = this.eventFunction.addParameter(SpiderNumberType.i32);
         const threadListPtrVarRef = this.eventFunction.addParameter(SpiderNumberType.i32);
 
         const targetVarRef = this.eventFunction.addLocalVariable(SpiderNumberType.i32);
 
-        this.eventFunction.body.emit(SpiderOpcodes.local_get, runtimePtrVarRef);
+        this.eventFunction.body.emitConstant(SpiderNumberType.i32, this.subsystem.compiler.runtimeInstance.ptr);
         this.eventFunction.body.emit(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("targets"));
         this.eventFunction.body.emit(SpiderOpcodes.local_set, targetVarRef);
 
@@ -48,8 +47,6 @@ class BroadcastInfo {
                 loop.emit(SpiderOpcodes.local_get, targetVarRef);
                 loop.emit(SpiderOpcodes.i32_eqz);
                 loop.emit(SpiderOpcodes.br_if, 1);
-
-
 
                 // Get the pointer to the sprite of this target
                 const spriteVarRef = this.eventFunction!.addLocalVariable(SpiderNumberType.i32);
@@ -130,12 +127,10 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
 
     public addEvents(): void {
         const broadcastName = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
-        const runtimePtrVarRef = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
         const threadListPtrVarRef = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
 
         for (const broadcastInfo of this._broadcastTriggers.values()) {
             const eventFunc = broadcastInfo.createEventFunction();
-            this.compiler.addEvent("broadcast_" + broadcastInfo.name, eventFunc);
 
             this._broadcastGeneric.body.emit(SpiderOpcodes.local_get, broadcastName);
             this._broadcastGeneric.body.emitConstant(
@@ -149,7 +144,6 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
             this._broadcastGeneric.body.emit(SpiderOpcodes.i32_eqz);
 
             this._broadcastGeneric.body.emitIf((trueBody) => {
-                trueBody.emit(SpiderOpcodes.local_get, runtimePtrVarRef);
                 trueBody.emit(SpiderOpcodes.local_get, threadListPtrVarRef);
                 trueBody.emit(SpiderOpcodes.call, eventFunc);
                 trueBody.emit(SpiderOpcodes.return);

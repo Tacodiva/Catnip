@@ -1,12 +1,9 @@
-import { CatnipScript } from "../../../runtime/CatnipScript";
-import { CatnipCompiler } from "../../CatnipCompiler";
+import { CatnipEventID } from "../../../CatnipEvents";
 import { CatnipCompilerIrGenContext } from "../../CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../CatnipIr";
-import { CatnipIrScriptTriggerType } from "../../CatnipIrScriptTrigger";
-import { CatnipValueFormat } from "../../CatnipValueFormat";
+import { CatnipIrScriptTrigger, CatnipIrScriptTriggerType } from "../../CatnipIrScriptTrigger";
+import { CatnipCompilerEventTriggerSubsystem } from "../../subsystems/CatnipCompilerEventTriggerSubsystem";
 import { ir_thread_terminate } from "./thread_terminate";
-
-export type CatnipEventID = string;
 
 export type ir_event_trigger_inputs = {
     id: CatnipEventID,
@@ -18,16 +15,21 @@ export interface CatnipIrScriptEventTriggerListener<TInputs extends ir_event_tri
     inputs: TInputs,
 }
 
-export class CatnipIrScriptEventTrigger<TInputs extends ir_event_trigger_inputs> extends CatnipIrScriptTriggerType<TInputs> {
+export const ir_event_trigger = new class extends CatnipIrScriptTriggerType<ir_event_trigger_inputs> {
+    public create(ir: CatnipIr, inputs: ir_event_trigger_inputs): CatnipIrScriptTrigger<ir_event_trigger_inputs, this> {
+        const trigger = super.create(ir, inputs);
+        ir.compiler.getSubsystem(CatnipCompilerEventTriggerSubsystem).addTrigger(trigger);
+        return trigger;
+    }
+
     public requiresFunctionIndex(): boolean {
         return true;
     }
 
-    public postIR(ctx: CatnipCompilerIrGenContext, inputs: TInputs): void {
+    public postIR(ctx: CatnipCompilerIrGenContext, inputs: ir_event_trigger_inputs): void {
         super.postIR(ctx, inputs);
         ctx.emitIr(ir_thread_terminate, {}, {});
     }
-    
-}
+};
 
-export const ir_event_trigger = new CatnipIrScriptEventTrigger<ir_event_trigger_inputs>();
+export type CatnipIrScriptEventTrigger = CatnipIrScriptTrigger<ir_event_trigger_inputs, typeof ir_event_trigger>;

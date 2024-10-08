@@ -16,6 +16,7 @@ import { CatnipProcedureID } from "../ops/procedure/procedure_definition";
 import { CatnipIrBranch, CatnipIrBranchType } from "./CatnipIrBranch";
 import { CatnipCompilerProcedureSubsystem } from "./subsystems/CatnipCompilerProcedureSubsystem";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
+import { CatnipEventID } from "../CatnipEvents";
 
 export interface CatnipCompilerWasmLocal {
     ref: SpiderLocalReference,
@@ -289,6 +290,14 @@ export class CatnipCompilerWasmGenContext {
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_end"));
     }
 
+    public emitWasmCallEvent(event: CatnipEventID, emitArgs: () => void) {
+        const func = this.compiler.getEventFunction(event);
+        if (func !== null) {
+            emitArgs();
+            this.emitWasm(SpiderOpcodes.call, func);
+        }
+    }
+
     public prepareStackForCall(branch: CatnipIrBranch, tailCall: boolean) {
 
         if (branch.branchType === CatnipIrBranchType.EXTERNAL && branch.returnLocation !== null) {
@@ -406,6 +415,12 @@ export class CatnipCompilerWasmGenContext {
                         );
                 }
             }
+
+            // this.emitWasm(SpiderOpcodes.local_get, newStackPtrVar.ref);
+            // this.emitWasm(SpiderOpcodes.f64_convert_i32_u);
+            // this.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
+            // this.emitWasmRuntimeFunctionCall("catnip_blockutil_debug_log");
+            
 
             this.emitWasmGetThread();
 

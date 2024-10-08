@@ -267,7 +267,12 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer) 
 
     // const project = await runtime.initialize();
 
+    project.registerEventListener("PROJECT_BROADCAST", (name, listPtr) => {
+        console.log(`Broadcast received '${name}' (${listPtr})`);
+    });
+
     await project.rewrite();
+
 
     // for (let tick = 1; tick <= 10; tick++) {
     //     console.time("C " + tick);

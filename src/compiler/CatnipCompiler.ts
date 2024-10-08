@@ -9,33 +9,33 @@ import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunction
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreAnalysisPassAnalyzeFunctionCallers";
 import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
-import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderExportFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType } from "wasm-spider";
+import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
-import { CatnipEventID, ir_event_trigger, ir_event_trigger_inputs } from "./ir/core/event_trigger";
 import { CatnipCompilerSubsystem, CatnipCompilerSubsystemClass } from "./CatnipCompilerSubsystem";
 import { CatnipIrExternalBranch } from "./CatnipIrBranch";
-import { CatnipCommandList, CatnipOp } from "../ops";
-import { CatnipIrOp } from "./CatnipIrOp";
+import { CatnipOp } from "../ops";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
 import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
 import { LoopPassTypeAnalysis } from "./passes/AnalysisPassTypeAnalysis";
+import { CatnipEventID, CatnipEvents } from "../CatnipEvents";
+import { CatnipCompilerEvent } from "./CatnipCompilerEvent";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
     externalBranches: CatnipIrExternalBranch[];
 }
 
-export type generic_callback = (...args: any[]) => void | number | string;
-type wasm_callback = (...args: number[]) => void | number;
+export type catnip_compiler_callback = (...args: any[]) => void | number | string;
+export type catnip_compiler_raw_callback = (...args: number[]) => void | number;
 
 interface CallbackInfo {
     name: string;
     import: SpiderImportFunction;
-    callback: wasm_callback;
+    callback: catnip_compiler_raw_callback;
     argFormats: CatnipValueFormat[];
     returnFormat: CatnipValueFormat | null;
 }
@@ -43,6 +43,7 @@ interface CallbackInfo {
 export class CatnipCompiler {
     public readonly project: CatnipProject;
     public get runtimeModule() { return this.project.runtimeModule; }
+    public get runtimeInstance() { return this.project.runtimeInstance; }
 
     public readonly config: Readonly<CatnipCompilerConfig>;
 
@@ -56,8 +57,8 @@ export class CatnipCompiler {
 
     private readonly _runtimeFuncs: ReadonlyMap<CatnipRuntimeModuleFunctionName, SpiderImportFunction>;
     private readonly _subsystems: Map<CatnipCompilerSubsystemClass, CatnipCompilerSubsystem>;
-    private readonly _events: { id: string, export: SpiderExportFunction, func: SpiderFunctionDefinition }[];
-    private readonly _callbacks: Map<generic_callback, CallbackInfo>;
+    private readonly _callbacks: Map<catnip_compiler_callback, CallbackInfo>;
+    private readonly _events: Map<CatnipEventID, CatnipCompilerEvent>;
 
     private readonly _scripts: Map<CatnipSpriteID, Map<CatnipScriptID, CatnipIr>>;
 
@@ -110,7 +111,7 @@ export class CatnipCompiler {
         this._exportCount = 0;
 
         this._subsystems = new Map();
-        this._events = [];
+        this._events = new Map();
 
         this._callbacks = new Map();
     }
@@ -178,15 +179,22 @@ export class CatnipCompiler {
         for (const scriptIR of this._enumerateScripts()) {
             if (!scriptIR.hasCommandIR)
                 this._createCommandIR(scriptIR);
-
-            scriptIR.createWASM();
         }
-
-        this._createEventFunctions();
 
         for (const subsystem of this._subsystems.values()) {
             if (subsystem.addEvents)
                 subsystem.addEvents();
+        }
+
+        for (const scriptIR of this._enumerateScripts()) {
+            scriptIR.createWASM();
+        }
+
+        let eventID: CatnipEventID;
+        for (eventID in CatnipEvents) {
+            if (this._events.has(eventID) || this.project.hasEventListeners(eventID)) {
+                this._getEvent(eventID).generateFunction();
+            }
         }
 
         const functionsElement = this._createFunctionsElement();
@@ -197,7 +205,7 @@ export class CatnipCompiler {
             this.runtimeModule.indirectFunctionTable.grow(largetFunctionElement - this.runtimeModule.indirectFunctionTable.length);
         }
 
-        const callbacks: Record<string, wasm_callback> = {};
+        const callbacks: Record<string, catnip_compiler_raw_callback> = {};
 
         for (const callback of this._callbacks.values()) {
             callbacks[callback.name] = callback.callback;
@@ -215,7 +223,7 @@ export class CatnipCompiler {
         });
 
         const events: CatnipProjectModuleEvent[] = [];
-        for (const eventInfo of this._events)
+        for (const eventInfo of this._events.values())
             events.push({ id: eventInfo.id, exportName: eventInfo.export.name });
 
         const projectModule = new CatnipProjectModule(this.project, instance, events);
@@ -230,16 +238,25 @@ export class CatnipCompiler {
         return projectModule;
     }
 
-    public addEvent(id: string, func: SpiderFunctionDefinition) {
-        CatnipCompilerLogger.log("Added event " + id);
-        this._events.push({
-            id,
-            func,
-            export: this.spiderModule.exportFunction(
-                this._allocateExportName(id),
-                func
-            )
-        });
+    public addEventListener(id: CatnipEventID, func: SpiderFunction) {
+        this._getEvent(id).addListener(func);
+    }
+
+    public getEventFunction(id: CatnipEventID): SpiderFunction | null {
+        if (this._events.has(id) || this.project.hasEventListeners(id))
+            return this._getEvent(id).func;
+        return null;
+    }
+
+    private _getEvent(id: CatnipEventID): CatnipCompilerEvent {
+        let event = this._events.get(id);
+
+        if (event === undefined) {
+            event = new CatnipCompilerEvent(this, id);
+            this._events.set(id, event);
+        }
+
+        return event;
     }
 
     private _createFunctionsElement(): SpiderElementFuncIdxActive {
@@ -264,50 +281,6 @@ export class CatnipCompiler {
         this.spiderModule.elements.splice(this.spiderModule.elements.indexOf(element), 1);
     }
 
-    private _createEventFunctions() {
-        const eventMap: Map<CatnipEventID, { ir: CatnipIr, priority: number }[]> = new Map();
-
-        for (const ir of this._enumerateScripts()) {
-            if (ir.trigger.type === ir_event_trigger) {
-                const inputs = ir.trigger.inputs as ir_event_trigger_inputs;
-                const eventID = inputs.id;
-                let listeners = eventMap.get(eventID);
-
-                if (listeners === undefined) {
-                    listeners = [];
-                    eventMap.set(eventID, listeners);
-                }
-
-                listeners.push({ ir, priority: inputs.priority });
-            }
-        }
-
-        for (const list of eventMap.values())
-            list.sort((a, b) => a.priority - b.priority);
-
-        for (const [event, listeners] of eventMap) {
-
-            const eventFunc = this.spiderModule.createFunction();
-            this.addEvent(event, eventFunc);
-
-            const runtimePtrVarRef = eventFunc.addParameter(SpiderNumberType.i32);
-            const threadListPtrVarRef = eventFunc.addParameter(SpiderNumberType.i32);
-
-            for (const listener of listeners) {
-
-                const sprite = this.project.getSprite(listener.ir.spriteID)!;
-                const spritePtr = sprite.structWrapper.ptr;
-                const entrypointPtr = listener.ir.entrypoint.functionTableIndex;
-
-                eventFunc.body.emit(SpiderOpcodes.local_get, runtimePtrVarRef);
-                eventFunc.body.emitConstant(SpiderNumberType.i32, spritePtr);
-                eventFunc.body.emitConstant(SpiderNumberType.i32, entrypointPtr);
-                eventFunc.body.emit(SpiderOpcodes.local_get, threadListPtrVarRef);
-                eventFunc.body.emit(SpiderOpcodes.call, this.getRuntimeFunction("catnip_runtime_start_threads"));
-            }
-        }
-    }
-
     public getRuntimeFunction(funcName: CatnipRuntimeModuleFunctionName): SpiderImportFunction {
         const func = this._runtimeFuncs.get(funcName);
         if (func === undefined) throw new Error(`Unknown runtime function '${funcName}'.`);
@@ -325,7 +298,7 @@ export class CatnipCompiler {
         this._freeFunctionTableIndices.push(idx);
     }
 
-    private _allocateExportName(name: string): string {
+    public allocateExportName(name: string): string {
         return name + "_" + (this._exportCount++);
     }
 
@@ -346,7 +319,6 @@ export class CatnipCompiler {
     }
 
     private _preAnalyzeIRs() {
-
         function analyzeOp(ir: CatnipIr, analysis: CatnipIrPreAnalysis, op: CatnipOp) {
             for (const inputOrSubstack of op.type.getInputsAndSubstacks(ir, op.inputs)) {
                 if (Array.isArray(inputOrSubstack)) {
@@ -396,11 +368,11 @@ export class CatnipCompiler {
         }
     }
 
-    public createCallback(
+    public createRawCallback(
         name: string,
-        callback: generic_callback,
+        callback: catnip_compiler_raw_callback,
         argFormats: CatnipValueFormat[],
-        returnFormat: CatnipValueFormat | null
+        returnFormat: CatnipValueFormat | null,
     ): SpiderImportFunction {
         let callbackInfo = this._callbacks.get(callback);
 
@@ -417,7 +389,29 @@ export class CatnipCompiler {
 
         callbackInfo = {
             name,
-            callback: (...args: number[]) => {
+            callback,
+            import: this.spiderModule.importFunction(
+                "catnip_callbacks",
+                name,
+                this.spiderModule.createType(parameterValueTypes, ...returnValueType)
+            ),
+            argFormats,
+            returnFormat
+        };
+
+        this._callbacks.set(callback, callbackInfo);
+        return callbackInfo.import;
+    }
+
+    public createCallback(
+        name: string,
+        callback: catnip_compiler_callback,
+        argFormats: CatnipValueFormat[],
+        returnFormat: CatnipValueFormat | null,
+    ): SpiderImportFunction {
+        return this.createRawCallback(
+            name,
+            (...args: number[]) => {
 
                 if (args.length !== argFormats.length)
                     throw new Error("Wrong callback arg types.");
@@ -447,7 +441,7 @@ export class CatnipCompiler {
                         throw new Error("Callback must return a value.");
 
                     if (CatnipValueFormatUtils.isAlways(returnFormat, CatnipValueFormat.I32_HSTRING)) {
-                        return this.runtimeModule.allocateHeapString(""+returnValue);
+                        return this.runtimeModule.allocateHeapString("" + returnValue);
                     } else {
                         if (typeof returnValue !== "number")
                             throw new Error("Expected callback return of type number.");
@@ -455,16 +449,8 @@ export class CatnipCompiler {
                     }
                 }
             },
-            import: this.spiderModule.importFunction(
-                "catnip_callbacks",
-                name,
-                this.spiderModule.createType(parameterValueTypes, ...returnValueType)
-            ),
             argFormats,
             returnFormat
-        };
-
-        this._callbacks.set(callback, callbackInfo);
-        return callbackInfo.import;
+        );
     }
 }

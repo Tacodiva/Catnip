@@ -74,7 +74,6 @@ export class CatnipRuntimeModule {
         this.instance = instance;
         this.imports = imports;
         this.functions = this.instance.exports as CatnipRuntimeModuleFunctionsObject;
-
         this._memory = null;
         this._memoryBytes = null;
     }
