@@ -63,6 +63,7 @@ export class CatnipCompiler {
     private readonly _scripts: Map<CatnipSpriteID, Map<CatnipScriptID, CatnipIr>>;
 
     private readonly _freeFunctionTableIndices: number[];
+    private _functionTableOffset: number;
     private _functionTableIndexCount: number;
 
     private _exportCount: number;
@@ -107,7 +108,17 @@ export class CatnipCompiler {
         this._scripts = new Map();
 
         this._freeFunctionTableIndices = [];
-        this._functionTableIndexCount = 1; // Starts at 1 because we never allocate function table index 0
+        this._functionTableIndexCount = 0; 
+        this._functionTableOffset = 1; // Starts at 1 because we never allocate function table index 0
+
+        while (this.runtimeModule.indirectFunctionTable.get(this._functionTableOffset) !== null) {
+            ++this._functionTableOffset;
+            
+            if (this._functionTableOffset == this.runtimeModule.indirectFunctionTable.length) {
+                break;
+            }
+        }
+
         this._exportCount = 0;
 
         this._subsystems = new Map();
@@ -266,14 +277,14 @@ export class CatnipCompiler {
         for (const ir of this._enumerateScripts()) {
             for (const func of ir.functions) {
                 if (func.hasFunctionTableIndex) {
-                    CatnipCompilerLogger.assert(spiderFns[func.functionTableIndex] === this._spiderFunctionNop);
-                    spiderFns[func.functionTableIndex] = func.spiderFunction;
+                    CatnipCompilerLogger.assert(spiderFns[func.functionTableIndex - this._functionTableOffset] === this._spiderFunctionNop);
+                    spiderFns[func.functionTableIndex - this._functionTableOffset] = func.spiderFunction;
                 }
             }
         }
 
         return this.spiderModule.createElementFuncIdxActive(
-            this.spiderIndirectFunctionTable, 0, spiderFns
+            this.spiderIndirectFunctionTable, this._functionTableOffset, spiderFns
         );
     }
 
@@ -291,7 +302,7 @@ export class CatnipCompiler {
         if (this._freeFunctionTableIndices.length !== 0)
             return this._freeFunctionTableIndices.pop()!;
 
-        return this._functionTableIndexCount++;
+        return (this._functionTableIndexCount++) + this._functionTableOffset;
     }
 
     public freeFunctionTableIndex(idx: number) {
@@ -424,7 +435,7 @@ export class CatnipCompiler {
 
                     if (CatnipValueFormatUtils.isAlways(argFormat, CatnipValueFormat.I32_HSTRING)) {
                         const bytes = argValue + CatnipWasmStructHeapString.size;
-                        const byteLength = CatnipWasmStructHeapString.getMember(argValue, this.runtimeModule.memory, "bytelen");
+                        const byteLength = CatnipWasmStructHeapString.getMember(argValue, this.runtimeModule.memory, "bytelen") - CatnipWasmStructHeapString.size;
 
                         const stringValue = CatnipRuntimeModule.TEXT_DECODER.decode(this.runtimeModule.memory.buffer.slice(bytes, bytes + byteLength));
 

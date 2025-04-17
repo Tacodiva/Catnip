@@ -3,7 +3,9 @@
 #include "./walloc.c"
 
 void *catnip_mem_alloc(catnip_ui32_t n) {
-  return malloc(n);
+  void *allocation = malloc(n);
+  CATNIP_ASSERT(allocation != CATNIP_NULL);
+  return allocation;
 }
 
 void catnip_mem_free(void *p) {

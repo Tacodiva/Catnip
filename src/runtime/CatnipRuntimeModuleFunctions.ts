@@ -16,15 +16,10 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_mem_free: fn<[ptr: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32], undefined),
 
-    catnip_hstring_deref: fn<[ptr: SpiderNumberType.i32], undefined>
-        ([SpiderNumberType.i32], undefined),
-    catnip_hstring_ref: fn<[ptr: SpiderNumberType.i32], undefined>
-        ([SpiderNumberType.i32], undefined),
-
-    catnip_numconv_stringify_f64: fn<[val: SpiderNumberType.f64], SpiderNumberType.i32>
-        ([SpiderNumberType.f64], SpiderNumberType.i32),
-    catnip_numconv_parse_and_deref: fn<[str: SpiderNumberType.i32], SpiderNumberType.f64>
-        ([SpiderNumberType.i32], SpiderNumberType.f64),
+    catnip_numconv_stringify_f64: fn<[val: SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_numconv_parse: fn<[str: SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.f64>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.f64),
 
     catnip_runtime_new: fn<[], SpiderNumberType.i32>
         ([], SpiderNumberType.i32),
@@ -60,10 +55,12 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_cmp: fn<[SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
-    catnip_blockutil_value_cmp: fn<[SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32>
-        ([SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32),
-    catnip_blockutil_value_eq: fn<[SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32>
-        ([SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.i32),
+    catnip_blockutil_value_cmp: fn<[SpiderNumberType.f64, SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_blockutil_value_eq: fn<[SpiderNumberType.f64, SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_blockutil_hstring_join: fn<[SpiderNumberType.i32, SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
 
     catnip_list_new: fn<[itemSize: SpiderNumberType.i32, capacity: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32)

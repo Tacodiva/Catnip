@@ -3,7 +3,7 @@ import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
-import { VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
+import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 
 export type cast_ir_inputs = {
@@ -133,6 +133,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.I32_HSTRING)) {
                     // Convert from a number to a string
                     if (ctx !== null) {
+                        ctx.emitWasmGetRuntime();
                         ctx.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
                     }
 
@@ -246,8 +247,23 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32)) {
 
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_HSTRING)) {
+
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
+                    // Box I32 hstring
+
+                    if (ctx != null) {
+                        ctx.emitWasm(SpiderOpcodes.i64_extend_i32_u);
+                        ctx.emitWasmConst(SpiderNumberType.i64, VALUE_STRING_MASK);
+                        ctx.emitWasm(SpiderOpcodes.i64_or);
+                        ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
+                    }
+                    
+                    return CatnipValueFormat.F64_BOXED_I32_HSTRING;
+                }
+
                 if (ctx !== null) {
-                    ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse_and_deref");
+                    ctx.emitWasmGetRuntime();
+                    ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
                 }
                 return this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
             }

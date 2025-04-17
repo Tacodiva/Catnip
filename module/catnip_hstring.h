@@ -5,22 +5,18 @@
 #include "./catnip.h"
 
 struct catnip_hstring {
-
-  catnip_ui32_t refcount;
-
-  catnip_ui32_t bytelen;
+  catnip_obj_head obj_head;
 };
 
 typedef struct catnip_hstring catnip_hstring;
 
-void catnip_hstring_ref(catnip_hstring *str);
-void catnip_hstring_deref(catnip_hstring *str);
 catnip_char_t *catnip_hstring_get_data(const catnip_hstring *str);
-catnip_hstring *catnip_hstring_new(const catnip_char_t *chars,
-                                   catnip_ui32_t len);
-catnip_hstring *catnip_hstring_new_from_cstring(const char *cstr);
+catnip_hstring *catnip_hstring_new_simple(catnip_runtime *runtime, catnip_ui32_t len);
+catnip_hstring *catnip_hstring_new(catnip_runtime *runtime, const catnip_char_t *chars, catnip_ui32_t len);
+catnip_hstring *catnip_hstring_new_from_cstring(catnip_runtime *runtime, const char *cstr);
 void catnip_hstring_print(const catnip_hstring *str);
-catnip_bool_t catnip_hstring_cmp_cstring(const catnip_hstring *str1, const char* str2);
-catnip_hstring *catnip_str_trim(catnip_hstring *str);
+catnip_hstring *catnip_str_trim(catnip_runtime *runtime, catnip_hstring *str);
+
+#define CATNIP_HSTRING_BYTELENGTH(str) str->obj_head.bytelen - sizeof(catnip_hstring)
 
 #endif

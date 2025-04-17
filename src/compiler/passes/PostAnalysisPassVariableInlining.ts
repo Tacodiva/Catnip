@@ -219,7 +219,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                     } else {
                         for (const branchName of branchNames) {
                             const subbranch = op.branches[branchName];
-                            if (subbranch.branchType === CatnipIrBranchType.EXTERNAL) {
+                            if (subbranch.branchType === CatnipIrBranchType.EXTERNAL || subbranch.body.func !== func) {
                                 doesSync = true;
                                 break;
                             }

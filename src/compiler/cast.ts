@@ -1,5 +1,5 @@
 
-export type catnip_compiler_constant = string | number | boolean;
+export type catnip_compiler_constant = string | number | boolean | undefined;
 
 /** 
  * Stolen from https://github.com/TurboWarp/scratch-vm/blob/fed099c4ccb1ae59a8a7fe2ae14fa4ef4b85bd01/src/util/cast.js

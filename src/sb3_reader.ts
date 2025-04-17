@@ -1,6 +1,7 @@
 import { createLogger, Logger } from "./log";
 import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./ops";
 import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
+import { op_const } from "./ops/core/const";
 import { CatnipProcedureID, CatnipProcedureTriggerArgType } from "./ops/procedure/procedure_definition";
 import { CatnipProjectDesc } from "./runtime/CatnipProject";
 import { CatnipScriptID } from "./runtime/CatnipScript";
@@ -223,25 +224,14 @@ export class SB3ScriptReader {
         }
     }
 
-    public readOptionalInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline | null {
+    public readInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline | null {
         if (input === null) return null;
 
         if (Array.isArray(input)) {
             return input[1];
         } else {
-            return input;
+            return input ?? null;
         }
-    }
-
-    public readInputOrBlockID(input: ProjectSB3Input | string | null): string | ProjectSB3InputValueInline {
-        SB3ReadLogger.assert(input !== null);
-
-        const inputOrBlockID = this.readOptionalInputOrBlockID(input);
-
-        if (inputOrBlockID === null)
-            throw new Error("Unexpected null input value.");
-
-        return inputOrBlockID;
     }
 
     public readBlockID(input: ProjectSB3Input | string | null): string {
@@ -252,7 +242,7 @@ export class SB3ScriptReader {
     }
 
     public readOptionalBlockID(input: ProjectSB3Input | string | null): string | null {
-        const inputOrBlockID = this.readOptionalInputOrBlockID(input);
+        const inputOrBlockID = this.readInputOrBlockID(input);
         if (inputOrBlockID === null) return null;
         if (typeof inputOrBlockID !== "string")
             throw new Error(`Unexpected array literal, expected block ID.`);
@@ -261,7 +251,7 @@ export class SB3ScriptReader {
 
     public readStack(stack: ProjectSB3Input | string | null): CatnipCommandList {
         if (stack === null) return [];
-        
+
         let stackID: string | null = this.readBlockID(stack);
         const stackCommands: CatnipCommandList = [];
 
@@ -286,6 +276,10 @@ export class SB3ScriptReader {
 
         if (Array.isArray(inputOrBlockID)) {
             return this._readInputFromArray(inputOrBlockID);
+        }
+
+        if (inputOrBlockID === null) {
+            return op_const.create({ value: undefined })
         }
 
         const block = this.getBlock(inputOrBlockID);

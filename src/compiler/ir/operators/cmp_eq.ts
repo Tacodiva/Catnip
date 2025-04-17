@@ -16,6 +16,7 @@ export const ir_cmp_eq = new class extends CatnipIrInputOpType<{}> {
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<{}>): void {
+        ctx.emitWasmGetRuntime();
         ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_value_eq");
     }
 }

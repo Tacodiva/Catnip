@@ -42,18 +42,15 @@ catnip_thread_status catnip_blockutil_wait_for_threads(catnip_list *threadList) 
 }
 
 // https://github.com/TurboWarp/scratch-vm/blob/fed099c4ccb1ae59a8a7fe2ae14fa4ef4b85bd01/src/util/cast.js#L142
-catnip_i32_t catnip_blockutil_value_cmp(catnip_value a, catnip_value b) {
-  catnip_f64_t aNumber = catnip_value_to_number(a);
-  catnip_f64_t bNumber = catnip_value_to_number(b);
+catnip_i32_t catnip_blockutil_value_cmp(catnip_runtime *runtime, catnip_value a, catnip_value b) {
+  catnip_f64_t aNumber = catnip_value_to_number(runtime, a);
+  catnip_f64_t bNumber = catnip_value_to_number(runtime, b);
 
   if (CATNIP_F64_ISNAN(aNumber) || CATNIP_F64_ISNAN(bNumber)) {
-    catnip_hstring *aString = catnip_value_to_string(a);
-    catnip_hstring *bString = catnip_value_to_string(b);
+    catnip_hstring *aString = catnip_value_to_string(runtime, a);
+    catnip_hstring *bString = catnip_value_to_string(runtime, b);
 
     catnip_i32_t result = catnip_blockutil_hstring_cmp(aString, bString);
-
-    catnip_hstring_deref(aString);
-    catnip_hstring_deref(bString);
 
     return result;
   }
@@ -66,18 +63,15 @@ catnip_i32_t catnip_blockutil_value_cmp(catnip_value a, catnip_value b) {
   return aNumber - bNumber;
 }
 
-catnip_bool_t catnip_blockutil_value_eq(catnip_value a, catnip_value b) {
-  catnip_f64_t aNumber = catnip_value_to_number(a);
-  catnip_f64_t bNumber = catnip_value_to_number(b);
+catnip_bool_t catnip_blockutil_value_eq(catnip_runtime *runtime, catnip_value a, catnip_value b) {
+  catnip_f64_t aNumber = catnip_value_to_number(runtime, a);
+  catnip_f64_t bNumber = catnip_value_to_number(runtime, b);
 
   if (CATNIP_F64_ISNAN(aNumber) || CATNIP_F64_ISNAN(bNumber)) {
-    catnip_hstring *aString = catnip_value_to_string(a);
-    catnip_hstring *bString = catnip_value_to_string(b);
+    catnip_hstring *aString = catnip_value_to_string(runtime, a);
+    catnip_hstring *bString = catnip_value_to_string(runtime, b);
 
     catnip_i32_t result = catnip_blockutil_hstring_cmp(aString, bString);
-
-    catnip_hstring_deref(aString);
-    catnip_hstring_deref(bString);
 
     return result == 0;
   }
@@ -88,11 +82,11 @@ catnip_bool_t catnip_blockutil_value_eq(catnip_value a, catnip_value b) {
 catnip_i32_t catnip_blockutil_hstring_cmp(const catnip_hstring *a, const catnip_hstring *b) {
 
   const catnip_char_t *aStart = catnip_hstring_get_data(a);
-  const catnip_char_t *aEnd = aStart + a->bytelen;
+  const catnip_char_t *aEnd = aStart + CATNIP_HSTRING_BYTELENGTH(a);
   const catnip_char_t *aCur = aStart;
 
   const catnip_char_t *bStart = catnip_hstring_get_data(b);
-  const catnip_char_t *bEnd = bStart + b->bytelen;
+  const catnip_char_t *bEnd = bStart + CATNIP_HSTRING_BYTELENGTH(b);
   const catnip_char_t *bCur = bStart;
 
   for (;;) {
@@ -124,4 +118,21 @@ catnip_i32_t catnip_blockutil_hstring_cmp(const catnip_hstring *a, const catnip_
       }
     }
   }
+}
+
+catnip_hstring *catnip_blockutil_hstring_join(catnip_runtime *runtime, const catnip_hstring *a, const catnip_hstring *b) {
+
+  const catnip_ui32_t aLen = CATNIP_HSTRING_BYTELENGTH(a);
+  const catnip_ui32_t bLen = CATNIP_HSTRING_BYTELENGTH(b);
+
+  const catnip_ui32_t newLen = aLen + bLen;
+
+  catnip_hstring *newStr = catnip_hstring_new_simple(runtime, newLen);
+
+  catnip_char_t *newStrData = catnip_hstring_get_data(newStr);
+  
+  catnip_mem_copy(newStrData, catnip_hstring_get_data(a), aLen);
+  catnip_mem_copy(newStrData + aLen, catnip_hstring_get_data(b), bLen);
+
+  return newStr;
 }

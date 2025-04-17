@@ -2,7 +2,7 @@ import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenCo
 import { ir_const } from "../../compiler/ir/core/const";
 import { CatnipInputOpType, CatnipOp } from "../CatnipOp";
 
-type const_inputs = { value: string | number | boolean };
+type const_inputs = { value: string | number | boolean | undefined };
 
 export const op_const = new class extends CatnipInputOpType<const_inputs> {
     public *getInputsAndSubstacks(): IterableIterator<CatnipOp> {}

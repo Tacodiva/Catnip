@@ -75,6 +75,7 @@ static const catnip_numconv_exp_limit catnip_numconv_exp_limits[] = {
   (sizeof(catnip_bigint) * CATNIP_NUMCONV_CTX_NUM_BIGINTS)
 
 typedef struct {
+  catnip_runtime *runtime;
   catnip_bigint f, r, s, mp, mm, t1, t2;
 
   catnip_bool_t is_s2n;
@@ -494,7 +495,7 @@ static catnip_hstring *catnip_numconv_dragon4_convert(catnip_numconv_stringify_c
     q += catnip_numconv_dragon4_format_uint32(q, expt, radix);
   }
 
-  return catnip_hstring_new((catnip_char_t *)buf, (catnip_ui32_t)(q - buf));
+  return catnip_hstring_new(nc_ctx->runtime, (catnip_char_t *)buf, (catnip_ui32_t)(q - buf));
 }
 
 static void catnip_numconv_dragon4_double_to_ctx(catnip_numconv_stringify_ctx *nc_ctx, catnip_f64_t x) {
@@ -668,13 +669,15 @@ recheck_exp:
   *x = CATNIP_DBLUNION_GET_DOUBLE(&u);
 }
 
-catnip_hstring *catnip_numconv_stringify_f64(catnip_f64_t x) {
+catnip_hstring *catnip_numconv_stringify_f64(catnip_runtime *runtime, catnip_f64_t x) {
 
   catnip_i32_t radix = 10;
   catnip_i32_t digits = 0;
 
   catnip_numconv_stringify_ctx nc_ctx_alloc;
   catnip_numconv_stringify_ctx *nc_ctx = &nc_ctx_alloc;
+
+  nc_ctx->runtime = runtime;
 
   catnip_bool_t is_neg;
 
@@ -687,12 +690,12 @@ catnip_hstring *catnip_numconv_stringify_f64(catnip_f64_t x) {
 
   // TODO These can all share the same string, no need to create new ones every time
   if (CATNIP_F64_ISNAN(x)) {
-    return catnip_hstring_new_from_cstring("NaN");
+    return catnip_hstring_new_from_cstring(nc_ctx->runtime, "NaN");
   } else if (CATNIP_F64_ISINFINITE(x)) {
     if (is_neg)
-      return catnip_hstring_new_from_cstring("-Infinity");
+      return catnip_hstring_new_from_cstring(nc_ctx->runtime, "-Infinity");
     else
-      return catnip_hstring_new_from_cstring("Infinity");
+      return catnip_hstring_new_from_cstring(nc_ctx->runtime, "Infinity");
   } // TODO Investigate 0 shortcut
 
   catnip_ui32_t uval = (catnip_ui32_t)x;
@@ -707,7 +710,7 @@ catnip_hstring *catnip_numconv_stringify_f64(catnip_f64_t x) {
       *p++ = '-';
     }
     p += catnip_numconv_dragon4_format_uint32(p, uval, radix);
-    return catnip_hstring_new((catnip_char_t *)buf, (catnip_i32_t)(p - buf));
+    return catnip_hstring_new(nc_ctx->runtime, (catnip_char_t *)buf, (catnip_i32_t)(p - buf));
   }
 
   /*
@@ -811,13 +814,13 @@ zero_skip:
   return catnip_numconv_dragon4_convert(nc_ctx, radix, digits, 0, is_neg);
 }
 
-catnip_f64_t catnip_numconv_parse(catnip_hstring *str) {
+catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
   // TODO Account for scratch's broken trim polyfill
-  str = catnip_str_trim(str);
+  str = catnip_str_trim(runtime, str);
 
-  catnip_ui32_t p_bytelen = str->bytelen;
+  catnip_ui32_t p_bytelen = CATNIP_HSTRING_BYTELENGTH(str);
 
   if (p_bytelen == 0) {
     // Empty string
@@ -1057,7 +1060,7 @@ catnip_f64_t catnip_numconv_parse(catnip_hstring *str) {
       //   DUK_DDD(DUK_DDDPRINT("parse failed: empty string not allowed (as zero)"));
       //   goto parse_fail;
       // } else if (duk_hstring_get_bytelen(h_str) != 0) {
-      if (str->bytelen != 0) {
+      if (CATNIP_HSTRING_BYTELENGTH(str) != 0) {
         // no digits, but not empty (had a +/- sign)
         goto parse_fail;
       }
@@ -1186,7 +1189,6 @@ catnip_f64_t catnip_numconv_parse(catnip_hstring *str) {
   goto negcheck_and_ret;
 
 negcheck_and_ret:
-  catnip_hstring_deref(str);
 
   if (is_negitive) {
     result = -result;
@@ -1195,12 +1197,10 @@ negcheck_and_ret:
   return result;
 
 parse_fail:
-  catnip_hstring_deref(str);
   // parse failed
   return CATNIP_F64_NAN;
 
 parse_explimit_error:
-  catnip_hstring_deref(str);
   // parse failed, exponent too large
   return CATNIP_F64_NAN;
 }

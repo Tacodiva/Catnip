@@ -6,17 +6,19 @@ base_sources = ./module/catnip_assert.c ./module/catnip_blockutil.c ./module/cat
 
 catnip_sources = ./module/catnip.c
 
+
 debug:
 	clang \
-			--target=wasm32 \
 			-O3 \
+			--target=wasm32 \
 			-flto \
+			-Wl,--lto-O3 \
+			-fno-delete-null-pointer-checks \
 			-nostdlib \
 			-mbulk-memory \
 			-Wl,--import-memory \
 			-Wl,--import-table \
 			-Wl,--no-entry \
-			-Wl,--lto-O3 \
 			-o ./public/catnip.wasm \
 			-D CATNIP_DEBUG \
 			$(base_sources) $(catnip_sources)
@@ -26,11 +28,12 @@ release:
 			--target=wasm32 \
 			-O3 \
 			-flto \
+			-Wl,--lto-O3 \
+			-fno-delete-null-pointer-checks \
 			-nostdlib \
 			-mbulk-memory \
 			-Wl,--import-memory \
 			-Wl,--import-table \
 			-Wl,--no-entry \
-			-Wl,--lto-O3 \
 			-o ./public/catnip.wasm \
 			$(base_sources) $(catnip_sources)

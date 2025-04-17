@@ -18,7 +18,7 @@ void CATNIP_EXPORT(main)(catnip_runtime *runtime) {
     }
   }
 
-  catnip_hstring *str = catnip_numconv_stringify_f64(nth);
+  catnip_hstring *str = catnip_numconv_stringify_f64(runtime, nth);
   catnip_blockutil_debug_log(str);
 }
 
@@ -34,26 +34,13 @@ void CATNIP_EXPORT(catnip_mem_free)(void *ptr) {
   catnip_mem_free(ptr);
 }
 
-
-void CATNIP_EXPORT(catnip_hstring_deref)(catnip_hstring *string) {
-  catnip_hstring_deref(string);
+catnip_hstring *CATNIP_EXPORT(catnip_numconv_stringify_f64)(catnip_f64_t value, catnip_runtime *runtime) {
+  return catnip_numconv_stringify_f64(runtime, value);
 }
 
-void CATNIP_EXPORT(catnip_hstring_ref)(catnip_hstring *string) {
-  catnip_hstring_ref(string);
+catnip_f64_t CATNIP_EXPORT(catnip_numconv_parse)(catnip_hstring *str, catnip_runtime *runtime) {
+  return catnip_numconv_parse(runtime, str);
 }
-
-
-catnip_hstring *CATNIP_EXPORT(catnip_numconv_stringify_f64)(catnip_f64_t value) {
-  return catnip_numconv_stringify_f64(value);
-}
-
-catnip_f64_t CATNIP_EXPORT(catnip_numconv_parse_and_deref)(catnip_hstring *str) {
-  catnip_f64_t val = catnip_numconv_parse(str);
-  catnip_hstring_deref(str);
-  return val;
-}
-
 
 catnip_runtime *CATNIP_EXPORT(catnip_runtime_new)() {
   return catnip_runtime_new();
@@ -102,12 +89,16 @@ catnip_i32_t CATNIP_EXPORT(catnip_blockutil_hstring_cmp)(catnip_hstring *a, catn
   return catnip_blockutil_hstring_cmp(a, b);
 }
 
-catnip_i32_t CATNIP_EXPORT(catnip_blockutil_value_cmp)(catnip_f64_t a, catnip_f64_t b) {
-  return catnip_blockutil_value_cmp(CATNIP_VALUE_FROM_F64(a), CATNIP_VALUE_FROM_F64(b));
+catnip_i32_t CATNIP_EXPORT(catnip_blockutil_value_cmp)(catnip_f64_t a, catnip_f64_t b, catnip_runtime *runtime) {
+  return catnip_blockutil_value_cmp(runtime, CATNIP_VALUE_FROM_F64(a), CATNIP_VALUE_FROM_F64(b));
 }
 
-catnip_bool_t CATNIP_EXPORT(catnip_blockutil_value_eq)(catnip_f64_t a, catnip_f64_t b) {
-  return catnip_blockutil_value_eq(CATNIP_VALUE_FROM_F64(a), CATNIP_VALUE_FROM_F64(b));
+catnip_bool_t CATNIP_EXPORT(catnip_blockutil_value_eq)(catnip_f64_t a, catnip_f64_t b, catnip_runtime *runtime) {
+  return catnip_blockutil_value_eq(runtime, CATNIP_VALUE_FROM_F64(a), CATNIP_VALUE_FROM_F64(b));
+}
+
+catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_join)(const catnip_hstring *a, const catnip_hstring *b, catnip_runtime *runtime) {
+  return catnip_blockutil_hstring_join(runtime, a, b);
 }
 
 

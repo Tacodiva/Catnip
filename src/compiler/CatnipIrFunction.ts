@@ -232,7 +232,7 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
                 }
             });
 
-            this._stackSize += source.variable.size;
+            this._stackSize += 8;
         } else {
             this._addLocalVariable({
                 variable: source.variable,
@@ -289,7 +289,7 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
                     type: CatnipIrExternalLocationType.STACK,
                     stackOffset: this.stackSize
                 };
-                this._stackSize += varInfo.variable.size;
+                this._stackSize += 8;
 
                 varInfo.ref = this.spiderFunction.addLocalVariable(varInfo.variable.type);
             }

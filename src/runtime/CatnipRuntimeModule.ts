@@ -3,7 +3,7 @@ import { CatnipRuntimeModuleImports } from "./CatnipRuntimeModuleImports";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
 import { WasmStruct, WasmStructWrapper, WasmUnionWrapper } from "../wasm-interop/wasm-types";
 import { createLogger } from "../log";
-import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
+import { CATNIP_STRING_HEADER_MAGIC, CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
 import { CatnipWasmUnionValue, VALUE_CANNON_NAN_UPPER, VALUE_STRING_UPPER } from "../wasm-interop/CatnipWasmStructValue";
 import { CatnipProject, CatnipProjectDesc } from "./CatnipProject";
 import { CatnipWasmArrayFuncEntry } from "../wasm-interop/CatnipWasmStructFuncEntry";
@@ -96,7 +96,10 @@ export class CatnipRuntimeModule {
 
         CatnipWasmStructHeapString.set(strPtr, this.memory, {
             refcount: 1,
-            bytelen: encodedStr.length
+            bytelen: encodedStr.length + CatnipWasmStructHeapString.size,
+            magic: CATNIP_STRING_HEADER_MAGIC,
+            externref_count: 1,
+            move_ptr: strPtr
         });
 
         this.memoryBytes.set(encodedStr, strPtr + CatnipWasmStructHeapString.size);
@@ -105,11 +108,11 @@ export class CatnipRuntimeModule {
     }
 
     public createRuntimeInstance(): WasmStructWrapper<typeof CatnipWasmStructRuntime> {
-        return new WasmStructWrapper(this.functions.catnip_runtime_new(), this.memory, CatnipWasmStructRuntime);
+        return new WasmStructWrapper(this.functions.catnip_runtime_new(), () => this.memory, CatnipWasmStructRuntime);
     }
 
     public allocateStruct<T extends WasmStruct<any>>(struct: T, zero: boolean = true): WasmStructWrapper<T> {
-        return new WasmStructWrapper(this.allocateMemory(struct.size, zero), this.memory, struct);
+        return new WasmStructWrapper(this.allocateMemory(struct.size, zero), () => this.memory, struct);
     }
 
     public setValue(ptr: WasmUnionWrapper<typeof CatnipWasmUnionValue>, value: number | string) {

@@ -87,7 +87,7 @@ export type ProjectSB3InputShadowedInput = [
     shadow: ProjectSB3InputValue
 ];
 
-export type ProjectSB3Input = ProjectSB3InputShadowOnly | ProjectSB3InputInputOnly | ProjectSB3InputShadowedInput;
+export type ProjectSB3Input = ProjectSB3InputShadowOnly | ProjectSB3InputInputOnly | ProjectSB3InputShadowedInput | undefined;
 
 export type ProjectSB3Field<TID extends string | null | undefined = string | null | undefined> = [
     value: ProjectSB3Value,
@@ -435,6 +435,12 @@ type SB3BlockTypeDefinition = {
             "OPERAND2": ProjectSB3Input,
         }
     },
+    "operator_join": {
+        inputs: {
+            "STRING1": ProjectSB3Input,
+            "STRING2": ProjectSB3Input,
+        }
+    }
 
     "sensing_dayssince2000": {},
 

@@ -271,14 +271,16 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer) 
         console.log(`Broadcast received '${name}' (${listPtr})`);
     });
 
+    
     await project.rewrite();
-
-
-    // for (let tick = 1; tick <= 10; tick++) {
-    //     console.time("C " + tick);
-    //     runtime.functions.main(project.runtimeInstance.ptr);
-    //     console.timeEnd("C " + tick);
-    // }
-
-
+    
+    project.start();
+    
+    for (let tick = 1; tick <= 1020; tick++) {
+        project.step();
+    }
+    
+    console.log("Garbage collection stats: ")
+    console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
+    
 }

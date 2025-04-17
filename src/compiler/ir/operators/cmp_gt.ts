@@ -53,6 +53,7 @@ export const ir_cmp_gt = new class extends CatnipIrInputOpType<{}> {
                     // Right is not NaN and left is NaN.
                     ctx.emitWasm(SpiderOpcodes.local_get, leftTemp.ref);
                     ctx.emitWasm(SpiderOpcodes.local_get, rightTemp.ref);
+                    ctx.emitWasmGetRuntime();
                     ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp");
                     ctx.emitWasmConst(SpiderNumberType.i32, 0);
                     ctx.emitWasm(SpiderOpcodes.i32_gt_s);
@@ -71,6 +72,7 @@ export const ir_cmp_gt = new class extends CatnipIrInputOpType<{}> {
                 ctx.pushExpression();
                 // The right is NaN.
                 ctx.emitWasm(SpiderOpcodes.local_get, rightTemp.ref);
+                ctx.emitWasmGetRuntime();
                 ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp");
                 ctx.emitWasmConst(SpiderNumberType.i32, 0);
                 ctx.emitWasm(SpiderOpcodes.i32_gt_s);
@@ -102,6 +104,7 @@ export const ir_cmp_gt = new class extends CatnipIrInputOpType<{}> {
                 // Right is NaN and left cannot be NaN.
                 ctx.emitWasm(SpiderOpcodes.local_get, leftTemp.ref);
                 ctx.emitWasm(SpiderOpcodes.local_get, rightTemp.ref);
+                ctx.emitWasmGetRuntime();
                 ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp");
                 ctx.emitWasmConst(SpiderNumberType.i32, 0);
                 ctx.emitWasm(SpiderOpcodes.i32_gt_s);
@@ -118,6 +121,7 @@ export const ir_cmp_gt = new class extends CatnipIrInputOpType<{}> {
         } else {
             // Either of them may be a string.
             // TODO This can be optimized in the case that one of the values is def a number
+            ctx.emitWasmGetRuntime();
             ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp");
             ctx.emitWasmConst(SpiderNumberType.i32, 0);
             ctx.emitWasm(SpiderOpcodes.i32_gt_s);

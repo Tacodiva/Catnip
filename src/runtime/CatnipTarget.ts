@@ -33,7 +33,7 @@ export class CatnipTarget {
             this.runtime.functions.catnip_target_new(
                 this.project.runtimeInstance.ptr,
                 this.sprite.structWrapper.ptr
-            ), this.runtime.memory);
+            ), () => this.runtime.memory);
 
         this._variables = desc.variables;
     }

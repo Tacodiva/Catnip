@@ -22,9 +22,9 @@ struct catnip_thread {
   catnip_thread_fnptr function;
   catnip_thread_status status;
 
-  void *stack_ptr;
-  void *stack_end;
-  void *stack_start;
+  catnip_value *stack_ptr;
+  catnip_value *stack_end;
+  catnip_value *stack_start;
 };
 
 catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entrypoint);

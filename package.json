@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "concurrently \"serve\" \"rollup -c -w\"",
     "build": "rollup -c",
-    "test": "node --no-deprecation --import ./ts-node.register.js ./test/index.ts"
+    "test": "tap run test/index.ts",
+    "play": "node --no-deprecation --enable-source-maps --import ./ts-node.register.js ./index.ts"
   },
   "dependencies": {
     "@rollup/plugin-commonjs": "^26.0.1",
@@ -25,6 +26,7 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "rollup-plugin-livereload": "^2.0.5",
-    "serve": "^14.2.3"
+    "serve": "^14.2.3",
+    "tap": "^21.1.0"
   }
 }

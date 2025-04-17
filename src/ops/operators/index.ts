@@ -6,6 +6,7 @@ import { op_gt } from "./gt";
 import { op_equals } from "./equals";
 import { op_mul } from "./mul";
 import { op_or } from "./or";
+import { op_join } from "./join";
 
 export default {
     operators_sub: op_sub,
@@ -15,4 +16,5 @@ export default {
     operators_gt: op_gt,
     operators_equals: op_equals,
     operators_or: op_or,
+    operators_join: op_join
 };

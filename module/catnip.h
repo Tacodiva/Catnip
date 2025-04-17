@@ -2,6 +2,11 @@
 #ifndef CATNIP_H_INCLUDED
 #define CATNIP_H_INCLUDED
 
+#ifdef CATNIP_DEBUG
+#define CATNIP_GC_STATS
+#endif
+
+// #define CATNIP_GC_DISABLE
 
 #define CATNIP_EXPORT(name) __attribute__((export_name(#name))) catnip_export_ ## name
 #define CATNIP_IMPORT(name) __attribute__((import_module("catnip"), import_name(#name))) name
@@ -40,9 +45,9 @@ typedef char catnip_char_t;
 typedef unsigned char catnip_uchar_t;
 
 
-#if CATNIP_DEBUG
-void catnip_assert(catnip_bool_t assertion, const char* name, const char* line, const char* file);
-#define CATNIP_ASSERT(assertion) catnip_assert(assertion, #assertion, __FUNCTION__, __FILE__)
+#ifdef CATNIP_DEBUG
+void catnip_assert(catnip_bool_t assertion, const char* name, const char* func, const char* file, catnip_ui32_t line);
+#define CATNIP_ASSERT(assertion) catnip_assert(assertion, #assertion, __func__, __FILE__, __LINE__)
 #else
 #define CATNIP_ASSERT(assertion)
 #endif
@@ -54,6 +59,7 @@ typedef struct catnip_thread catnip_thread;
 typedef struct catnip_costume catnip_costume;
 typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 
+#include "./catnip_obj_head.h"
 #include "./catnip_util.h"
 #include "./catnip_list.h"
 #include "./catnip_mem.h"

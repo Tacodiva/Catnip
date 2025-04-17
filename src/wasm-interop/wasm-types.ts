@@ -9,7 +9,7 @@ export interface WasmType<TValue, TValueWrapper extends WasmValueWrapper<any>, T
     set(ptr: number, buffer: DataView, value: TSetValue): void;
     get(ptr: number, buffer: DataView): TValue;
 
-    getWrapper(ptr: number, buffer: DataView): TValueWrapper;
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): TValueWrapper;
 
 }
 
@@ -26,21 +26,21 @@ function alignOffset(offset: number, alignment: number) {
 
 export class WasmValueWrapper<TValueType extends WasmType<any, any>> {
     public readonly ptr: number;
-    public readonly buffer: DataView;
+    public readonly bufferProvider: () => DataView;
     public readonly type: TValueType;
 
-    constructor(ptr: number, buffer: DataView, type: TValueType) {
+    constructor(ptr: number, buffer: DataView | (() => DataView), type: TValueType) {
         this.ptr = ptr;
-        this.buffer = buffer;
+        this.bufferProvider = typeof(buffer) == "function" ? buffer : () => buffer;
         this.type = type;
     }
 
     set(value: WasmTypeSetValue<TValueType>): void {
-        this.type.set(this.ptr, this.buffer, value);
+        this.type.set(this.ptr, this.bufferProvider(), value);
     }
 
     get(): WasmTypeValue<TValueType> {
-        return this.type.get(this.ptr, this.buffer);
+        return this.type.get(this.ptr, this.bufferProvider());
     }
 }
 
@@ -57,7 +57,7 @@ export const WasmFloat64 = {
         return buffer.getFloat64(ptr, true);
     },
 
-    getWrapper(ptr: number, buffer: DataView): WasmValueWrapper<WasmType<number, any>> {
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<number, any>> {
         return new WasmValueWrapper(ptr, buffer, this);
     }
 } satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
@@ -75,7 +75,7 @@ export const WasmFloat32 = {
         return buffer.getFloat32(ptr, true);
     },
 
-    getWrapper(ptr: number, buffer: DataView): WasmValueWrapper<WasmType<number, any>> {
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<number, any>> {
         return new WasmValueWrapper(ptr, buffer, this);
     }
 } satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
@@ -93,7 +93,7 @@ export const WasmInt32 = {
         return buffer.getInt32(ptr, true);
     },
 
-    getWrapper(ptr: number, buffer: DataView): WasmValueWrapper<WasmType<number, any>> {
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<number, any>> {
         return new WasmValueWrapper(ptr, buffer, this);
     }
 } satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
@@ -111,7 +111,7 @@ export const WasmUInt32 = {
         return buffer.getUint32(ptr, true);
     },
 
-    getWrapper(ptr: number, buffer: DataView): WasmValueWrapper<WasmType<number, any>> {
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<number, any>> {
         return new WasmValueWrapper(ptr, buffer, this);
     }
 } satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
@@ -129,7 +129,25 @@ export const WasmUInt8 = {
         return buffer.getUint8(ptr);
     },
 
-    getWrapper(ptr: number, buffer: DataView): WasmValueWrapper<WasmType<number, any>> {
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<number, any>> {
+        return new WasmValueWrapper(ptr, buffer, this);
+    }
+} satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
+
+export const WasmUInt16 = {
+    size: 2,
+    name: "uint16",
+    alignment: 2,
+
+    set(ptr: number, buffer: DataView, value: number): void {
+        buffer.setUint16(ptr, value, true);
+    },
+
+    get(ptr: number, buffer: DataView): number {
+        return buffer.getUint16(ptr, true);
+    },
+
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<number, any>> {
         return new WasmValueWrapper(ptr, buffer, this);
     }
 } satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
@@ -147,22 +165,22 @@ export const WasmVoid = {
         throw new Error("Cannot get the value of void.");
     },
 
-    getWrapper(ptr: number, buffer: DataView): never {
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): never {
         throw new Error("Cannot create a wrapper around type void.");
     }
 } satisfies WasmType<never, never>;
 
 export class WasmPtrWrapper<TValue extends WasmType<any, any>> extends WasmValueWrapper<WasmPtr<TValue>> {
     public setInner(value: WasmTypeSetValue<TValue>) {
-        this.type.setInner(this.ptr, this.buffer, value);
+        this.type.setInner(this.ptr, this.bufferProvider(), value);
     }
 
     public getInner(): WasmTypeValue<TValue> {
-        return this.type.getInner(this.ptr, this.buffer);
+        return this.type.getInner(this.ptr, this.bufferProvider());
     }
 
     public getInnerWrapper(): WasmTypeValueWrapper<TValue> {
-        return this.type.getInnerWrapper(this.ptr, this.buffer);
+        return this.type.getInnerWrapper(this.ptr, this.bufferProvider);
     }
 }
 
@@ -209,11 +227,11 @@ export class WasmPtr<TValue extends WasmType<any, any>> implements WasmType<numb
         return this.type.get(this._getNonNull(ptr, buffer), buffer);
     }
 
-    public getInnerWrapper(ptr: number, buffer: DataView): WasmTypeValueWrapper<TValue> {
-        return this.type.getWrapper(this._getNonNull(ptr, buffer), buffer);
+    public getInnerWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmTypeValueWrapper<TValue> {
+        return this.type.getWrapper(this._getNonNull(ptr, typeof(buffer) == "function" ? buffer() : buffer), buffer);
     }
 
-    public getWrapper(ptr: number, buffer: DataView): WasmPtrWrapper<TValue> {
+    public getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmPtrWrapper<TValue> {
         return new WasmPtrWrapper(ptr, buffer, this);
     }
 }
@@ -222,15 +240,15 @@ export const WasmPtrVoid = new WasmPtr(WasmVoid);
 
 export class WasmArrayWrapper<TValue extends WasmType<any, any>> extends WasmValueWrapper<WasmArray<TValue>> {
     public setElement(index: number, value: WasmTypeSetValue<TValue>) {
-        this.type.setElement(this.ptr, this.buffer, index, value);
+        this.type.setElement(this.ptr, this.bufferProvider(), index, value);
     }
 
     public getElement(index: number): WasmTypeValue<TValue> {
-        return this.type.getElement(this.ptr, this.buffer, index);
+        return this.type.getElement(this.ptr, this.bufferProvider(), index);
     }
 
     public getElementWrapper(index: number): WasmTypeValueWrapper<TValue> {
-        return this.type.getElementWrapper(this.ptr, this.buffer, index);
+        return this.type.getElementWrapper(this.ptr, this.bufferProvider, index);
     }
 }
 
@@ -288,12 +306,12 @@ export class WasmArray<TInnerType extends WasmType<any, any>> implements WasmTyp
         return this.elementType.get(ptr + (this.elementSize * index), buffer);
     }
 
-    public getElementWrapper(ptr: number, buffer: DataView, index: number): WasmTypeValueWrapper<TInnerType> {
+    public getElementWrapper(ptr: number, buffer: DataView | (() => DataView), index: number): WasmTypeValueWrapper<TInnerType> {
         this._boundsCheck(index);
         return this.elementType.getWrapper(ptr + (this.elementSize * index), buffer);
     }
 
-    public getWrapper(ptr: number, buffer: DataView): WasmArrayWrapper<TInnerType> {
+    public getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmArrayWrapper<TInnerType> {
         return new WasmArrayWrapper(ptr, buffer, this);
     }
 }
@@ -307,15 +325,15 @@ export class WasmStructWrapper<
     TStruct extends WasmStruct<infer DefaultMembers> ? DefaultMembers : never
 > extends WasmValueWrapper<WasmStruct<TMembers>> {
     public getMember<MemberName extends keyof TMembers>(memberName: MemberName): WasmTypeValue<TMembers[MemberName]> {
-        return this.type.getMember(this.ptr, this.buffer, memberName);
+        return this.type.getMember(this.ptr, this.bufferProvider(), memberName);
     }
 
     public setMember<MemberName extends keyof TMembers>(memberName: MemberName, value: WasmTypeSetValue<TMembers[MemberName]>) {
-        this.type.setMember(this.ptr, this.buffer, memberName, value);
+        this.type.setMember(this.ptr, this.bufferProvider(), memberName, value);
     }
 
     public getMemberWrapper<MemberName extends keyof TMembers>(memberName: MemberName): WasmTypeValueWrapper<TMembers[MemberName]> {
-        return this.type.getMemberWrapper(this.ptr, this.buffer, memberName);
+        return this.type.getMemberWrapper(this.ptr, this.bufferProvider, memberName);
     }
 }
 
@@ -391,7 +409,7 @@ export class WasmStruct<TMembers extends WasmStructMembersDefinition> implements
         return member.type.set(ptr + member.offset, buffer, value);
     }
 
-    public getMemberWrapper<MemberName extends keyof TMembers>(ptr: number, buffer: DataView, memberName: MemberName): WasmTypeValueWrapper<TMembers[MemberName]> {
+    public getMemberWrapper<MemberName extends keyof TMembers>(ptr: number, buffer: DataView | (() => DataView), memberName: MemberName): WasmTypeValueWrapper<TMembers[MemberName]> {
         const member = this.members[memberName];
         return member.type.getWrapper(ptr + member.offset, buffer);
     }
@@ -400,7 +418,7 @@ export class WasmStruct<TMembers extends WasmStructMembersDefinition> implements
         return this.members[memberName].offset;
     }
 
-    public getWrapper(ptr: number, buffer: DataView): WasmStructWrapper<WasmStruct<TMembers>> {
+    public getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmStructWrapper<WasmStruct<TMembers>> {
         return new WasmStructWrapper(ptr, buffer, this);
     }
 
@@ -430,7 +448,7 @@ export class WasmUnionWrapper<
 > extends WasmValueWrapper<WasmUnion<TMembers>> {
 
     public set<TIndex extends number>(value: WasmUnionValue<TMembers, TIndex>) {
-        this.type.set(this.ptr, this.buffer, value);
+        this.type.set(this.ptr, this.bufferProvider(), value);
     }
 
     public get(): WasmTypeValue<WasmUnion<TMembers>>;
@@ -438,14 +456,14 @@ export class WasmUnionWrapper<
 
     public get<TIndex extends number>(index?: TIndex): WasmTypeValue<WasmUnion<TMembers>> | TMembers[TIndex] {
         if (index === undefined) {
-            return this.type.get(this.ptr, this.buffer);
+            return this.type.get(this.ptr, this.bufferProvider());
         } else {
-            return this.type.get(this.ptr, this.buffer, index);
+            return this.type.get(this.ptr, this.bufferProvider(), index);
         }
     }
 
     public getMemberWrapper<TIndex extends number>(index: number): WasmTypeValueWrapper<TMembers[TIndex]> {
-        return this.type.getMemberWrapper(this.ptr, this.buffer, index);
+        return this.type.getMemberWrapper(this.ptr, this.bufferProvider, index);
     }
 }
 
@@ -496,11 +514,11 @@ export class WasmUnion<TMembers extends WasmUnionDefinition> implements WasmType
         return this.members[index ?? 0].get(ptr, buffer);
     }
 
-    public getWrapper<TIndex extends number>(ptr: number, buffer: DataView): WasmUnionWrapper<WasmUnion<TMembers>> {
+    public getWrapper<TIndex extends number>(ptr: number, buffer: DataView | (() => DataView)): WasmUnionWrapper<WasmUnion<TMembers>> {
         return new WasmUnionWrapper(ptr, buffer, this);
     }
 
-    public getMemberWrapper<TIndex extends number>(ptr: number, buffer: DataView, index: TIndex): WasmTypeValueWrapper<TMembers[TIndex]> {
+    public getMemberWrapper<TIndex extends number>(ptr: number, buffer: DataView | (() => DataView), index: TIndex): WasmTypeValueWrapper<TMembers[TIndex]> {
         return this.members[index].getWrapper(ptr, buffer);
     }
 }

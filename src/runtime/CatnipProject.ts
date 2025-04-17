@@ -216,17 +216,24 @@ export class CatnipProject {
             downloadBlob(writeModule(compiler.spiderModule), "module.wasm", "application/wasm");
         }
 
-        const stage = [...this._sprites.values()][0];
-        const printVariable = stage.getVariable("2");
-        this._projectModule.triggerEvent("PROJECT_START");
+        // const stage = [...this._sprites.values()][0];
+        // const printVariable = stage.getVariable("2");
 
-        for (let tick = 1; tick <= 20; tick++) {
-            console.time("" + tick);
-            this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-            console.timeEnd("" + tick);
-            // if (printVariable !== undefined) {
-            //     console.log("nth = " + printVariable.sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(printVariable._index).getMemberWrapper(0).get());
-            // }
-        }
+        // for (let tick = 1; tick <= 20; tick++) {
+        //     // console.time("" + tick);
+        //     this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
+        //     // console.timeEnd("" + tick);
+        //     // if (printVariable !== undefined) {
+        //     //     console.log("nth = " + printVariable.sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(printVariable._index).getMemberWrapper(0).get());
+        //     // }
+        // }
+    }
+
+    public start(): void {
+        this._projectModule?.triggerEvent("PROJECT_START");
+    }
+
+    public step(): void {
+        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
     }
 }

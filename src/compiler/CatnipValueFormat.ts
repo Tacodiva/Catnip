@@ -48,7 +48,7 @@ export enum CatnipValueFormat {
 
     
     /** Any string. */
-    I32_HSTRING = 1 << 9,    
+    I32_HSTRING = 1 << 9,
     /** A string nan-boxed into an F64. */
     F64_BOXED_I32_HSTRING = 1 << 10,
     

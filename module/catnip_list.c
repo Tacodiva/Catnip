@@ -7,7 +7,7 @@
 catnip_bool_t catnip_list_is_valid(catnip_list *list) {
   if (list == CATNIP_NULL)
     return CATNIP_FALSE;
-  if (list->length >= list->capacity)
+  if (list->length > list->capacity)
     return CATNIP_FALSE;
   return CATNIP_TRUE;
 }
@@ -43,8 +43,9 @@ catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const
   catnip_ui32_t item_index = list->length;
   ++list->length;
 
-  if (list->length == list->capacity) {
+  if (list->length >= list->capacity) {
     catnip_ui32_t new_capacity = list->capacity * 2;
+    if (new_capacity == 0) new_capacity = 1;
     void *new_data = catnip_mem_alloc(new_capacity * item_size);
     catnip_mem_copy(new_data, list->data, list->capacity * item_size);
     catnip_mem_free(list->data);
