@@ -2,9 +2,11 @@ import { CatnipOps } from "./ops";
 import { CatnipRuntimeModule } from "./runtime/CatnipRuntimeModule";
 import JSZip from "jszip";
 import { readSB3 } from "./sb3_reader";
+import { ICatnipRenderer } from "./runtime/ICatnipRenderer";
+import { DummyRenderer } from "./runtime/DummyRenderer";
 
 
-export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer) {
+export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer) {
 
     const jszip = new JSZip();
 
@@ -15,7 +17,7 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer) 
     const projectDesc = readSB3(JSON.parse(projectJSON));
 
 
-    const runtime = await CatnipRuntimeModule.create(runtimeModule);
+    const runtime = await CatnipRuntimeModule.create(runtimeModule, renderer ?? new DummyRenderer());
 
     // const project = runtime.loadProject({
     //     sprites: [
@@ -282,5 +284,7 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer) 
     
     console.log("Garbage collection stats: ")
     console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
+
+    console.log(project.getSprite("1").defaultTarget.structWrapper.get());
     
 }

@@ -7,8 +7,8 @@ export const VALUE_I32_UPPER: number = 0x7FF80002; // All exponent bits + signif
 export const VALUE_STRING_MASK: bigint = 0x7FF80001n << 32n; // All exponent bits + significand bit #52 + significand bit #33
 
 export const CatnipWasmStructValue = new WasmStruct("catnip_value", {
+    lower: CatnipWasmPtrHeapString,
     upper: WasmUInt32,
-    lower: CatnipWasmPtrHeapString
 });
 
 export const CatnipWasmUnionValue = new WasmUnion("catnip_value_union", [

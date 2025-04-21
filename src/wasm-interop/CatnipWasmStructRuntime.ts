@@ -1,3 +1,4 @@
+import { CatnipWasmStructList } from "./CatnipWasmStructList";
 import { CatnipWasmPtrRuntimeGcStats } from "./CatnipWasmStructRuntimeGcStats";
 import { CatnipWasmPtrSprite } from "./CatnipWasmStructSprite";
 import { CatnipWasmPtrTarget } from "./CatnipWasmStructTarget";
@@ -10,10 +11,7 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     
     targets: CatnipWasmPtrTarget,
 
-    // Should be a struct but I'm lazy
-    threads_length: WasmUInt32,
-    threads_capacity: WasmUInt32,
-    threads_data: WasmUInt32,
+    threads: CatnipWasmStructList,
 
     gc_stats: CatnipWasmPtrRuntimeGcStats,
 

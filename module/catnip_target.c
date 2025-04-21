@@ -15,6 +15,9 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
   target->variable_table = catnip_mem_alloc(sizeof(catnip_value) * sprite->variable_count);
   catnip_mem_zero(target->variable_table, sizeof(catnip_value) * sprite->variable_count);
 
+  target->list_table = catnip_mem_alloc(sizeof(catnip_list) * sprite->list_count);
+  catnip_mem_zero(target->list_table, sizeof(catnip_list) * sprite->list_count);
+
   target->next_sprite = sprite->target;
   target->prev_sprite = CATNIP_NULL;
   sprite->target = target;
@@ -41,4 +44,26 @@ void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr e
     CATNIP_LIST_ADD(threadList, catnip_thread *, newThread);
 
   target = target->next_sprite;
+}
+
+void catnip_target_set_xy(catnip_target* target, catnip_i32_t x, catnip_i32_t y) {
+
+  // TODO We need to do fencing here, but that requires information about the costume we don't have yet.
+
+  if (target->pen_down) {
+    catnip_runtime_render_pen_draw_line(
+      target->runtime,
+      &target->pen_state,
+      target->position_x,
+      target->position_y,
+      x,
+      y
+    );
+  }
+
+  target->position_x = x;
+  target->position_y = y;
+
+  catnip_util_print_int(x);
+  catnip_util_print_int(y);
 }

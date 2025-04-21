@@ -7,6 +7,7 @@ import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipTarget } from "../runtime/CatnipTarget";
+import { CatnipList } from "../runtime/CatnipList";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
@@ -106,6 +107,8 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         return JSON.stringify(inputs, (key: string, value: any) => {
             if (value instanceof CatnipVariable) {
                 return `<VARIABLE '${value.id}'>`;
+            } else if (value instanceof CatnipList) {
+                return `<LIST '${value.id}'>`;
             } else if (value instanceof CatnipTarget) {
                 return `<TARGET '${value.sprite.id}'>`;
             } else if (value instanceof CatnipIrTransientVariable) {

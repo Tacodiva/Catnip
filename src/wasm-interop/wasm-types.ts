@@ -116,6 +116,25 @@ export const WasmUInt32 = {
     }
 } satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
 
+export const WasmBool32 = {
+    size: 4,
+    name: "bool32",
+    alignment: 4,
+
+    set(ptr: number, buffer: DataView, value: boolean): void {
+        buffer.setUint32(ptr, value ? 1 : 0, true);
+    },
+
+    get(ptr: number, buffer: DataView): boolean {
+        return buffer.getUint32(ptr, true) !== 0;
+    },
+
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<boolean, any>> {
+        return new WasmValueWrapper(ptr, buffer, this);
+    }
+} satisfies WasmType<boolean, WasmValueWrapper<WasmType<boolean, any>>>;
+
+
 export const WasmUInt8 = {
     size: 1,
     name: "uint8",

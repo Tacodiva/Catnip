@@ -1,6 +1,7 @@
 import { createLogger } from "../log";
 import { CatnipWasmStructSprite } from "../wasm-interop/CatnipWasmStructSprite";
 import { WasmPtr, WasmStructWrapper } from "../wasm-interop/wasm-types";
+import { CatnipList, CatnipListDesc, CatnipListID } from "./CatnipList";
 import { CatnipProject } from "./CatnipProject";
 import { CatnipScript, CatnipScriptDesc, CatnipScriptID } from "./CatnipScript";
 import { CatnipTarget, CatnipTargetDesc } from "./CatnipTarget";
@@ -12,6 +13,7 @@ export interface CatnipSpriteDesc {
     id: CatnipSpriteID;
     name: string;
     variables: CatnipVariableDesc[];
+    lists: CatnipListDesc[];
     scripts: CatnipScriptDesc[];
     target: CatnipTargetDesc;
 }
@@ -23,7 +25,7 @@ export class CatnipSprite {
     public readonly project: CatnipProject;
     public readonly structWrapper: WasmStructWrapper<typeof CatnipWasmStructSprite>;
     public get runtime() { return this.project.runtimeModule; }
-    
+
     public readonly defaultTarget: CatnipTarget;
     private _rewriteTargets: Set<CatnipTarget>;
 
@@ -31,10 +33,14 @@ export class CatnipSprite {
 
     private _name: string;
     private _rewriteName: boolean;
-    
+
     private readonly _variables: Map<CatnipVariableID, CatnipVariable>;
     private _rewriteVariableList: boolean;
     private _rewriteVariables: Set<CatnipVariable>;
+
+    private readonly _lists: Map<CatnipListID, CatnipList>;
+    private _rewriteListsList: boolean;
+    private _rewriteLists: Set<CatnipList>;
 
     private readonly _scripts: Map<CatnipScriptID, CatnipScript>;
     private _rewriteScripts: boolean;
@@ -48,26 +54,32 @@ export class CatnipSprite {
         this.id = desc.id;
         this.project = project;
 
-        this._variables = new Map();
-
         this._scripts = new Map();
-
+        
         this.structWrapper = this.runtime.allocateStruct(CatnipWasmStructSprite);
-
+        
         this._rewriteName = true;
         this._name = desc.name;
-
+        
+        this._variables = new Map();
         this._rewriteVariableList = true;
         this._rewriteVariables = new Set();
         for (const varDesc of desc.variables) {
             this.createVariable(varDesc);
         }
 
+        this._lists = new Map();
+        this._rewriteListsList = true;
+        this._rewriteLists = new Set();
+        for (const listDesc of desc.lists) {
+            this.createList(listDesc);
+        }
+
         this._rewriteScripts = true;
         for (const scriptDesc of desc.scripts) {
             this.createScript(scriptDesc);
         }
-        
+
         this._rewriteTargets = new Set();
 
         this._rewrite();
@@ -115,6 +127,30 @@ export class CatnipSprite {
         return false;
     }
 
+    public createList(desc: CatnipListDesc): CatnipList {
+        const list = new CatnipList(this, desc);
+        this._lists.set(list.id, list);
+        this._rewriteLists.add(list);
+        this._rewriteListsList = true;
+        this._markRewrite();
+        return list;
+    }
+
+    public getList(id: CatnipListID): CatnipList | undefined {
+        return this._lists.get(id);
+    }
+
+    public deleteList(list: CatnipList): boolean {
+        if (this._lists.delete(list.id)) {
+            this._rewriteLists.delete(list);
+            this._rewriteListsList = true;
+            this._markRewrite();
+            list._onDelete();
+            return true;
+        }
+        return false;
+    }
+
     public createScript(desc: CatnipScriptDesc): CatnipScript {
         const script = new CatnipScript(this, desc);
         this._scripts.set(script.id, script);
@@ -150,6 +186,12 @@ export class CatnipSprite {
     }
 
     /** @internal */
+    _rewriteList(list: CatnipList): void {
+        this._rewriteLists.add(list);
+        this._markRewrite();
+    }
+
+    /** @internal */
     _rewrite() {
         if (this._rewriteName) {
             let namePtr = this.structWrapper.getMember("name");
@@ -160,32 +202,39 @@ export class CatnipSprite {
             this._rewriteName = false;
         }
 
-        if (this._rewriteVariableList) {
-            let variablesPtr = this.structWrapper.getMember("variables");
-            if (variablesPtr !== 0)
-                this.runtime.freeMemory(variablesPtr);
-
-            variablesPtr = this.runtime.allocateMemory(this._variables.size * WasmPtr.size, false);
-
-            this.structWrapper.setMember("variable_count", this._variables.size);
-            this.structWrapper.setMember("variables", variablesPtr);
-
-            let i = 0;
-
-            for (const variable of this._variables.values()) {
-                WasmPtr.set(variablesPtr + (i * WasmPtr.size), this.runtime.memory, variable.structWrapper.ptr);
-                variable._index = i;
-                ++i;
-            }
-
-            this._rewriteVariableList = false;
-        }
-
         if (this._rewriteVariables.size !== 0) {
             for (const rewriteVariable of this._rewriteVariables) {
                 rewriteVariable._rewrite();
             }
             this._rewriteVariables.clear();
+        }
+
+        if (this._rewriteVariableList) {
+            let listsPtr = this.structWrapper.getMember("lists");
+            if (listsPtr !== 0)
+                this.runtime.freeMemory(listsPtr);
+
+            listsPtr = this.runtime.allocateMemory(this._lists.size * WasmPtr.size, false);
+
+            this.structWrapper.setMember("list_count", this._lists.size);
+            this.structWrapper.setMember("lists", listsPtr);
+
+            let i = 0;
+
+            for (const list of this._lists.values()) {
+                WasmPtr.set(listsPtr + (i * WasmPtr.size), this.runtime.memory, list.structWrapper.ptr);
+                list._index = i;
+                ++i;
+            }
+
+            this._rewriteListsList = false;
+        }
+
+        if (this._rewriteLists.size !== 0) {
+            for (const rewriteList of this._rewriteLists) {
+                rewriteList._rewrite();
+            }
+            this._rewriteLists.clear();
         }
 
         if (this._rewriteTargets.size !== 0) {

@@ -17,6 +17,7 @@ import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { ir_external_callback_command } from "./ir/core/external_callback_command";
 import { ir_external_callback_input } from "./ir/core/external_callback_input";
 import { CatnipCompilerValue } from "./CatnipCompilerValue";
+import { CatnipValueFormatUtils } from './CatnipValueFormatUtils';
 
 export class CatnipCompilerIrGenContext {
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
@@ -277,7 +278,7 @@ export class CatnipCompilerIrGenContext {
         if (!this._body.doesContinue()) return;
         const operand = this.stack.peekDetailed();
 
-        if (operand.source !== null && operand.value.format !== format) {
+        if (operand.source !== null && !CatnipValueFormatUtils.isAlways(operand.value.format, format)) {
             if (!operand.source.type.tryCast(operand.source, format)) {
                 this.emitIr(ir_cast, { format }, {});
             }

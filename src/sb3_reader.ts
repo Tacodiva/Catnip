@@ -3,10 +3,11 @@ import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./
 import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
 import { op_const } from "./ops/core/const";
 import { CatnipProcedureID, CatnipProcedureTriggerArgType } from "./ops/procedure/procedure_definition";
+import { CatnipListDesc, CatnipListID } from "./runtime/CatnipList";
 import { CatnipProjectDesc } from "./runtime/CatnipProject";
 import { CatnipScriptID } from "./runtime/CatnipScript";
 import { CatnipSpriteDesc, CatnipSpriteID } from "./runtime/CatnipSprite";
-import { CatnipTargetVariableDesc } from "./runtime/CatnipTarget";
+import { CatnipTargetListDesc, CatnipTargetVariableDesc } from "./runtime/CatnipTarget";
 import { CatnipVariableDesc, CatnipVariableID } from "./runtime/CatnipVariable";
 import { ProjectSB3, ProjectSB3Block, ProjectSB3BlockOpcode, ProjectSB3Field, ProjectSB3Input, ProjectSB3InputType, ProjectSB3InputValueColor, ProjectSB3InputValueInline, ProjectSB3InputValueNameID, ProjectSB3InputValueNumber, ProjectSB3InputValueString, ProjectSB3InputValueType, ProjectSB3Target, ProjectSB3TargetBlocks, SB3BlockTypes } from "./sb3";
 import { SB3ReadLogger } from "./sb3_logger";
@@ -16,6 +17,11 @@ import { sb3_ops, SB3CommandBlockDeserializer, SB3HatBlockDeserializer, SB3Input
 export interface SB3VariableInfo {
     readonly spriteID: CatnipSpriteID;
     readonly variableID: CatnipVariableID;
+}
+
+export interface SB3ListInfo {
+    readonly spriteID: CatnipSpriteID;
+    readonly listID: CatnipListID;
 }
 
 export interface SB3ProcedureArgumentInfo {
@@ -40,11 +46,16 @@ export class SB3ReadMetadata {
     private _variableMap: Map<string, SB3VariableInfo>;
     private _variableCount: number;
 
+    private _listMap: Map<string, SB3ListInfo>;
+    private _listCount: number;
+
     public constructor() {
         this._spriteCount = 0;
         this._scriptCount = 0;
         this._variableCount = 0;
         this._variableMap = new Map();
+        this._listCount = 0;
+        this._listMap = new Map();
         this._procedureCount = 0;
         this._procedureMap = new Map();
     }
@@ -63,6 +74,22 @@ export class SB3ReadMetadata {
         const variableInfo = this._variableMap.get(scratchVariableID);
         if (variableInfo === undefined) throw new Error(`Unknown variable ID '${scratchVariableID}'`);
         return variableInfo;
+    }
+
+    private _assignListID(): CatnipVariableID {
+        return (this._listCount++) + "";
+    }
+
+    public addList(scratchListID: string, spriteID: CatnipSpriteID): CatnipListID {
+        const listID = this._assignListID();
+        this._listMap.set(scratchListID, { spriteID, listID: listID });
+        return listID;
+    }
+
+    public getList(scratchListID: string): SB3ListInfo {
+        const listInfo = this._listMap.get(scratchListID);
+        if (listInfo === undefined) throw new Error(`Unknown list ID '${scratchListID}'`);
+        return listInfo;
     }
 
     private _assignProcedureID(proccode: string): CatnipProcedureID {
@@ -128,6 +155,18 @@ export class SB3ScriptReader {
         }
 
         return this.meta.getVariable(variableID);
+    }
+
+    public getList(list: string | ProjectSB3Field<string>): SB3ListInfo {
+        let listID: string;
+
+        if (Array.isArray(list)) {
+            listID = list[1];
+        } else {
+            listID = list;
+        }
+
+        return this.meta.getList(listID);
     }
 
     private _getBlockInfo<TOpcode extends ProjectSB3BlockOpcode>(opcode: TOpcode): { type: BlockType.HAT, deserializer: SB3HatBlockDeserializer<TOpcode> } |
@@ -298,6 +337,9 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
     const variableDesc: CatnipVariableDesc[] = [];
     const variableValueDesc: CatnipTargetVariableDesc[] = [];
 
+    const listDesc: CatnipListDesc[] = [];
+    const listValueDesc: CatnipTargetListDesc[] = [];
+
     for (const scratchVariableID in target.variables) {
         const scratchVariable = target.variables[scratchVariableID];
 
@@ -322,14 +364,42 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
         });
     }
 
+    for (const scratchListID in target.lists) {
+        const scratchList = target.lists[scratchListID];
+
+        const listID = meta.addList(scratchListID, spriteID);
+
+        listDesc.push({
+            id: listID,
+            name: scratchList[0],
+        });
+
+        let value: (number | string)[] = [];
+
+        for (const listValue of scratchList[1]) {
+            if (typeof listValue === "boolean") {
+                value.push("" + listValue);
+            } else {
+                value.push(listValue);
+            }
+        }
+
+        listValueDesc.push({
+            id: listID,
+            value: value
+        });
+    }
+
     return {
         id: spriteID,
         name: target.name,
         variables: variableDesc,
+        lists: listDesc,
         scripts: [],
 
         target: {
             variables: variableValueDesc,
+            lists: listValueDesc,
             x_position: 0,
             y_position: 0
         }

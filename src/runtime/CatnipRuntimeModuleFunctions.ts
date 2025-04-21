@@ -39,6 +39,8 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_target_start_new_thread: fn<[target: SpiderNumberType.i32, entrypoint: SpiderNumberType.i32, threadList: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_target_set_xy: fn<[x: SpiderNumberType.i32, y: SpiderNumberType.i32, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
 
     catnip_thread_new: fn<[target: SpiderNumberType.i32, fnprt: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

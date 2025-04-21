@@ -339,6 +339,13 @@ export type SB3BlockTypes = {
 
 type SB3BlockTypeDefinition = {
 
+    "motion_gotoxy": {
+        inputs: {
+            "X": ProjectSB3Input,
+            "Y": ProjectSB3Input,
+        }
+    }
+
     "looks_say": {
         inputs: {
             "MESSAGE": ProjectSB3Input,
@@ -464,6 +471,14 @@ type SB3BlockTypeDefinition = {
         fields: {
             "VARIABLE": ProjectSB3Field<string>
         },
+    },
+    "data_itemoflist": {
+        inputs: {
+            "INDEX": ProjectSB3Input
+        },
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        },
     }
 
     "procedures_definition": {
@@ -492,4 +507,8 @@ type SB3BlockTypeDefinition = {
             "VALUE": ProjectSB3Field
         }
     },
+
+    "pen_clear": {},
+    "pen_penDown": {},
+    "pen_penUp": {},
 };

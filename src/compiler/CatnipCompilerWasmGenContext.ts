@@ -288,13 +288,18 @@ export class CatnipCompilerWasmGenContext {
         this.emitWasm(SpiderOpcodes.local_get, this.func.spiderThreadParam);
     }
 
+    public emitWasmGetCurrentTarget() {
+        this.emitWasmGetThread();
+        this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("target"));
+    }
+
     public emitWasmGetStackPtr() {
-        this.emitWasm(SpiderOpcodes.local_get, this.func.spiderThreadParam);
+        this.emitWasmGetThread();
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
     }
 
     public emitWasmGetStackEnd() {
-        this.emitWasm(SpiderOpcodes.local_get, this.func.spiderThreadParam);
+        this.emitWasmGetThread();
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_end"));
     }
 

@@ -63,6 +63,10 @@ void CATNIP_EXPORT(catnip_target_start_new_thread)(catnip_target *target, catnip
   catnip_target_start_new_thread(target, entrypoint, threadList);
 }
 
+void CATNIP_EXPORT(catnip_target_set_xy)(catnip_i32_t x, catnip_i32_t y, catnip_target *target) {
+  catnip_target_set_xy(target, x, y);
+}
+
 
 catnip_thread *CATNIP_EXPORT(catnip_thread_new)(catnip_target *target, catnip_thread_fnptr fnptr) {
   return catnip_thread_new(target, fnptr);

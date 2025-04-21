@@ -21,17 +21,17 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         if (ir.operands[0].isConstant)
             return CatnipCompilerValue.constant(ir.operands[0].constantValue, ir.inputs.format);
 
-        return CatnipCompilerValue.dynamic(this._convert(null, ir.operands[0].format, ir.inputs.format));
+        return CatnipCompilerValue.dynamic(this.cast(null, ir.operands[0].format, ir.inputs.format));
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<cast_ir_inputs>): void {
         const srcFormat = ir.operands[0].format;
         const dstFormat = ir.inputs.format;
 
-        this._convert(ctx, srcFormat, dstFormat);
+        this.cast(ctx, srcFormat, dstFormat);
     }
 
-    private _convert(ctx: CatnipCompilerWasmGenContext | null, src: CatnipValueFormat, dst: CatnipValueFormat): CatnipValueFormat {
+    public cast(ctx: CatnipCompilerWasmGenContext | null, src: CatnipValueFormat, dst: CatnipValueFormat): CatnipValueFormat {
 
         if (CatnipValueFormatUtils.isAlways(src, dst))
             return src;
@@ -63,9 +63,9 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
                             ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
                             ctx.releaseLocal(local);
-                        }
 
-                        return src & (~CatnipValueFormat.F64_NAN);
+                            return this.cast(ctx, src & (~CatnipValueFormat.F64_NAN), dst);
+                        }
                     }
 
                     if (dst === CatnipValueFormat.F64_INT) {
@@ -141,13 +141,14 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 }
 
                 if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
-                    return this._convert(ctx, this._convert(ctx, src, CatnipValueFormat.I32_HSTRING), CatnipValueFormat.F64_BOXED_I32_HSTRING);
+                    return this.cast(ctx, this.cast(ctx, src, CatnipValueFormat.I32_HSTRING), CatnipValueFormat.F64_BOXED_I32_HSTRING);
                 }
 
 
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
                     if (ctx !== null) {
-                        this._convert(ctx, src, CatnipValueFormat.F64_INT);
+                        this.cast(ctx, src, CatnipValueFormat.F64_INT);
+                        // TODO We need to check if the F64 is in range.
                         ctx.emitWasm(SpiderOpcodes.i32_trunc_f64_u);
                     }
 
@@ -165,7 +166,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
                 }
 
-                return this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
+                return this.cast(ctx, CatnipValueFormat.I32_HSTRING, dst);
             }
 
             if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER_OR_NAN | CatnipValueFormat.I32_NUMBER)) {
@@ -186,21 +187,21 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     // Executed if the value is a string
                     ctx.pushExpression();
                     ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
-                    let type = this._convert(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst);
+                    let type = this.cast(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst);
                     const trueExpr = ctx.popExpression();
 
                     // Executed if the value is a double already
                     ctx.pushExpression();
                     ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
-                    type |= this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                    type |= this.cast(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
                     const falseExpr = ctx.popExpression();
 
-                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
+                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, CatnipValueFormatUtils.getFormatSpiderType(type));
                     ctx.releaseLocal(value);
 
                     return type;
                 } else {
-                    return this._convert(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst) | this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                    return this.cast(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst) | this.cast(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
                 }
             }
 
@@ -231,7 +232,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     ctx.pushExpression();
                     ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
                     ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
-                    this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_HSTRING);
+                    this.cast(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_HSTRING);
                     const falseExpr = ctx.popExpression();
 
                     ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
@@ -265,7 +266,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     ctx.emitWasmGetRuntime();
                     ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
                 }
-                return this._convert(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                return this.cast(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
             }
 
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_BOOLEAN)) {
@@ -284,7 +285,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                         ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
                     }
 
-                    return this._convert(ctx, CatnipValueFormat.I32_HSTRING, dst);
+                    return this.cast(ctx, CatnipValueFormat.I32_HSTRING, dst);
                 }
 
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
@@ -301,7 +302,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                         ctx.emitWasm(SpiderOpcodes.i32_ne);
                         ctx.emitWasm(SpiderOpcodes.f64_convert_i32_u);
                     }
-                    return this._convert(ctx, CatnipValueFormat.F64_ZERO | CatnipValueFormat.F64_POS_INT, dst);
+                    return this.cast(ctx, CatnipValueFormat.F64_ZERO | CatnipValueFormat.F64_POS_INT, dst);
                 }
             }
 
@@ -310,7 +311,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     ctx.emitWasm(SpiderOpcodes.f64_convert_i32_s);
                 }
 
-                return this._convert(ctx, CatnipValueFormat.F64_INT, dst);
+                return this.cast(ctx, CatnipValueFormat.F64_INT, dst);
             }
 
             notSupported();

@@ -23,6 +23,7 @@ void catnip_list_free(catnip_list *list, catnip_ui32_t item_size);
 catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const void* item);
 
 #define CATNIP_LIST_GET(list, type, index) (*((type*) catnip_list_get((list), sizeof(type), (index))))
+#define CATNIP_LIST_GET_PTR_DANGER(list, type, index) ((type*) catnip_list_get((list), sizeof(type), (index)))
 void* catnip_list_get(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index);
 
 #define CATNIP_LIST_REMOVE(list, type, index) (catnip_list_remove((list), sizeof(type), (index)))

@@ -8,6 +8,7 @@ import { CatnipWasmUnionValue, VALUE_CANNON_NAN_UPPER, VALUE_STRING_UPPER } from
 import { CatnipProject, CatnipProjectDesc } from "./CatnipProject";
 import { CatnipWasmArrayFuncEntry } from "../wasm-interop/CatnipWasmStructFuncEntry";
 import { CatnipRuntimeModuleFunctionsObject } from "./CatnipRuntimeModuleFunctions";
+import { ICatnipRenderer, PEN_ATTRIBUTE_STRIDE_BYTES } from "./ICatnipRenderer";
 
 /*
  * A wrapper for the catnip wasm runtime
@@ -15,7 +16,7 @@ import { CatnipRuntimeModuleFunctionsObject } from "./CatnipRuntimeModuleFunctio
 
 export class CatnipRuntimeModule {
 
-    public static async create(module: WebAssembly.Module): Promise<CatnipRuntimeModule> {
+    public static async create(module: WebAssembly.Module, renderer: ICatnipRenderer): Promise<CatnipRuntimeModule> {
         let runtimeModule: CatnipRuntimeModule;
 
         const imports: CatnipRuntimeModuleImports = {
@@ -23,6 +24,9 @@ export class CatnipRuntimeModule {
                 catnip_import_log: (strPtr: number, strLength: number) => {
                     const str = CatnipRuntimeModule.TEXT_DECODER.decode(runtimeModule.memory.buffer.slice(strPtr, strPtr + strLength));
                     CatnipRuntimeModule._wasmLogger.log(str);
+                },
+                catnip_import_render_pen_draw_lines: (linesPtr: number, linesLength: number) => {
+                    renderer.penDrawLines(new Float32Array(runtimeModule.memory.buffer.slice(linesPtr, linesPtr + linesLength * PEN_ATTRIBUTE_STRIDE_BYTES)), linesLength);
                 }
             },
 
@@ -37,7 +41,7 @@ export class CatnipRuntimeModule {
             }
         };
 
-        runtimeModule = new CatnipRuntimeModule(module, imports, await WebAssembly.instantiate(module, imports as any));
+        runtimeModule = new CatnipRuntimeModule(module, imports, await WebAssembly.instantiate(module, imports as any), renderer);
         return runtimeModule;
     }
 
@@ -47,6 +51,7 @@ export class CatnipRuntimeModule {
     public static readonly TEXT_DECODER = new TextDecoder("utf-8");
     public static readonly TEXT_ENCODER = new TextEncoder();
 
+    public readonly renderer: ICatnipRenderer;
     public readonly module: WebAssembly.Module;
     public readonly instance: WebAssembly.Instance;
     public readonly imports: CatnipRuntimeModuleImports;
@@ -69,13 +74,14 @@ export class CatnipRuntimeModule {
     public get indirectFunctionTable() { return this.imports.env.__indirect_function_table; }
 
     /** @internal */
-    public constructor(module: WebAssembly.Module, imports: CatnipRuntimeModuleImports, instance: WebAssembly.Instance) {
+    public constructor(module: WebAssembly.Module, imports: CatnipRuntimeModuleImports, instance: WebAssembly.Instance, renderer: ICatnipRenderer) {
         this.module = module;
         this.instance = instance;
         this.imports = imports;
         this.functions = this.instance.exports as CatnipRuntimeModuleFunctionsObject;
         this._memory = null;
         this._memoryBytes = null;
+        this.renderer = renderer;
     }
 
     public loadProject(projectDesc: CatnipProjectDesc) {
@@ -95,7 +101,7 @@ export class CatnipRuntimeModule {
         const strPtr = this.allocateMemory(encodedStr.length + CatnipWasmStructHeapString.size, false);
 
         CatnipWasmStructHeapString.set(strPtr, this.memory, {
-            refcount: 1,
+            refcount: 0,
             bytelen: encodedStr.length + CatnipWasmStructHeapString.size,
             magic: CATNIP_STRING_HEADER_MAGIC,
             externref_count: 1,
