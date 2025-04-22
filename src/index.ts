@@ -278,13 +278,13 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
     
     project.start();
     
-    for (let tick = 1; tick <= 1020; tick++) {
+    do {
         project.step();
-    }
+    } while (project.runtimeInstance.getMember("num_active_threads") !== 0);
     
-    console.log("Garbage collection stats: ")
-    console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
+    // console.log("Garbage collection stats: ")
+    // console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
 
-    console.log(project.getSprite("1").defaultTarget.structWrapper.get());
+    // console.log(project.getSprite("1").defaultTarget.structWrapper.get());
     
 }

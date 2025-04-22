@@ -12,6 +12,7 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     targets: CatnipWasmPtrTarget,
 
     threads: CatnipWasmStructList,
+    num_active_threads: WasmUInt32,
 
     gc_stats: CatnipWasmPtrRuntimeGcStats,
 

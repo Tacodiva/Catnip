@@ -3,6 +3,7 @@ import terser from '@rollup/plugin-terser';
 import livereload from 'rollup-plugin-livereload';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import tla from 'rollup-plugin-tla';
 import { string } from "rollup-plugin-string";
 
 const production = !process.env.ROLLUP_WATCH;
@@ -22,7 +23,7 @@ export default [
         },
 
         external: [
-            'jszip'
+            'jszip',
         ],
 
         plugins: [
@@ -46,8 +47,12 @@ export default [
                 include: "renderer/shaders/*",
             }),
 
-            nodeResolve(),
+            nodeResolve({
+                browser: true
+            }),
             commonjs(),
+
+            tla(),
 
             !production && livereload({ watch: ['public'] }),
             production && terser({ mangle: false }),

@@ -190,7 +190,7 @@ export class CatnipProject {
         this._projectModule = await compiler.createModule();
         console.timeEnd("compile");
 
-        if (globalThis.document && window.location.href.endsWith("download")) {
+        if (globalThis.document && window.location.href.search("download") !== -1) {
             const downloadURL = (data: string, fileName: string) => {
                 const a = document.createElement('a')
                 a.href = data

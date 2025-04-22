@@ -64,8 +64,8 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                             ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.f64);
                             ctx.releaseLocal(local);
 
-                            return this.cast(ctx, src & (~CatnipValueFormat.F64_NAN), dst);
                         }
+                        return this.cast(ctx, src & (~CatnipValueFormat.F64_NAN), dst);
                     }
 
                     if (dst === CatnipValueFormat.F64_INT) {

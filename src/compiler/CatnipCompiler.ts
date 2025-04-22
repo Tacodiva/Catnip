@@ -9,7 +9,7 @@ import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunction
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreAnalysisPassAnalyzeFunctionCallers";
 import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
-import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType } from "wasm-spider";
+import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
@@ -23,6 +23,7 @@ import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
 import { LoopPassTypeAnalysis } from "./passes/AnalysisPassTypeAnalysis";
 import { CatnipEventID, CatnipEvents } from "../CatnipEvents";
 import { CatnipCompilerEvent } from "./CatnipCompilerEvent";
+import binaryen from "binaryen";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -108,12 +109,12 @@ export class CatnipCompiler {
         this._scripts = new Map();
 
         this._freeFunctionTableIndices = [];
-        this._functionTableIndexCount = 0; 
+        this._functionTableIndexCount = 0;
         this._functionTableOffset = 1; // Starts at 1 because we never allocate function table index 0
 
         while (this.runtimeModule.indirectFunctionTable.get(this._functionTableOffset) !== null) {
             ++this._functionTableOffset;
-            
+
             if (this._functionTableOffset == this.runtimeModule.indirectFunctionTable.length) {
                 break;
             }
@@ -180,7 +181,9 @@ export class CatnipCompiler {
         this._runPass(ir, CatnipCompilerStage.PASS_POST_ANALYSIS);
         this._runPass(ir, CatnipCompilerStage.PASS_PRE_WASM_GEN);
 
-        console.log("" + ir);
+        if (this.config.ir_dump) {
+            console.log("" + ir);
+        }
     }
 
     public async createModule(): Promise<CatnipProjectModule> {
@@ -222,7 +225,32 @@ export class CatnipCompiler {
             callbacks[callback.name] = callback.callback;
         }
 
-        const module = await compileModule(this.spiderModule);
+        let moduleSource = writeModule(this.spiderModule, { mergeTypes: false });
+
+        if (this.config.enable_binaryen_optimizer || this.config.binaryen_dump) {
+            const binaryenModule = binaryen.readBinary(moduleSource);
+
+            if (this.config.enable_binaryen_optimizer) {
+                binaryenModule.optimize();
+                moduleSource = binaryenModule.emitBinary();
+            }
+
+            if (this.config.binaryen_dump) {
+                switch (this.config.binaryen_dump) {
+                    case "wat":
+                        console.log(binaryenModule.emitText());
+                        break;
+                    case "as":
+                        console.log(binaryenModule.emitAsmjs());
+                        break;
+                    case "stack":
+                        console.log(binaryenModule.emitStackIR());
+                        break;
+                    }
+            }
+        }
+
+        const module = await WebAssembly.compile(moduleSource);
 
         const instance = await WebAssembly.instantiate(module, {
             env: {

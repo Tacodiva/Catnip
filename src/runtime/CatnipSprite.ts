@@ -202,6 +202,27 @@ export class CatnipSprite {
             this._rewriteName = false;
         }
 
+        if (this._rewriteVariableList) {
+            let variablesPtr = this.structWrapper.getMember("variables");
+            if (variablesPtr !== 0)
+                this.runtime.freeMemory(variablesPtr);
+
+            variablesPtr = this.runtime.allocateMemory(this._variables.size * WasmPtr.size, false);
+
+            this.structWrapper.setMember("variable_count", this._variables.size);
+            this.structWrapper.setMember("variables", variablesPtr);
+
+            let i = 0;
+
+            for (const variable of this._variables.values()) {
+                WasmPtr.set(variablesPtr + (i * WasmPtr.size), this.runtime.memory, variable.structWrapper.ptr);
+                variable._index = i;
+                ++i;
+            }
+
+            this._rewriteVariableList = false;
+        }
+
         if (this._rewriteVariables.size !== 0) {
             for (const rewriteVariable of this._rewriteVariables) {
                 rewriteVariable._rewrite();

@@ -360,7 +360,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                             operations write to the actual variable
                                              */
                                             for (const prevOperation of variableState.prevOperations) {
-                                                if (prevOperation.type !== VariableOperationType.SYNC && prevOperation.status === VariableOperationInlineStatus.INLINE) {
+                                                if (prevOperation.type === VariableOperationType.SET && prevOperation.status === VariableOperationInlineStatus.INLINE) {
                                                     setOperationStatus(prevOperation, VariableOperationInlineStatus.BOTH);
                                                     modified = true;
                                                 }

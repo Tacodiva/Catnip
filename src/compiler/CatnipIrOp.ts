@@ -106,11 +106,11 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
     public stringifyInputs(inputs: TInputs): string {
         return JSON.stringify(inputs, (key: string, value: any) => {
             if (value instanceof CatnipVariable) {
-                return `<VARIABLE '${value.id}'>`;
+                return `<VARIABLE '${value.name}'>`;
             } else if (value instanceof CatnipList) {
-                return `<LIST '${value.id}'>`;
+                return `<LIST '${value.name}'>`;
             } else if (value instanceof CatnipTarget) {
-                return `<TARGET '${value.sprite.id}'>`;
+                return `<TARGET '${value.sprite.name}'>`;
             } else if (value instanceof CatnipIrTransientVariable) {
                 return `<TRANSIENT '${value.name}'>`;
             }
