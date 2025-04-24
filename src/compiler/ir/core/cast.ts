@@ -5,6 +5,7 @@ import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from ".
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
+import { CatnipWasmStructHeapString } from "../../../wasm-interop/CatnipWasmStructHeapString";
 
 export type cast_ir_inputs = {
     format: CatnipValueFormat,
@@ -29,6 +30,10 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         const dstFormat = ir.inputs.format;
 
         this.cast(ctx, srcFormat, dstFormat);
+    }
+
+    public stringifyInputs(inputs: cast_ir_inputs): string {
+        return "-> " + CatnipValueFormatUtils.stringify(inputs.format);
     }
 
     public cast(ctx: CatnipCompilerWasmGenContext | null, src: CatnipValueFormat, dst: CatnipValueFormat): CatnipValueFormat {
@@ -149,10 +154,15 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                     if (ctx !== null) {
                         this.cast(ctx, src, CatnipValueFormat.F64_INT);
                         // TODO We need to check if the F64 is in range.
-                        ctx.emitWasm(SpiderOpcodes.i32_trunc_f64_u);
+                        ctx.emitWasm(SpiderOpcodes.i32_trunc_f64_s);
                     }
 
                     return CatnipValueFormat.I32_NUMBER;
+                }
+
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_COLOR)) {
+                    this.cast(ctx, src, CatnipValueFormat.I32_NUMBER);
+                    return CatnipValueFormat.I32_COLOR;
                 }
 
                 notSupported();
@@ -167,6 +177,39 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 }
 
                 return this.cast(ctx, CatnipValueFormat.I32_HSTRING, dst);
+            }
+
+            if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_COLOR)) {
+
+                if (ctx !== null) {            
+                    // We need to check if this is a strings, and try to parse it as a '#RRGGBB' if it is.
+                    const value = ctx.createLocal(SpiderNumberType.f64);
+                    ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
+
+                    ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
+                    ctx.emitWasm(SpiderOpcodes.i64_const, 32);
+                    ctx.emitWasm(SpiderOpcodes.i64_shr_u);
+                    ctx.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                    ctx.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
+                    ctx.emitWasm(SpiderOpcodes.i32_eq);
+
+                    // Executed if the value is a string
+                    ctx.pushExpression();
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    this.cast(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, CatnipValueFormat.I32_COLOR);
+                    const trueExpr = ctx.popExpression();
+
+                    // Executed if the value is a double
+                    ctx.pushExpression();
+                    ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                    this.cast(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);
+                    const falseExpr = ctx.popExpression();
+
+                    ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
+                    ctx.releaseLocal(value);
+                }
+
+                return CatnipValueFormat.I32_COLOR;
             }
 
             if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER_OR_NAN | CatnipValueFormat.I32_NUMBER)) {
@@ -252,14 +295,50 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
                     // Box I32 hstring
 
-                    if (ctx != null) {
+                    if (ctx !== null) {
                         ctx.emitWasm(SpiderOpcodes.i64_extend_i32_u);
                         ctx.emitWasmConst(SpiderNumberType.i64, VALUE_STRING_MASK);
                         ctx.emitWasm(SpiderOpcodes.i64_or);
                         ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
                     }
-                    
+
                     return CatnipValueFormat.F64_BOXED_I32_HSTRING;
+                }
+
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_COLOR)) {
+
+                    if (ctx !== null) {
+                        // If the first character of the string is '#', we will try to parse it as a color
+                        const strPtr = ctx.createLocal(SpiderNumberType.i32);
+                        ctx.emitWasm(SpiderOpcodes.local_tee, strPtr.ref);
+
+                        // Get the first character of the string
+                        ctx.emitWasm(SpiderOpcodes.i32_load8_u, 0, CatnipWasmStructHeapString.size);
+
+                        ctx.emitWasmConst(SpiderNumberType.i32, "#".charCodeAt(0));
+                        ctx.emitWasm(SpiderOpcodes.i32_eq);
+
+                        ctx.pushExpression();
+                        // The first character of the string is a '#'
+                        ctx.emitWasm(SpiderOpcodes.local_get, strPtr.ref);
+                        ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_to_argb");
+                        const trueExpr = ctx.popExpression();
+
+                        ctx.pushExpression();
+                        // The first character is not a '#', we will try to parse it into a number then a color
+                        ctx.emitWasm(SpiderOpcodes.local_get, strPtr.ref);
+                        ctx.emitWasmGetRuntime();
+                        ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
+
+                        this.cast(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);
+                        const falseExpr = ctx.popExpression();
+
+                        ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);
+
+                        ctx.releaseLocal(strPtr);
+                    }
+
+                    return CatnipValueFormat.I32_COLOR;
                 }
 
                 if (ctx !== null) {

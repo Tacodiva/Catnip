@@ -57,11 +57,13 @@ export enum CatnipValueFormat {
     I32_NUMBER = 1 << 12,
     /** A boolean  */
     I32_BOOLEAN = 1 << 13,
+    /** A color stored in ARGB format */
+    I32_COLOR = 1 << 14,
     
     /** Any F64. */
     F64 = F64_NUMBER_OR_NAN | F64_BOXED_I32_HSTRING,
     /** Any I32. */
-    I32 = I32_HSTRING | I32_NUMBER | I32_BOOLEAN,
+    I32 = I32_HSTRING | I32_NUMBER | I32_BOOLEAN | I32_COLOR,
     /** Any value. */
     ANY = I32 | F64,
 

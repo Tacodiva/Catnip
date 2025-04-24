@@ -64,15 +64,12 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
 
   catnip_runtime_gc(runtime);
 
-  catnip_target_pen_state state;
+  // catnip_target_pen_state state;
 
-  state.r = 1;
-  state.g = 0.5;
-  state.b = 0;
-  state.a = 1;
-  state.thickness = 10;
+  // state.argb = 0;
+  // state.thickness = 10;
 
-  catnip_runtime_render_pen_draw_line(runtime, &state, 0, 0, 100, 100);
+  // catnip_runtime_render_pen_draw_line(runtime, &state, 0, 0, 100, 100);
 }
 
 void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList) {

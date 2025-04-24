@@ -136,3 +136,160 @@ catnip_hstring *catnip_blockutil_hstring_join(catnip_runtime *runtime, const cat
 
   return newStr;
 }
+
+inline catnip_i32_t to_hex_value(const catnip_char_t c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'A' && c <= 'F') return (c - 'A') + 10;
+  if (c >= 'a' && c <= 'f') return (c - 'a') + 10;
+  return -1;
+}
+
+catnip_ui32_t catnip_blockutil_hstring_to_argb(const catnip_hstring *str) {
+
+  const catnip_char_t *strData = catnip_hstring_get_data(str);
+  const catnip_ui32_t strLen = CATNIP_HSTRING_BYTELENGTH(str);
+
+  CATNIP_ASSERT(strData[0] == '#');
+
+  if (strLen == 7) {
+    // In the format '#RRGGBB'
+    catnip_ui32_t color = 0;
+
+    for (catnip_ui32_t i = 1; i < 7; i++) {
+      catnip_i32_t value = to_hex_value(strData[i]);
+      if (value == -1) return 0xFF << 24; // Default to alpha 255 if invalid hex
+
+      color <<= 4;
+      color |= value;
+    }
+
+    return color;
+  }
+
+  if (strLen == 4) {
+    // In the format '#RGB'
+    // In the format '#RRGGBB'
+    catnip_ui32_t color = 0;
+
+    for (catnip_ui32_t i = 1; i < 4; i++) {
+      catnip_i32_t value = to_hex_value(strData[i]);
+      if (value == -1) return 0xFF << 24;
+
+      color <<= 4;
+      color |= value;
+      color <<= 4;
+      color |= value;
+    }
+  }
+
+  return 0;
+}
+
+void catnip_blockutil_pen_update_thsv(catnip_target *target) {
+
+  CATNIP_ASSERT(target->pen_argb_valid);
+  CATNIP_ASSERT(!target->pen_thsv_valid);
+
+  const catnip_f64_t a = ((target->pen_argb >> 24) & 0xFF) / 255.0;
+  const catnip_f64_t r = ((target->pen_argb >> 16) & 0xFF) / 255.0;
+  const catnip_f64_t g = ((target->pen_argb >> 8) & 0xFF) / 255.0;
+  const catnip_f64_t b = ((target->pen_argb >> 0) & 0xFF) / 255.0;
+
+  const catnip_f64_t x = CATNIP_MIN(CATNIP_MIN(r, g), b);
+  const catnip_f64_t v = CATNIP_MAX(CATNIP_MAX(r, g), b);
+
+  // For grays, hue will be arbitrarily reported as zero. Otherwise, calculate
+  catnip_f64_t h = 0;
+  catnip_f64_t s = 0;
+
+  if (x != v) {
+    const catnip_f64_t f = (r == x) ? g - b : ((g == x) ? b - r : r - g);
+    const catnip_f64_t i = (r == x) ? 3 : ((g == x) ? 5 : 1);
+    h = catnip_math_fmod((i - (f / (v - x))) * 60, 360) / 360;      
+    s = (v - x) / v;
+  }
+
+  CATNIP_ASSERT(a >= 0 && a <= 1);
+  CATNIP_ASSERT(h >= 0 && h <= 1);
+  CATNIP_ASSERT(s >= 0 && s <= 1);
+  CATNIP_ASSERT(v >= 0 && v <= 1);
+
+  target->pen_thsv_valid = CATNIP_TRUE;
+  target->pen_transparency = (1 - a) * 100;
+  target->pen_hue = h * 100;
+  target->pen_satuation = s * 100;
+  target->pen_value = v * 100;
+}
+
+void catnip_blockutil_pen_update_argb(catnip_target *target) {
+
+  CATNIP_ASSERT(target->pen_thsv_valid);
+  CATNIP_ASSERT(!target->pen_argb_valid);
+
+  catnip_f64_t h = (target->pen_hue / 100) * 360;
+  catnip_f64_t s = target->pen_satuation / 100;
+  catnip_f64_t v = target->pen_value / 100;
+
+  h = catnip_math_fmod(h, 360);
+  if (h < 0) h += 360;
+  
+  s = CATNIP_MAX(0, CATNIP_MIN(s, 1));
+  v = CATNIP_MAX(0, CATNIP_MIN(v, 1));
+
+  const catnip_i32_t i = (catnip_i32_t) (h / 60);
+  const catnip_f64_t f = (h / 60) - i;
+  const catnip_f64_t p = v * (1 - s);
+  const catnip_f64_t q = v * (1 - (s * f));
+  const catnip_f64_t t = v * (1 - (s * (1 - f)));
+
+  catnip_f64_t r;
+  catnip_f64_t g;
+  catnip_f64_t b;
+
+  switch (i) {
+  default:
+  case 0:
+      r = v;
+      g = t;
+      b = p;
+      break;
+  case 1:
+      r = q;
+      g = v;
+      b = p;
+      break;
+  case 2:
+      r = p;
+      g = v;
+      b = t;
+      break;
+  case 3:
+      r = p;
+      g = q;
+      b = v;
+      break;
+  case 4:
+      r = t;
+      g = p;
+      b = v;
+      break;
+  case 5:
+      r = v;
+      g = p;
+      b = q;
+      break;
+  }
+
+  CATNIP_ASSERT(t >= 0 && t <= 1);
+  CATNIP_ASSERT(r >= 0 && r <= 1);
+  CATNIP_ASSERT(g >= 0 && g <= 1);
+  CATNIP_ASSERT(b >= 0 && b <= 1);
+
+  catnip_ui32_t aI = (catnip_ui32_t) ((1 - target->pen_transparency) * 255.0);
+  catnip_ui32_t rI = (catnip_ui32_t) (r * 255.0);
+  catnip_ui32_t gI = (catnip_ui32_t) (g * 255.0);
+  catnip_ui32_t bI = (catnip_ui32_t) (b * 255.0);
+
+  target->pen_argb_valid = CATNIP_TRUE;
+  target->pen_argb = (aI << 24) | (rI << 16) | (gI << 8) | bI;
+}

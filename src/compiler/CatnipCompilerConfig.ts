@@ -19,13 +19,14 @@ export function catnipCreateDefaultCompilerConfig(): CatnipCompilerConfig {
         ir_dump: false,
         enable_tail_call: true,
         enable_optimization_variable_inlining: true,
-        enable_optimization_variable_inlining_force: true,
+        enable_optimization_variable_inlining_force: false,
         enable_optimization_type_analysis: true,
         enable_warp_timer: false,
     } as CatnipCompilerConfig;
 
     // def.enable_binaryen_optimizer = false;
     // def.binaryen_dump = "stack";
+    // def.ir_dump = true;
 
     if (globalThis.document && window.location.href.search("binaryen") !== -1) {
         def.enable_binaryen_optimizer = true;

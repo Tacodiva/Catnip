@@ -3,6 +3,7 @@ export type catnip_compiler_constant = string | number | boolean | undefined;
 
 /** 
  * Stolen from https://github.com/TurboWarp/scratch-vm/blob/fed099c4ccb1ae59a8a7fe2ae14fa4ef4b85bd01/src/util/cast.js
+ * With some custom edition for the color stuff
  */
 
 /**
@@ -146,6 +147,32 @@ export class Cast {
         }
         // Compare as numbers.
         return n1 - n2;
+    }
+
+    static toRGB(value: catnip_compiler_constant): number {
+        if (typeof (value) === "string" && value.charAt(0) === "#") {
+
+            const hex = value.substring(1);
+            const parsed = parseInt(hex, 16);
+
+            if (isNaN(parsed)) return 0xFF << 24; // Alpha 255
+
+            if (hex.length === 6) {
+                return parsed;
+            }
+
+            if (hex.length == 3) {
+                const r = ((parsed >> 8) & 0xf);
+                const g = ((parsed >> 4) & 0xf);
+                const b = parsed & 0xf;
+
+                return (((((r << 4) | r) << 8) | (g << 4) | g) << 8) | (b << 4) | b;
+            }
+
+            return 0xFF << 24;
+        } else {
+            return Cast.toNumber(value) & 0xFFFFFFFF;
+        }
     }
 
 }

@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import { readSB3 } from "./sb3_reader";
 import { ICatnipRenderer } from "./runtime/ICatnipRenderer";
 import { DummyRenderer } from "./runtime/DummyRenderer";
+import { CatnipWasmStructTarget } from "./wasm-interop/CatnipWasmStructTarget";
 
 
 export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer) {
@@ -285,6 +286,5 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
     // console.log("Garbage collection stats: ")
     // console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
 
-    // console.log(project.getSprite("1").defaultTarget.structWrapper.get());
-    
+    console.log(project.getSprite("1").defaultTarget.structWrapper.get());
 }

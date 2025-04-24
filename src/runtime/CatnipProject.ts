@@ -235,5 +235,10 @@ export class CatnipProject {
 
     public step(): void {
         this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
+        this._penFlush();
+    }
+
+    private _penFlush(): void {
+        this.runtimeModule.functions.catnip_runtime_render_pen_flush(this.runtimeInstance.ptr);
     }
 }

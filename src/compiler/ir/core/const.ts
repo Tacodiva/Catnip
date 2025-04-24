@@ -6,6 +6,7 @@ import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { VALUE_STRING_MASK } from "../../../wasm-interop/CatnipWasmStructValue";
 import { Cast, catnip_compiler_constant } from "../../cast";
+import { cast_ir_inputs } from "./cast";
 
 type const_ir_inputs = { value: catnip_compiler_constant, format?: CatnipValueFormat };
 
@@ -49,6 +50,10 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         return true;
     }
 
+    public stringifyInputs(inputs: const_ir_inputs): string {
+        return `${JSON.stringify(inputs.value)} ${inputs.format ? CatnipValueFormatUtils.stringify(inputs.format) : "unformatted"}`;
+    }
+
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<const_ir_inputs>): void {
         const value = ir.inputs.value;
         const format = this._getFormat(ir.inputs);
@@ -77,6 +82,11 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
 
         if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_BOOLEAN)) {
             ctx.emitWasmConst(SpiderNumberType.i32, Cast.toBoolean(value) ? 1 : 0);
+            return;
+        }
+
+        if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_COLOR)) {
+            ctx.emitWasmConst(SpiderNumberType.i32, Cast.toRGB(value));
             return;
         }
 

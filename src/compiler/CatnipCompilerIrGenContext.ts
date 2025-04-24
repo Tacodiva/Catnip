@@ -20,6 +20,9 @@ import { CatnipCompilerValue } from "./CatnipCompilerValue";
 import { CatnipValueFormatUtils } from './CatnipValueFormatUtils';
 
 export class CatnipCompilerIrGenContext {
+    emitWasmRuntimeFunctionCall(arg0: string) {
+        throw new Error("Method not implemented.");
+    }
     private static readonly _logger: Logger = createLogger("CatnipCompilerIrGenContext");
 
     public readonly ir: CatnipIr;

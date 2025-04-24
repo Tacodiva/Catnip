@@ -4,7 +4,7 @@
 
 #include "./catnip.h"
 
-#define CATNIP_RENDER_PEN_LINE_BUFFER_SIZE 2048
+#define CATNIP_RENDER_PEN_LINE_BUFFER_SIZE 16384
 
 struct catnip_pen_line {
     catnip_f32_t color_r;
@@ -95,6 +95,7 @@ void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite
 catnip_obj_head *catnip_runtime_gc_new_obj(catnip_runtime *runtime, catnip_ui32_t size);
 catnip_obj_head *catnip_gc_new_immortal(catnip_ui32_t size);
 void catnip_runtime_gc(catnip_runtime *runtime);
-void catnip_runtime_render_pen_draw_line( catnip_runtime *runtime, catnip_target_pen_state *state, catnip_i32_t x0, catnip_i32_t y0, catnip_i32_t x1, catnip_i32_t y1);
+void catnip_runtime_render_pen_draw_line( catnip_runtime *runtime, catnip_target *target, catnip_i32_t x0, catnip_i32_t y0, catnip_i32_t x1, catnip_i32_t y1);
+void catnip_runtime_render_pen_flush(catnip_runtime *runtime);
 
 #endif

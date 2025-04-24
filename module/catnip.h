@@ -30,15 +30,6 @@ typedef int catnip_bool_t;
 
 #define CATNIP_NULL 0
 
-#define CATNIP_F64_INFINITY __builtin_inf()
-#define CATNIP_F64_NAN __builtin_nan("")
-#define CATNIP_F64_ISNAN(x) __builtin_isnan(x)
-#define CATNIP_F64_ISINFINITE(x) __builtin_isinf(x)
-#define CATNIP_F64_SIGNBIT(x) __builtin_signbit(x)
-
-#define CATNIP_F32_SQRT(x) __builtin_sqrt(x)
-#define CATNIP_F64_SQRT(x) __builtin_sqrt(x)
-
 typedef catnip_i32_t catnip_codepoint_t;
 
 typedef char catnip_char_t;
@@ -60,6 +51,7 @@ typedef struct catnip_costume catnip_costume;
 typedef struct catnip_pen_line catnip_pen_line;
 typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 
+#include "./catnip_math.h"
 #include "./catnip_obj_head.h"
 #include "./catnip_util.h"
 #include "./catnip_list.h"

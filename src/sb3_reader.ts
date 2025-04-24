@@ -248,7 +248,7 @@ export class SB3ScriptReader {
             case ProjectSB3InputValueType.STRING:
                 return CatnipOps.core_const.create({ value: array[1] });
             case ProjectSB3InputValueType.COLOR:
-                throw new Error("Not supported.");
+                return CatnipOps.core_const.create({ value: array[1] });
             case ProjectSB3InputValueType.BROADCAST:
                 return CatnipOps.core_const.create({ value: array[1] });
             case ProjectSB3InputValueType.VARIABLE: {

@@ -54,6 +54,10 @@ void CATNIP_EXPORT(catnip_runtime_start_threads)(catnip_runtime *runtime, catnip
   return catnip_runtime_start_threads(runtime, sprite, entrypoint, threadList);
 }
 
+void CATNIP_EXPORT(catnip_runtime_render_pen_flush)(catnip_runtime *runtime) {
+  catnip_runtime_render_pen_flush(runtime);
+}
+
 
 catnip_target *CATNIP_EXPORT(catnip_target_new)(catnip_runtime *runtime, catnip_sprite *sprite) {
   return catnip_target_new(runtime, sprite);
@@ -105,6 +109,18 @@ catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_join)(const catnip_hstrin
   return catnip_blockutil_hstring_join(runtime, a, b);
 }
 
+catnip_ui32_t CATNIP_EXPORT(catnip_blockutil_hstring_to_argb)(const catnip_hstring *str) {
+  return catnip_blockutil_hstring_to_argb(str);
+}
+
+void CATNIP_EXPORT(catnip_blockutil_pen_update_thsv)(catnip_target *target) {
+  catnip_blockutil_pen_update_thsv(target);
+}
+
+void CATNIP_EXPORT(catnip_blockutil_pen_update_argb)(catnip_target *target) {
+  catnip_blockutil_pen_update_argb(target);
+}
+
 
 void CATNIP_EXPORT(catnip_thread_resize_stack)(catnip_thread *thread, catnip_ui32_t extraCapacity) {
   catnip_thread_resize_stack(thread, extraCapacity);
@@ -113,4 +129,8 @@ void CATNIP_EXPORT(catnip_thread_resize_stack)(catnip_thread *thread, catnip_ui3
 
 catnip_list *CATNIP_EXPORT(catnip_list_new)(catnip_ui32_t item_size, catnip_ui32_t capacity) {
   return catnip_list_new(item_size, capacity);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_fmod)(catnip_f64_t x, catnip_f64_t y) {
+  return catnip_math_fmod(x, y);
 }

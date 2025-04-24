@@ -2,7 +2,7 @@
 
 base_sources = ./module/catnip_assert.c ./module/catnip_blockutil.c ./module/catnip_hstring.c ./module/catnip_list.c \
 	./module/catnip_mem.c ./module/catnip_numconv.c ./module/catnip_runtime.c ./module/catnip_sprite.c ./module/catnip_target.c \
-	./module/catnip_thread.c ./module/catnip_unicode.c ./module/catnip_util.c ./module/catnip_value.c
+	./module/catnip_thread.c ./module/catnip_unicode.c ./module/catnip_util.c ./module/catnip_value.c ./module/catnip_math.c
 
 catnip_sources = ./module/catnip.c
 

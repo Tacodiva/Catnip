@@ -12,16 +12,6 @@ typedef catnip_ui32_t catnip_target_flags;
 #define CATNIP_TARGET_FLAG_IS_STAGE CATNIP_TARGET_FLAG(1)
 #define CATNIP_TARGET_FLAG_IS_VISIBLE CATNIP_TARGET_FLAG(2)
 
-struct catnip_target_pen_state {
-    catnip_f32_t thickness;
-    catnip_f32_t r;
-    catnip_f32_t g;
-    catnip_f32_t b;
-    catnip_f32_t a;
-};
-
-typedef struct catnip_target_pen_state catnip_target_pen_state;
-
 struct catnip_target;
 typedef struct catnip_target catnip_target;
 
@@ -46,7 +36,16 @@ struct catnip_target {
     catnip_ui32_t costume;
 
     catnip_bool_t pen_down;
-    catnip_target_pen_state pen_state;
+    catnip_f32_t pen_thickness;
+    
+    catnip_bool_t pen_argb_valid;
+    catnip_ui32_t pen_argb;
+
+    catnip_bool_t pen_thsv_valid;
+    catnip_f64_t pen_transparency;
+    catnip_f64_t pen_hue;
+    catnip_f64_t pen_satuation;
+    catnip_f64_t pen_value;
     
     catnip_f64_t effect_color;
     catnip_f64_t effect_fisheye;

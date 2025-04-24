@@ -511,4 +511,25 @@ type SB3BlockTypeDefinition = {
     "pen_clear": {},
     "pen_penDown": {},
     "pen_penUp": {},
+    "pen_setPenColorToColor": {
+        inputs: {
+             "COLOR": ProjectSB3Input
+        }
+    },
+    "pen_setPenSizeTo": {
+        inputs: {
+            "SIZE": ProjectSB3Input
+        }
+    },
+    "pen_changePenColorParamBy": {
+        inputs: {
+            "VALUE": ProjectSB3Input,
+            "COLOR_PARAM": ProjectSB3Input,
+        }
+    },
+    "pen_menu_colorParam": {
+        fields: {
+            "colorParam": ProjectSB3Field<null>
+        }
+    }
 };

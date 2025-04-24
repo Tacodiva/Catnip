@@ -34,6 +34,10 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
     target->next_global->prev_global = target;
   }
 
+  target->pen_down = CATNIP_FALSE;
+  target->pen_argb_valid = CATNIP_TRUE;
+  target->pen_argb = 0;
+  
   return target;
 }
 
@@ -53,7 +57,7 @@ void catnip_target_set_xy(catnip_target* target, catnip_i32_t x, catnip_i32_t y)
   if (target->pen_down) {
     catnip_runtime_render_pen_draw_line(
       target->runtime,
-      &target->pen_state,
+      target,
       target->position_x,
       target->position_y,
       x,
@@ -63,7 +67,4 @@ void catnip_target_set_xy(catnip_target* target, catnip_i32_t x, catnip_i32_t y)
 
   target->position_x = x;
   target->position_y = y;
-
-  catnip_util_print_int(x);
-  catnip_util_print_int(y);
 }
