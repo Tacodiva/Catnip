@@ -36,13 +36,7 @@ void catnip_list_free(catnip_list *list, catnip_ui32_t item_size) {
     catnip_mem_free(list->data);
 }
 
-catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const void *item) {
-  CATNIP_ASSERT_LIST_VALID(list);
-  CATNIP_ASSERT(item != CATNIP_NULL);
-
-  catnip_ui32_t item_index = list->length;
-  ++list->length;
-
+inline void try_grow_list(catnip_list *list, catnip_ui32_t item_size) {
   if (list->length >= list->capacity) {
     catnip_ui32_t new_capacity = list->capacity * 2;
     if (new_capacity == 0) new_capacity = 1;
@@ -52,6 +46,16 @@ catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const
     list->capacity = new_capacity;
     list->data = new_data;
   }
+}
+
+catnip_ui32_t catnip_list_push(catnip_list *list, catnip_ui32_t item_size, const void *item) {
+  CATNIP_ASSERT_LIST_VALID(list);
+  CATNIP_ASSERT(item != CATNIP_NULL);
+
+  catnip_ui32_t item_index = list->length;
+  ++list->length;
+
+  try_grow_list(list, item_size);
 
   catnip_mem_copy(&list->data[item_index * item_size], item, item_size);
   return list->length;
@@ -74,4 +78,18 @@ void catnip_list_remove(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_
 catnip_ui32_t catnip_list_length(catnip_list *list) {
   CATNIP_ASSERT_LIST_VALID(list);
   return list->length;
+}
+
+void catnip_list_insert(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index, const void *item) {
+  CATNIP_ASSERT_LIST_VALID(list);
+  CATNIP_ASSERT(index <= list->length);
+
+  const catnip_ui32_t byteIndex = index * item_size;
+
+  ++list->length;
+
+  try_grow_list(list, item_size);
+  
+  catnip_mem_move(&list->data[byteIndex + item_size], &list->data[byteIndex], (list->length - index) * item_size);
+  catnip_mem_copy(&list->data[byteIndex], item, item_size);
 }

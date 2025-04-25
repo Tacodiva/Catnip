@@ -116,7 +116,7 @@ export const ir_pen_change_param = new class extends CatnipIrCommandOpType<pen_c
                 ctx.pushExpression();
 
                 // It's greater than 100
-                ctx.emitWasmConst(SpiderNumberType.i64, 100);
+                ctx.emitWasmConst(SpiderNumberType.f64, 100);
                 ctx.emitWasm(SpiderOpcodes.local_set, value.ref);
 
                 const trueExpr2 = ctx.popExpression();

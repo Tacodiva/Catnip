@@ -286,5 +286,5 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
     // console.log("Garbage collection stats: ")
     // console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
 
-    console.log(project.getSprite("1").defaultTarget.structWrapper.get());
+    // console.log(project.getSprite("1").defaultTarget.structWrapper.get());
 }

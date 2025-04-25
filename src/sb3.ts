@@ -417,6 +417,12 @@ type SB3BlockTypeDefinition = {
             "NUM1": ProjectSB3Input,
             "NUM2": ProjectSB3Input,
         },
+    },
+    "operator_divide": {
+        inputs: {
+            "NUM1": ProjectSB3Input,
+            "NUM2": ProjectSB3Input,
+        },
     }
     "operator_lt": {
         inputs: {
@@ -479,6 +485,50 @@ type SB3BlockTypeDefinition = {
         fields: {
             "LIST": ProjectSB3Field<string>
         },
+    },
+    "data_lengthoflist": {
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
+    },
+    "data_addtolist": {
+        inputs: {
+            "ITEM": ProjectSB3Input
+        },
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
+    },
+    "data_deletealloflist": {
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
+    },
+    "data_replaceitemoflist": {
+        inputs: {
+            "ITEM": ProjectSB3Input,
+            "INDEX": ProjectSB3Input,
+        },
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
+    },
+    "data_insertatlist": {
+        inputs: {
+            "ITEM": ProjectSB3Input,
+            "INDEX": ProjectSB3Input,
+        },
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
+    },
+    "data_deleteoflist": {
+        inputs: {
+            "INDEX": ProjectSB3Input,
+        },
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
     }
 
     "procedures_definition": {
@@ -513,7 +563,7 @@ type SB3BlockTypeDefinition = {
     "pen_penUp": {},
     "pen_setPenColorToColor": {
         inputs: {
-             "COLOR": ProjectSB3Input
+            "COLOR": ProjectSB3Input
         }
     },
     "pen_setPenSizeTo": {
@@ -522,6 +572,12 @@ type SB3BlockTypeDefinition = {
         }
     },
     "pen_changePenColorParamBy": {
+        inputs: {
+            "VALUE": ProjectSB3Input,
+            "COLOR_PARAM": ProjectSB3Input,
+        }
+    },
+    "pen_setPenColorParamTo": {
         inputs: {
             "VALUE": ProjectSB3Input,
             "COLOR_PARAM": ProjectSB3Input,

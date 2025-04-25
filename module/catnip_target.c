@@ -37,6 +37,7 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
   target->pen_down = CATNIP_FALSE;
   target->pen_argb_valid = CATNIP_TRUE;
   target->pen_argb = 0;
+  target->pen_thickness = 1;
   
   return target;
 }

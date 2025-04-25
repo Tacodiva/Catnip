@@ -68,6 +68,13 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_pen_update_thsv: fn<[target: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
     catnip_blockutil_pen_update_argb: fn<[target: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
+    catnip_blockutil_pen_down: fn<[target: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
+    catnip_blockutil_list_push: fn<[item: SpiderNumberType.f64, list: SpiderNumberType.i32]>
+        ([SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_blockutil_list_delete_at: fn<[index: SpiderNumberType.i32, list: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_blockutil_list_insert_at: fn<[index: SpiderNumberType.i32, value: SpiderNumberType.f64, list: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
 
     catnip_list_new: fn<[itemSize: SpiderNumberType.i32, capacity: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

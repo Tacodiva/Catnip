@@ -293,3 +293,28 @@ void catnip_blockutil_pen_update_argb(catnip_target *target) {
   target->pen_argb_valid = CATNIP_TRUE;
   target->pen_argb = (aI << 24) | (rI << 16) | (gI << 8) | bI;
 }
+
+void catnip_blockutil_pen_down(catnip_target *target) {
+  target->pen_down = CATNIP_TRUE;
+
+  catnip_runtime_render_pen_draw_line(
+    target->runtime,
+    target,
+    target->position_x,
+    target->position_y,
+    target->position_x,
+    target->position_y
+  );
+}
+
+void catnip_blockutil_list_push(catnip_list *list, catnip_f64_t value) {
+  CATNIP_LIST_ADD(list, catnip_f64_t, value);
+}
+
+void catnip_blockutil_list_delete_at(catnip_list *list, catnip_i32_t index) {
+  CATNIP_LIST_REMOVE(list, catnip_f64_t, index);
+}
+
+void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catnip_f64_t value) {
+  CATNIP_LIST_INSERT(list, catnip_f64_t, index, value);
+}

@@ -1,6 +1,4 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-import { CatnipIr } from "../../compiler/CatnipIr";
-import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 import { ir_get_var } from "../../compiler/ir/data/get_var";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipVariableID } from "../../runtime/CatnipVariable";

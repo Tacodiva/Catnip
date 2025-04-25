@@ -51,7 +51,7 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
     }
 
     public stringifyInputs(inputs: const_ir_inputs): string {
-        return `${JSON.stringify(inputs.value)} ${inputs.format ? CatnipValueFormatUtils.stringify(inputs.format) : "unformatted"}`;
+        return `${JSON.stringify(inputs.value)} ${inputs.format ? "format" : "no format"} ${CatnipValueFormatUtils.stringify(this._getFormat(inputs))}`;
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<const_ir_inputs>): void {
