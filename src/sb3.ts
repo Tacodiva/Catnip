@@ -89,8 +89,8 @@ export type ProjectSB3InputShadowedInput = [
 
 export type ProjectSB3Input = ProjectSB3InputShadowOnly | ProjectSB3InputInputOnly | ProjectSB3InputShadowedInput | undefined;
 
-export type ProjectSB3Field<TID extends string | null | undefined = string | null | undefined> = [
-    value: ProjectSB3Value,
+export type ProjectSB3Field<TID extends string | null | undefined = string | null | undefined, TValue extends ProjectSB3Value = ProjectSB3Value> = [
+    value: TValue,
     /** The ID of the field's value. On present on certain fields. */
     id: TID
 ];
@@ -351,6 +351,21 @@ type SB3BlockTypeDefinition = {
             "MESSAGE": ProjectSB3Input,
         }
     },
+    "looks_costume": {
+        fields: {
+            "COSTUME": ProjectSB3Field<null>
+        }
+    },
+    "looks_switchcostumeto": {
+        inputs: {
+            "COSTUME": ProjectSB3Input,
+        }
+    },
+    "looks_costumenumbername": {
+        fields: {
+            "NUMBER_NAME": ProjectSB3Field<null, "name" | "number">
+        }
+    }
 
     "event_whenflagclicked": {},
     "event_broadcast": {

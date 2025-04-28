@@ -9,7 +9,7 @@ import { CatnipOpInputs } from "../ops";
 import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpType, CatnipReadonlyIrInputOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
-import { CatnipSpriteID } from "../runtime/CatnipSprite";
+import { CatnipSprite, CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedure/procedure_trigger";
 import { CatnipProcedureID } from "../ops/procedure/procedure_definition";
@@ -19,6 +19,7 @@ import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipEventID } from "../CatnipEvents";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { VALUE_I32_UPPER, VALUE_STRING_UPPER } from "../wasm-interop/CatnipWasmStructValue";
+import { CatnipProject } from "../runtime/CatnipProject";
 
 export interface CatnipCompilerWasmLocal {
     ref: SpiderLocalReference,
@@ -33,7 +34,9 @@ export class CatnipCompilerWasmGenContext {
     public get spiderModule() { return this.compiler.spiderModule; }
     public get runtimeModule() { return this.compiler.runtimeModule; }
 
-    public get project() { return this.compiler.project; }
+    public get project(): CatnipProject { return this.compiler.project; }
+    public get spriteID(): CatnipSpriteID { return this.func.spriteID; }
+    public get sprite(): CatnipSprite { return this.func.sprite; }
 
     private _func: CatnipIrFunction;
     public get func() { return this._func; }
@@ -301,6 +304,10 @@ export class CatnipCompilerWasmGenContext {
     public emitWasmGetStackEnd() {
         this.emitWasmGetThread();
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_end"));
+    }
+
+    public emitWasmGetSprite() {
+        this.emitWasmConst(SpiderNumberType.i32, this.sprite.structWrapper.ptr);
     }
 
     public emitWasmCallEvent(event: CatnipEventID, emitArgs: () => void) {

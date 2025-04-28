@@ -16,7 +16,7 @@ import { CatnipWasmUnionValue, VALUE_STRING_MASK } from "../../../wasm-interop/C
 export type get_list_item_ir_inputs = { target: CatnipTarget, list: CatnipList };
 
 export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_item_ir_inputs> {
-    constructor() { super("ir_get_list_item"); }
+    constructor() { super("get_list_item"); }
 
     public getOperandCount(): number { return 1; }
 

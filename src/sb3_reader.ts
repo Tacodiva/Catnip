@@ -3,6 +3,7 @@ import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./
 import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
 import { op_const } from "./ops/core/const";
 import { CatnipProcedureID, CatnipProcedureTriggerArgType } from "./ops/procedure/procedure_definition";
+import { CatnipCostumeDesc } from "./runtime/CatnipCostume";
 import { CatnipListDesc, CatnipListID } from "./runtime/CatnipList";
 import { CatnipProjectDesc } from "./runtime/CatnipProject";
 import { CatnipScriptID } from "./runtime/CatnipScript";
@@ -273,9 +274,9 @@ export class SB3ScriptReader {
         }
     }
 
-    public readBlockID(input: ProjectSB3Input | string | null): string {
+    public readBlockID(input: ProjectSB3Input | string | null): string | null {
         const inputOrBlockID = this.readInputOrBlockID(input);
-        if (typeof inputOrBlockID !== "string")
+        if (Array.isArray(inputOrBlockID))
             throw new Error(`Unexpected array literal, expected block ID.`);
         return inputOrBlockID;
     }
@@ -340,6 +341,8 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
     const listDesc: CatnipListDesc[] = [];
     const listValueDesc: CatnipTargetListDesc[] = [];
 
+    const costumes: CatnipCostumeDesc[] = [];
+
     for (const scratchVariableID in target.variables) {
         const scratchVariable = target.variables[scratchVariableID];
 
@@ -390,18 +393,26 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
         });
     }
 
+    for (const costume of target.costumes) {
+        costumes.push({
+            name: costume.name
+        });
+    }
+
     return {
         id: spriteID,
         name: target.name,
         variables: variableDesc,
         lists: listDesc,
         scripts: [],
+        costumes,
 
         target: {
             variables: variableValueDesc,
             lists: listValueDesc,
             x_position: 0,
-            y_position: 0
+            y_position: 0,
+            currentCostume: target.currentCostume
         }
     };
 }

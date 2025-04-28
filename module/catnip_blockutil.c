@@ -168,7 +168,6 @@ catnip_ui32_t catnip_blockutil_hstring_to_argb(const catnip_hstring *str) {
 
   if (strLen == 4) {
     // In the format '#RGB'
-    // In the format '#RRGGBB'
     catnip_ui32_t color = 0;
 
     for (catnip_ui32_t i = 1; i < 4; i++) {
@@ -317,4 +316,39 @@ void catnip_blockutil_list_delete_at(catnip_list *list, catnip_i32_t index) {
 
 void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catnip_f64_t value) {
   CATNIP_LIST_INSERT(list, catnip_f64_t, index, value);
+}
+
+void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume) {
+
+  for (catnip_i32_t i = 0; i < target->sprite->costume_count; i++) {
+    if (catnip_hstring_equal(costume, target->sprite->costumes[i].name)) {
+
+      // We found the right costume
+      target->costume = i;
+
+      return;
+    }
+  }
+
+  // No right costume :c
+
+  // TODO Check for 'next costume' and 'previous costume'
+
+  catnip_f64_t cast = catnip_numconv_parse(target->runtime, costume);
+
+  if (CATNIP_F64_ISNAN(cast)) return;
+
+  // If the string is whitespace, we don't do anything
+  if (CATNIP_HSTRING_BYTELENGTH(catnip_hstring_trim(target->runtime, costume)) == 0)
+    return;
+
+  cast = catnip_math_round(cast - 1);
+
+  if (CATNIP_F64_ISINFINITE(cast)) cast = 0;
+
+  cast = catnip_math_fmod(cast, target->sprite->costume_count);
+
+  if (cast < 0) cast += target->sprite->costume_count;
+
+  target->costume = (catnip_ui32_t) cast;
 }

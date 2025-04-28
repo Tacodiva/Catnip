@@ -1,6 +1,6 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp, CatnipReadonlyIrInputOp, CatnipReadonlyIrOp } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
@@ -46,7 +46,17 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
 
     public tryCast(ir: CatnipReadonlyIrOp<const_ir_inputs, {}, this>, format: CatnipValueFormat): boolean {
         /** TODO */
-        (ir as any).inputs.format = format;
+
+        const irCast = ir as CatnipIrOp<const_ir_inputs, {}, this>;
+
+        if (irCast.inputs.format !== undefined &&
+            CatnipValueFormatUtils.isSometimes(irCast.inputs.format, format)
+        ) {
+            irCast.inputs.format &= format;
+        } else {
+            irCast.inputs.format = format;
+        }
+
         return true;
     }
 

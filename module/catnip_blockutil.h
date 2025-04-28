@@ -22,4 +22,6 @@ void catnip_blockutil_list_push(catnip_list *list, catnip_f64_t value);
 void catnip_blockutil_list_delete_at(catnip_list *list, catnip_i32_t value);
 void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catnip_f64_t value);
 
+void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume);
+
 #endif

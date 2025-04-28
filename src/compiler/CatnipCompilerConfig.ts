@@ -27,6 +27,7 @@ export function catnipCreateDefaultCompilerConfig(): CatnipCompilerConfig {
     def.enable_binaryen_optimizer = false;
     // def.binaryen_dump = "stack";
     // def.ir_dump = true;
+    // def.enable_optimization_type_analysis = false;
 
     if (globalThis.document && window.location.href.search("binaryen") !== -1) {
         def.enable_binaryen_optimizer = true;

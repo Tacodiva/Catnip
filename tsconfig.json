@@ -15,6 +15,7 @@
         "compilerOptions": {
             "module": "ESNext"
         },
+        "logError": true
     },
     "include": [
         "src",

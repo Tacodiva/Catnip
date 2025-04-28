@@ -9,10 +9,11 @@
 #define CATNIP_F64_ISINFINITE(x) __builtin_isinf(x)
 #define CATNIP_F64_SIGNBIT(x) __builtin_signbit(x)
 #define CATNIP_F64_SQRT(x) __builtin_sqrt(x)
+#define CATNIP_F64_FLOOR(x) __builtin_floor(x)
 
 #define CATNIP_F32_ISNAN(x) __builtin_isnan(x)
 #define CATNIP_F32_SQRT(x) __builtin_sqrt(x)
-
+#define CATNIP_F32_FLOOR(x) __builtin_floor(x)
 
 #define CATNIP_MAX(a,b) \
 ({ __typeof__ (a) _a = (a); \
@@ -25,5 +26,6 @@
     _a < _b ? _a : _b; })
 
 catnip_f64_t catnip_math_fmod(catnip_f64_t x, catnip_f64_t y);
+catnip_f64_t catnip_math_round(catnip_f64_t x);
 
 #endif

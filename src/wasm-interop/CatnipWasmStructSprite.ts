@@ -1,3 +1,4 @@
+import { CatnipWasmStructCostume } from "./CatnipWasmStructCostume";
 import { CatnipWasmPtrHeapString } from "./CatnipWasmStructHeapString";
 import { CatnipWasmPtrTarget } from "./CatnipWasmStructTarget";
 import { CatnipWasmStructVariable } from "./CatnipWasmStructVariable";
@@ -13,7 +14,10 @@ export const CatnipWasmStructSprite = new WasmStruct("catnip_sprite", {
     list_count: WasmUInt32,
     lists: new WasmPtr(new WasmArray(new WasmPtr(CatnipWasmStructVariable), null)),
 
-    target: WasmPtrVoid
+    target: WasmPtrVoid,
+
+    costume_count: WasmUInt32,
+    costumes: new WasmPtr(new WasmArray(CatnipWasmStructCostume, null))
 });
 
 export const CatnipWasmPtrSprite = new WasmPtr(CatnipWasmStructSprite);

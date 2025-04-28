@@ -137,6 +137,10 @@ void CATNIP_EXPORT(catnip_blockutil_list_insert_at)(catnip_i32_t index, catnip_f
   catnip_blockutil_list_insert_at(list, index, value);
 }
 
+void CATNIP_EXPORT(catnip_blockutil_costume_set)(catnip_hstring *costume, catnip_target *target) {
+  catnip_blockutil_costume_set(target, costume);
+}
+
 
 void CATNIP_EXPORT(catnip_thread_resize_stack)(catnip_thread *thread, catnip_ui32_t extraCapacity) {
   catnip_thread_resize_stack(thread, extraCapacity);

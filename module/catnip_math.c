@@ -66,3 +66,21 @@ catnip_f64_t catnip_math_fmod(catnip_f64_t x, catnip_f64_t y)
 	ux.i = uxi;
 	return ux.f;
 }
+
+// https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_bi_math.c#L146
+catnip_f64_t catnip_math_round(catnip_f64_t x) {
+
+	if (CATNIP_F64_ISINFINITE(x) || CATNIP_F64_ISNAN(x)) {
+		return x;
+	}
+
+	if (x >= -0.5 && x < 0.5) {
+		if (x < 0.0) {
+			return -0.0;
+		} else {
+			return +0.0;
+		}
+	}
+
+	return CATNIP_F64_FLOOR(x + 0.5);
+}

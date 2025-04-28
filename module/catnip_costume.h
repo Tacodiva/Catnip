@@ -1,20 +1,15 @@
-
-
 #ifndef CATNIPR_CANVAS_H_INCLUDED
 #define CATNIPR_CANVAS_H_INCLUDED
 
-#include "./catnipr.h"
+#include "catnip.h"
 
-
-struct catnipr_canvas {
-
-    catnip_i32_t pen_line_count;
-    catnipr_pen_line *pen_lines;
-
+struct catnip_costume {
+    catnip_hstring *name;
     
+    catnip_f32_t aabb_left;
+    catnip_f32_t aabb_right;
+    catnip_f32_t aabb_top;
+    catnip_f32_t aabb_bottom;
 };
-
-typedef struct catnipr_canvas catnipr_canvas;
-
 
 #endif

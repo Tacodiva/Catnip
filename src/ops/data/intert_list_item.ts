@@ -18,7 +18,7 @@ export const op_insert_list_item = new class extends CatnipCommandOpType<insert_
     
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: insert_list_item_inputs): void {
         ctx.emitInput(inputs.value, CatnipValueFormat.F64);
-        ctx.emitInput(inputs.index, CatnipValueFormat.F64);
+        ctx.emitInput(inputs.index, CatnipValueFormat.F64 | CatnipValueFormat.I32_NUMBER);
 
         const sprite = ctx.project.getSprite(inputs.sprite)!;
         const target = sprite.defaultTarget;

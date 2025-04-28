@@ -16,7 +16,7 @@ export const op_delete_list_item = new class extends CatnipCommandOpType<delete_
     }
     
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: delete_list_item_inputs): void {
-        ctx.emitInput(inputs.index, CatnipValueFormat.F64);
+        ctx.emitInput(inputs.index, CatnipValueFormat.F64 | CatnipValueFormat.I32_NUMBER);
 
         const sprite = ctx.project.getSprite(inputs.sprite)!;
         const target = sprite.defaultTarget;

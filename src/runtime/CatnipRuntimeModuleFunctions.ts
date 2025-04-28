@@ -75,6 +75,8 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_blockutil_list_insert_at: fn<[index: SpiderNumberType.i32, value: SpiderNumberType.f64, list: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_blockutil_costume_set: fn<[costumeString: SpiderNumberType.i32, target: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
 
     catnip_list_new: fn<[itemSize: SpiderNumberType.i32, capacity: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

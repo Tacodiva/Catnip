@@ -41,7 +41,7 @@ void catnip_hstring_print(const catnip_hstring *str) {
 }
 
 // https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_api_string.c#L293
-catnip_hstring *catnip_str_trim(catnip_runtime *runtime, catnip_hstring *str) {
+catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
   const catnip_char_t *ptr_start = catnip_hstring_get_data(str);
@@ -110,4 +110,26 @@ catnip_hstring *catnip_str_trim(catnip_runtime *runtime, catnip_hstring *str) {
   }
 
   return catnip_hstring_new(runtime, trim_start, (catnip_ui32_t) (trim_end - trim_start));
+}
+
+catnip_bool_t catnip_hstring_equal(catnip_hstring *a, catnip_hstring *b) {
+  if (a == b)
+    return CATNIP_TRUE;
+
+  if (a == CATNIP_NULL || b == CATNIP_NULL)
+    return CATNIP_FALSE;
+
+  const catnip_ui32_t bytelen = CATNIP_HSTRING_BYTELENGTH(a);
+
+  if (bytelen != CATNIP_HSTRING_BYTELENGTH(b))
+    return CATNIP_FALSE;
+
+  const catnip_char_t *aDat = catnip_hstring_get_data(a);
+  const catnip_char_t *bDat = catnip_hstring_get_data(b);
+
+  for (catnip_ui32_t i = 0; i < bytelen; i++) {
+    if (aDat[i] != bDat[i]) return CATNIP_FALSE;
+  }
+
+  return CATNIP_TRUE;
 }

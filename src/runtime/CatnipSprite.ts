@@ -1,6 +1,8 @@
 import { createLogger } from "../log";
+import { CatnipWasmStructCostume } from "../wasm-interop/CatnipWasmStructCostume";
 import { CatnipWasmStructSprite } from "../wasm-interop/CatnipWasmStructSprite";
 import { WasmPtr, WasmStructWrapper } from "../wasm-interop/wasm-types";
+import { CatnipCostume, CatnipCostumeDesc } from "./CatnipCostume";
 import { CatnipList, CatnipListDesc, CatnipListID } from "./CatnipList";
 import { CatnipProject } from "./CatnipProject";
 import { CatnipScript, CatnipScriptDesc, CatnipScriptID } from "./CatnipScript";
@@ -15,6 +17,7 @@ export interface CatnipSpriteDesc {
     variables: CatnipVariableDesc[];
     lists: CatnipListDesc[];
     scripts: CatnipScriptDesc[];
+    costumes: CatnipCostumeDesc[];
     target: CatnipTargetDesc;
 }
 
@@ -44,6 +47,10 @@ export class CatnipSprite {
 
     private readonly _scripts: Map<CatnipScriptID, CatnipScript>;
     private _rewriteScripts: boolean;
+
+    private readonly _costumes: CatnipCostume[];
+    private _rewriteCostumes: boolean;
+    public get costumes(): readonly CatnipCostume[] { return this._costumes; }
 
     public get scripts(): IterableIterator<CatnipScript> { return this._scripts.values(); }
 
@@ -78,6 +85,12 @@ export class CatnipSprite {
         this._rewriteScripts = true;
         for (const scriptDesc of desc.scripts) {
             this.createScript(scriptDesc);
+        }
+
+        this._costumes = [];
+        this._rewriteCostumes = true;
+        for (const costumeDesc of desc.costumes) {
+            this.createCostume(costumeDesc);
         }
 
         this._rewriteTargets = new Set();
@@ -175,6 +188,14 @@ export class CatnipSprite {
         return false;
     }
 
+    public createCostume(desc: CatnipCostumeDesc): CatnipCostume {
+        const costume = new CatnipCostume(this, this._costumes.length, desc);
+        this._costumes.push(costume);
+        this._rewriteCostumes = true;
+        this._markRewrite();
+        return costume;
+    }
+
     private _markRewrite() {
         this.project._addRewriteSprite(this);
     }
@@ -263,6 +284,23 @@ export class CatnipSprite {
                 rewriteTarget._rewrite();
             }
             this._rewriteTargets.clear();
+        }
+
+        if (this._rewriteCostumes) {
+            // TODO this is horrible
+            const costumeCount = this._costumes.length;
+
+            const costumesPtr = this.runtime.allocateMemory(CatnipWasmStructCostume.size * costumeCount);
+            
+            this.structWrapper.setMember("costumes", costumesPtr);
+            this.structWrapper.setMember("costume_count", costumeCount);
+
+            for (let i = 0; i < costumeCount; i++) {
+                const costumePtr = costumesPtr + i * CatnipWasmStructCostume.size;
+                const costumeStruct = CatnipWasmStructCostume.getWrapper(costumePtr, this.structWrapper.bufferProvider);
+
+                this._costumes[i]._rewrite(costumeStruct);
+            }
         }
 
         this.project._removeRewriteSprite(this);

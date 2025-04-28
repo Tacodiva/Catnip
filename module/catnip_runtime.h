@@ -24,17 +24,6 @@ struct catnip_pen_line {
 
 typedef struct catnip_pen_line catnip_pen_line;
 
-struct catnip_costume {
-    catnip_hstring *name;
-    
-    catnip_f32_t aabbLeft;
-    catnip_f32_t aabbRight;
-    catnip_f32_t aabbTop;
-    catnip_f32_t aabbBottom;
-};
-
-typedef struct catnip_costume catnip_costume;
-
 #define CATNIP_HEAP_PAGE_MAGIC 0x1EE7
 
 struct catnip_gc_page {

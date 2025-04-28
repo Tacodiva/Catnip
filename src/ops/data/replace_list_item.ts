@@ -18,7 +18,7 @@ export const op_replace_list_item = new class extends CatnipCommandOpType<replac
     
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: replace_list_item_inputs): void {
         ctx.emitInput(inputs.value, CatnipValueFormat.F64);
-        ctx.emitInput(inputs.index, CatnipValueFormat.F64);
+        ctx.emitInput(inputs.index, CatnipValueFormat.F64 | CatnipValueFormat.I32_NUMBER);
 
         const sprite = ctx.project.getSprite(inputs.sprite)!;
         const target = sprite.defaultTarget;

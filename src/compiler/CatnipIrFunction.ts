@@ -5,6 +5,8 @@ import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipIr as CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedure/procedure_trigger";
+import { CatnipSprite, CatnipSpriteID } from "../runtime/CatnipSprite";
+import { CatnipProject } from "../runtime/CatnipProject";
 
 export interface CatnipIrTransientVariableSourceInfo {
     readonly variable: CatnipIrTransientVariable;
@@ -82,7 +84,10 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
 
     public readonly ir: CatnipIr;
     public get compiler(): CatnipCompiler { return this.ir.compiler; }
-    public get spiderModule() { return this.compiler.spiderModule; }
+    public get spiderModule(): SpiderModule { return this.compiler.spiderModule; }
+    public get project(): CatnipProject { return this.compiler.project; }
+    public get spriteID(): CatnipSpriteID { return this.ir.spriteID; }
+    public get sprite(): CatnipSprite { return this.project.getSprite(this.spriteID); }
 
     public readonly spiderFunction: SpiderFunctionDefinition;
     public readonly spiderThreadParam: SpiderLocalReference;

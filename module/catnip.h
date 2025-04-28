@@ -43,6 +43,7 @@ void catnip_assert(catnip_bool_t assertion, const char* name, const char* func, 
 #define CATNIP_ASSERT(assertion)
 #endif
 
+typedef struct catnip_costume catnip_costume;
 typedef struct catnip_runtime catnip_runtime;
 typedef struct catnip_target catnip_target;
 typedef struct catnip_sprite catnip_sprite;
@@ -62,6 +63,7 @@ typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 #include "./catnip_numconv.h"
 #include "./catnip_value.h"
 #include "./catnip_variable.h"
+#include "./catnip_costume.h"
 #include "./catnip_sprite.h"
 #include "./catnip_target.h"
 #include "./catnip_thread.h"

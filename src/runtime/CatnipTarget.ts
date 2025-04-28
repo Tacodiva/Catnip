@@ -11,6 +11,7 @@ export interface CatnipTargetDesc {
 
     x_position: number;
     y_position: number;
+    currentCostume: number;
 }
 
 export interface CatnipTargetVariableDesc {
@@ -34,6 +35,8 @@ export class CatnipTarget {
     private _variables: CatnipTargetVariableDesc[] | null;
     private _lists: CatnipTargetListDesc[] | null;
 
+    private _currentCostume: number;
+
     /** @internal */
     constructor(sprite: CatnipSprite, desc: CatnipTargetDesc) {
         this.sprite = sprite;
@@ -46,6 +49,7 @@ export class CatnipTarget {
 
         this._variables = desc.variables;
         this._lists = desc.lists;
+        this._currentCostume = desc.currentCostume;
     }
 
     /** @internal */
@@ -95,5 +99,7 @@ export class CatnipTarget {
                 }
             }
         }
+
+        this.structWrapper.setMember("costume", this._currentCostume);
     }
 }

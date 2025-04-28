@@ -818,7 +818,7 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
   CATNIP_ASSERT(str != CATNIP_NULL);
 
   // TODO Account for scratch's broken trim polyfill
-  str = catnip_str_trim(runtime, str);
+  str = catnip_hstring_trim(runtime, str);
 
   catnip_ui32_t p_bytelen = CATNIP_HSTRING_BYTELENGTH(str);
 
