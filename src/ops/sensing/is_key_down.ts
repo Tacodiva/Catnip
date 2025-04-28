@@ -1,8 +1,8 @@
-import { CatnipInputOp, CatnipInputOpType, CatnipOp } from "..";
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { ir_is_key_down } from "../../compiler/ir/sensing/is_key_down";
 import { registerSB3InputBlock } from "../../sb3_ops";
+import { CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
 
 type is_key_down_inputs = { key: CatnipInputOp }
 

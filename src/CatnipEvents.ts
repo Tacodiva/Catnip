@@ -85,6 +85,9 @@ export const CatnipEvents = {
 
     IO_KEY_PRESSED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode
     IO_KEY_RELEASED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode
+    IO_MOUSE_MOVE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const), // x, y
+    IO_MOUSE_DOWN: new CatnipEventInfo([] as const),
+    IO_MOUSE_UP: new CatnipEventInfo([] as const),
     
     TARGET_POSITION_UPDATE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const),
 } satisfies Record<string, CatnipEventInfo<any>>;

@@ -1,4 +1,4 @@
-import { CatnipWasmStructIoKeys } from "./CatnipWasmStructIoKeys";
+import { CatnipWasmStructIO } from "./CatnipWasmStructIO";
 import { CatnipWasmStructList } from "./CatnipWasmStructList";
 import { CatnipWasmPtrRuntimeGcStats } from "./CatnipWasmStructRuntimeGcStats";
 import { CatnipWasmPtrSprite } from "./CatnipWasmStructSprite";
@@ -24,6 +24,6 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     pen_line_buffer_length: WasmUInt32,
     pen_line_buffer: WasmPtrVoid,
 
-    io_keys: new WasmPtr(CatnipWasmStructIoKeys),
+    io: new WasmPtr(CatnipWasmStructIO),
 
 });

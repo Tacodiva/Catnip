@@ -88,6 +88,10 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_io_key_released: fn<[rt: SpiderNumberType.i32, keyCode: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_io_mouse_move: fn<[rt: SpiderNumberType.i32, x: SpiderNumberType.f64, y: SpiderNumberType.f64]>
+        ([SpiderNumberType.i32, SpiderNumberType.f64, SpiderNumberType.f64], undefined),
+    catnip_io_mouse_down: fn<[rt: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
+    catnip_io_mouse_up: fn<[rt: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
 };
 
 export type CatnipRuntimeModuleFunctionName = keyof typeof CatnipRuntimeModuleFunctions;

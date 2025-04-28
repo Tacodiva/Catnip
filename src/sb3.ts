@@ -485,7 +485,10 @@ type SB3BlockTypeDefinition = {
         fields: {
             "KEY_OPTION": ProjectSB3Field<null>
         }
-    }
+    },
+    "sensing_mousex": {},
+    "sensing_mousey": {},
+    "sensing_mousedown": {},
 
     "data_variable": {
         fields: {

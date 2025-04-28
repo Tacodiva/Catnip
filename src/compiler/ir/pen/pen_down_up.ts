@@ -13,16 +13,15 @@ export const ir_pen_down_up = new class extends CatnipIrCommandOpType<pen_down_u
     public getOperandCount(): number { return 0; }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<pen_down_up_ir_inputs, {}>): void {
-        ctx.emitWasmGetCurrentTarget();
+                
+        if (ir.inputs.type === "up") {
+            ctx.emitWasmGetCurrentTarget();
+            ctx.emitWasmConst(SpiderNumberType.i32, 0);
+            ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructTarget.getMemberOffset("pen_down"));
+        } else {
+            ctx.emitWasmGetCurrentTarget();
+            ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_pen_down");
+        }
 
-        ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_pen_down");
-
-        // if (ir.inputs.type === "up") {
-        //     ctx.emitWasmConst(SpiderNumberType.i32, 0);
-        // } else {
-        //     ctx.emitWasmConst(SpiderNumberType.i32, 1);
-        // }
-
-        // ctx.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructTarget.getMemberOffset("pen_down"));
     }
 }

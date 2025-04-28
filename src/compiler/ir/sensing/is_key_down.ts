@@ -6,7 +6,7 @@ import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrOp } from "../../
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
-import { CatnipWasmStructIoKeys } from "../../../wasm-interop/CatnipWasmStructIoKeys";
+import { CatnipWasmStructIO } from "../../../wasm-interop/CatnipWasmStructIO";
 import { CatnipCompilerKeyDownSubsystem } from "../../subsystems/CatnipCompilerKeyDownSubsystem";
 
 export const ir_is_key_down = new class extends CatnipIrInputOpType {
@@ -32,8 +32,8 @@ export const ir_is_key_down = new class extends CatnipIrInputOpType {
             let keyCode = Cast.toKeyCode(keyInput.constantValue);
 
             ctx.emitWasmGetRuntime();
-            ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("io_keys"));
-            ctx.emitWasm(SpiderOpcodes.i32_load8_u, 0, CatnipWasmStructIoKeys.getMemberOffset("keys") + keyCode);
+            ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("io"));
+            ctx.emitWasm(SpiderOpcodes.i32_load8_u, 0, CatnipWasmStructIO.getMemberOffset("keys") + keyCode);
 
             return;
 

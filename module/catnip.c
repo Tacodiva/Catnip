@@ -167,3 +167,15 @@ void CATNIP_EXPORT(catnip_io_key_pressed)(catnip_runtime *runtime, catnip_ui32_t
 void CATNIP_EXPORT(catnip_io_key_released)(catnip_runtime *runtime, catnip_ui32_t keyCode) {
   catnip_io_key_released(runtime, keyCode);
 }
+
+void CATNIP_EXPORT(catnip_io_mouse_move)(catnip_runtime *runtime, catnip_f64_t x, catnip_f64_t y) {
+  catnip_io_mouse_move(runtime, x, y);
+}
+
+void CATNIP_EXPORT(catnip_io_mouse_down)(catnip_runtime *runtime) {
+  catnip_io_mouse_down(runtime);
+}
+
+void CATNIP_EXPORT(catnip_io_mouse_up)(catnip_runtime *runtime) {
+  catnip_io_mouse_up(runtime);
+}

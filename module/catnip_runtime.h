@@ -77,7 +77,7 @@ struct catnip_runtime {
     catnip_ui32_t pen_line_buffer_length;
     catnip_pen_line *pen_line_buffer;
 
-    catnip_io_keys *io_keys;
+    catnip_io *io;
 };
 
 catnip_runtime *catnip_runtime_new();
