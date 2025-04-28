@@ -19,13 +19,14 @@ export const op_change_var_by = new class extends CatnipCommandOpType<change_var
     }
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: change_var_by_inputs): void {
-        ctx.emitInput(inputs.value, CatnipValueFormat.F64);
+        ctx.emitInput(inputs.value, CatnipValueFormat.F64_NUMBER);
 
         const sprite = ctx.project.getSprite(inputs.sprite)!;
         const target = sprite.defaultTarget;
         const variable = sprite.getVariable(inputs.variable)!;
 
         ctx.emitIr(ir_get_var, { target, variable }, {});
+        ctx.emitCast(CatnipValueFormat.F64_NUMBER);
         ctx.emitIr(ir_add, {}, {});
 
         ctx.emitIr(ir_set_var, { target, variable }, {});

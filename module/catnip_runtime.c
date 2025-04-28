@@ -29,6 +29,8 @@ catnip_runtime *catnip_runtime_new() {
   rt->pen_line_buffer = catnip_mem_alloc(sizeof(catnip_pen_line) * CATNIP_RENDER_PEN_LINE_BUFFER_SIZE);
   rt->pen_line_buffer_length = 0;
 
+  rt->io_keys = catnip_mem_alloc(sizeof(catnip_io_keys));
+
   return rt;
 }
 

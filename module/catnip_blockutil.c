@@ -5,6 +5,10 @@ void catnip_blockutil_debug_log(catnip_hstring *str) {
   catnip_hstring_print(str);
 }
 
+void catnip_blockutil_debug_log_int(catnip_ui32_t x) {
+  catnip_util_print_int(x);
+}
+
 catnip_thread_status catnip_blockutil_wait_for_threads(catnip_list *threadList) {
   catnip_bool_t anyRunning = CATNIP_FALSE;
 

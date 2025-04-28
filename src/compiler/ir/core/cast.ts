@@ -84,7 +84,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
             outFormat = valueFormat0 | valueFormat1;
         }
 
-        ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, outFormat === undefined ? undefined : CatnipValueFormatUtils.getFormatSpiderType(format));
+        ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, outFormat === undefined ? undefined : CatnipValueFormatUtils.getFormatSpiderType(outFormat));
         return outFormat;
     }
 
@@ -296,6 +296,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                         (ctx) => {
 
                             ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                            ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
 
                             // Should really be i64 -> F64_BOXED_I32_HSTRING -> CatnipValueFormat.I32_HSTRING
                             //  but we can go directly from i64 -> CatnipValueFormat.I32_HSTRING
@@ -306,7 +307,6 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                         (ctx) => {
                             ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
 
-                            ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
                             return this.cast(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_HSTRING);
                         }
                     );

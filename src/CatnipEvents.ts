@@ -32,6 +32,12 @@ export const CatnipEventValueTypes = {
         (rt, value: number) => value
     ),
 
+    NUMBER_I32: createValueTypeInfo<number>(
+        CatnipValueFormat.I32_NUMBER,
+        (rt, value: number) => value,
+        (rt, value: number) => value
+    ),
+
     STRING: createValueTypeInfo<string>(
         CatnipValueFormat.I32_HSTRING,
         (rt, value: number) => {
@@ -76,6 +82,9 @@ export type CatnipEventListener<EventID extends CatnipEventID = CatnipEventID> =
 export const CatnipEvents = {
     PROJECT_START: new CatnipEventInfo([] as const),
     PROJECT_BROADCAST: new CatnipEventInfo(["STRING", "POINTER"] as const),
+
+    IO_KEY_PRESSED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode
+    IO_KEY_RELEASED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode
     
     TARGET_POSITION_UPDATE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const),
 } satisfies Record<string, CatnipEventInfo<any>>;

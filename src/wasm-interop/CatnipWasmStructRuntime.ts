@@ -1,8 +1,9 @@
+import { CatnipWasmStructIoKeys } from "./CatnipWasmStructIoKeys";
 import { CatnipWasmStructList } from "./CatnipWasmStructList";
 import { CatnipWasmPtrRuntimeGcStats } from "./CatnipWasmStructRuntimeGcStats";
 import { CatnipWasmPtrSprite } from "./CatnipWasmStructSprite";
 import { CatnipWasmPtrTarget } from "./CatnipWasmStructTarget";
-import { WasmArray, WasmPtr, WasmStruct, WasmUInt32 } from "./wasm-types";
+import { WasmArray, WasmInt32, WasmPtr, WasmPtrVoid, WasmStruct, WasmUInt32 } from "./wasm-types";
 
 export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
 
@@ -15,5 +16,14 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     num_active_threads: WasmUInt32,
 
     gc_stats: CatnipWasmPtrRuntimeGcStats,
+    gc_page_index: WasmInt32,
+    gc_page: WasmPtrVoid,
+    gc_pages: CatnipWasmStructList,
+    gc_large_objs: CatnipWasmStructList,
+
+    pen_line_buffer_length: WasmUInt32,
+    pen_line_buffer: WasmPtrVoid,
+
+    io_keys: new WasmPtr(CatnipWasmStructIoKeys),
 
 });

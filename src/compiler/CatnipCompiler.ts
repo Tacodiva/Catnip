@@ -195,13 +195,13 @@ export class CatnipCompiler {
                 this._createCommandIR(scriptIR);
         }
 
+        for (const scriptIR of this._enumerateScripts()) {
+            scriptIR.createWASM();
+        }
+        
         for (const subsystem of this._subsystems.values()) {
             if (subsystem.addEvents)
                 subsystem.addEvents();
-        }
-
-        for (const scriptIR of this._enumerateScripts()) {
-            scriptIR.createWASM();
         }
 
         let eventID: CatnipEventID;
@@ -246,7 +246,7 @@ export class CatnipCompiler {
                     case "stack":
                         console.log(binaryenModule.emitStackIR());
                         break;
-                    }
+                }
             }
         }
 

@@ -101,8 +101,6 @@ export class CatnipRenderer implements ICatnipRenderer {
     public penDrawLines(data: Float32Array, length: number): void {
         const gl = this.gl;
 
-        console.log("Drawing " + length + " lines!");
-
         gl.useProgram(this.penShader);
 
         gl.uniform2fv(this.u_stageSize_loc, [this.canvasElement.width, this.canvasElement.height]);

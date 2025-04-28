@@ -382,7 +382,12 @@ type SB3BlockTypeDefinition = {
         fields: {
             "BROADCAST_OPTION": ProjectSB3Field<string>
         }
-    }
+    },
+    "event_whenkeypressed": {
+        fields: {
+            "KEY_OPTION": ProjectSB3Field<null>
+        }
+    },
 
     "control_if": {
         inputs: {
@@ -471,6 +476,16 @@ type SB3BlockTypeDefinition = {
     }
 
     "sensing_dayssince2000": {},
+    "sensing_keypressed": {
+        inputs: {
+            "KEY_OPTION": ProjectSB3Input
+        }
+    },
+    "sensing_keyoptions": {
+        fields: {
+            "KEY_OPTION": ProjectSB3Field<null>
+        }
+    }
 
     "data_variable": {
         fields: {

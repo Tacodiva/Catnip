@@ -149,6 +149,10 @@ export class Cast {
         return n1 - n2;
     }
 
+    //
+    // Stuff below here was written by me :3
+    //
+
     static toRGB(value: catnip_compiler_constant): number {
         if (typeof (value) === "string" && value.charAt(0) === "#") {
 
@@ -173,6 +177,30 @@ export class Cast {
         } else {
             return Cast.toNumber(value) & 0xFFFFFFFF;
         }
+    }
+
+    static toKeyCode(key: catnip_compiler_constant): number {
+
+        if (typeof (key) === "number") {
+            if (key >= 48 && key <= 90)
+                return key;
+
+            if (key === " ".charCodeAt(0)) return key;
+
+            throw new Error(`Unknown key code ${key}`);
+        }
+
+        key = "" + key;
+
+        if (key.length === 1) {
+            const code = key.toUpperCase().charCodeAt(0);
+            if (code >= 48 && code <= 90)
+                return code;
+        }
+
+        if (key === "space") return " ".charCodeAt(0);
+
+        throw new Error(`Unknown key code '${key}'`);
     }
 
 }

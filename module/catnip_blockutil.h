@@ -5,6 +5,8 @@
 #include "./catnip.h"
 
 void catnip_blockutil_debug_log(catnip_hstring* str);
+void catnip_blockutil_debug_log_int(catnip_ui32_t x);
+
 catnip_thread_status catnip_blockutil_wait_for_threads(catnip_list *threadList);
 
 catnip_i32_t catnip_blockutil_value_cmp(catnip_runtime *runtime, catnip_value a, catnip_value b);

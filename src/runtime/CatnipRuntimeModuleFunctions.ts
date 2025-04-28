@@ -52,8 +52,8 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_thread_resize_stack: fn<[thread: SpiderNumberType.i32, extraCapacity: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
 
-    catnip_blockutil_debug_log: fn<[SpiderNumberType.i32], undefined>
-        ([SpiderNumberType.i32], undefined),
+    catnip_blockutil_debug_log: fn<[SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
+    catnip_blockutil_debug_log_int: fn<[SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
     catnip_blockutil_wait_for_threads: fn<[SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_cmp: fn<[SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32>
@@ -83,6 +83,11 @@ export const CatnipRuntimeModuleFunctions = {
 
     catnip_math_fmod: fn<[a: SpiderNumberType.f64, b: SpiderNumberType.f64], SpiderNumberType.f64>
         ([SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.f64),
+
+    catnip_io_key_pressed: fn<[rt: SpiderNumberType.i32, keyCode: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_io_key_released: fn<[rt: SpiderNumberType.i32, keyCode: SpiderNumberType.i32]>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
 };
 
 export type CatnipRuntimeModuleFunctionName = keyof typeof CatnipRuntimeModuleFunctions;

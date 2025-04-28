@@ -9,7 +9,25 @@ async function main() {
     // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
     const module = await WebAssembly.compileStreaming(moduleRequest);
 
-    run(module, sb3File, new CatnipRenderer());
+    const project = await run(module, sb3File, new CatnipRenderer());
+
+    document.addEventListener("keydown", function onEvent(event) {
+        project.triggerEvent("IO_KEY_PRESSED", event.keyCode);
+    });
+
+    document.addEventListener("keyup", function onEvent(event) {
+        project.triggerEvent("IO_KEY_RELEASED", event.keyCode);
+    });
+
+    const stepRate = 30;
+
+    function frame() {
+
+        project.step();
+
+    }
+
+    setInterval(frame, 1000 / stepRate);
 }
 
 globalThis.main = main;

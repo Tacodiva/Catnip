@@ -89,6 +89,10 @@ void CATNIP_EXPORT(catnip_blockutil_debug_log)(catnip_hstring *str) {
   catnip_blockutil_debug_log(str);
 }
 
+void CATNIP_EXPORT(catnip_blockutil_debug_log_int)(catnip_ui32_t x) {
+  catnip_blockutil_debug_log_int(x);
+}
+
 catnip_thread_status CATNIP_EXPORT(catnip_blockutil_wait_for_threads)(catnip_list *threadList) {
   return catnip_blockutil_wait_for_threads(threadList);
 }
@@ -156,3 +160,10 @@ catnip_f64_t CATNIP_EXPORT(catnip_math_fmod)(catnip_f64_t x, catnip_f64_t y) {
 }
 
 
+void CATNIP_EXPORT(catnip_io_key_pressed)(catnip_runtime *runtime, catnip_ui32_t keyCode) {
+  catnip_io_key_pressed(runtime, keyCode);
+}
+
+void CATNIP_EXPORT(catnip_io_key_released)(catnip_runtime *runtime, catnip_ui32_t keyCode) {
+  catnip_io_key_released(runtime, keyCode);
+}

@@ -5,9 +5,10 @@ import { readSB3 } from "./sb3_reader";
 import { ICatnipRenderer } from "./runtime/ICatnipRenderer";
 import { DummyRenderer } from "./runtime/DummyRenderer";
 import { CatnipWasmStructTarget } from "./wasm-interop/CatnipWasmStructTarget";
+import { CatnipProject } from "./runtime/CatnipProject";
 
 
-export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer) {
+export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer): Promise<CatnipProject> {
 
     const jszip = new JSZip();
 
@@ -273,18 +274,10 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
     project.registerEventListener("PROJECT_BROADCAST", (name, listPtr) => {
         console.log(`Broadcast received '${name}' (${listPtr})`);
     });
-
     
     await project.rewrite();
     
     project.start();
-    
-    do {
-        project.step();
-    } while (project.runtimeInstance.getMember("num_active_threads") !== 0);
-    
-    // console.log("Garbage collection stats: ")
-    // console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
 
-    // console.log(project.getSprite("1").defaultTarget.structWrapper.get());
+    return project;
 }

@@ -50,6 +50,7 @@ typedef struct catnip_sprite catnip_sprite;
 typedef struct catnip_thread catnip_thread;
 typedef struct catnip_costume catnip_costume;
 typedef struct catnip_pen_line catnip_pen_line;
+typedef struct catnip_io_keys catnip_io_keys;
 typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 
 #include "./catnip_math.h"
@@ -64,6 +65,7 @@ typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 #include "./catnip_value.h"
 #include "./catnip_variable.h"
 #include "./catnip_costume.h"
+#include "./catnip_io.h"
 #include "./catnip_sprite.h"
 #include "./catnip_target.h"
 #include "./catnip_thread.h"
