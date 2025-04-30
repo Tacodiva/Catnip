@@ -17,11 +17,6 @@ catnip_bool_t catnip_unicode_decode_utf8(const catnip_char_t **ptr,
     goto fail;
   }
 
-  /*
-   *  UTF-8 decoder which accepts longer than standard byte sequences.
-   *  This allows full 32-bit code points to be used.
-   */
-
   ch = *p++;
   if (ch < 0x80) {
     /* 0xxx xxxx   [7 bits] */
@@ -42,30 +37,7 @@ catnip_bool_t catnip_unicode_decode_utf8(const catnip_char_t **ptr,
     /* 1111 0xxx   10xx xxxx   10xx xxxx   10xx xxxx   [21 bits] */
     res = (catnip_ui32_t)(ch & 0x07);
     n = 3;
-  } else if (ch < 0xfc) {
-    /* 1111 10xx   10xx xxxx   10xx xxxx   10xx xxxx   10xx xxxx   [26 bits] */
-    res = (catnip_ui32_t)(ch & 0x03);
-    n = 4;
-  } else if (ch < 0xfe) {
-    /* 1111 110x   10xx xxxx   10xx xxxx   10xx xxxx   10xx xxxx   10xx xxxx [31
-     * bits] */
-    res = (catnip_ui32_t)(ch & 0x01);
-    n = 5;
-  } else if (ch < 0xff) {
-    /* 1111 1110   10xx xxxx   10xx xxxx   10xx xxxx   10xx xxxx   10xx xxxx
-     * 10xx xxxx   [36 bits] */
-    res = (catnip_ui32_t)(0);
-    n = 6;
   } else {
-    /* 8-byte format could be:
-     * 1111 1111   10xx xxxx   10xx xxxx   10xx xxxx   10xx xxxx   10xx xxxx
-     * 10xx xxxx   10xx xxxx   [41 bits]
-     *
-     * However, this format would not have a zero bit following the
-     * leading one bits and would not allow 0xFF to be used as an
-     * "invalid xutf-8" marker for internal keys.  Further, 8-byte
-     * encodings (up to 41 bit code points) are not currently needed.
-     */
     goto fail;
   }
 
@@ -78,6 +50,9 @@ catnip_bool_t catnip_unicode_decode_utf8(const catnip_char_t **ptr,
   while (n > 0) {
     CATNIP_ASSERT(p >= ptr_start && p < ptr_end);
     ch = (catnip_ui32_t)(*p++);
+
+    // catnip: make sure this is a continuation byte (starts with 0x80)
+    CATNIP_ASSERT((ch & 0xc0) == 0x80);
 #if 0
 		if (ch & 0xc0 != 0x80) {
 			/* not a continuation byte */
@@ -108,6 +83,59 @@ catnip_unicode_decode_utf8_checked(const catnip_char_t **ptr,
     CATNIP_ASSERT(CATNIP_FALSE);
   }
   return cp;
+}
+
+// https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_unicode_support.c#L33
+catnip_ui32_t catnip_unicode_get_utf8_length(catnip_ucodepoint_t x) {
+	if (x < 0x80UL) {
+		/* 7 bits */
+		return 1;
+	} else if (x < 0x800UL) {
+		/* 11 bits */
+		return 2;
+	} else if (x < 0x10000UL) {
+		/* 16 bits */
+		return 3;
+	} else if (x < 0x200000UL) {
+		/* 21 bits */
+		return 4;
+	} else {
+    CATNIP_ASSERT(CATNIP_FALSE);
+    return 0;
+  }
+}
+
+// https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_unicode_support.c#L81C1
+const catnip_char_t catnip_unicode_utf8_markers[7] = { 0x00, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
+
+catnip_ui32_t catnip_unicode_encode_utf8(catnip_ucodepoint_t cp, catnip_char_t *out) {
+	catnip_ui32_t x = cp;
+	catnip_ui32_t len;
+	catnip_char_t marker;
+	catnip_ui32_t i;
+
+	len = catnip_unicode_get_utf8_length(cp);
+	CATNIP_ASSERT(len > 0);
+
+	marker = catnip_unicode_utf8_markers[len - 1]; /* 64-bit OK because always >= 0 */
+
+	i = len;
+	CATNIP_ASSERT(i > 0);
+	do {
+		i--;
+		if (i > 0) {
+			out[i] = (catnip_char_t) (0x80 + (x & 0x3f));
+			x >>= 6;
+		} else {
+			/* Note: masking of 'x' is not necessary because of
+			 * range check and shifting -> no bits overlapping
+			 * the marker should be set.
+			 */
+			out[0] = (catnip_char_t) (marker + x);
+		}
+	} while (i > 0);
+
+	return len;
 }
 
 // https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_unicode_support.c#L629
@@ -215,4 +243,42 @@ catnip_codepoint_t catnip_unicode_to_lowercase(catnip_codepoint_t codepoint) {
    */
 
   return codepoint;
+}
+
+catnip_ui32_t catnip_unicode_wtf8_char_length(const catnip_char_t *data, catnip_i32_t blen) {
+	const catnip_uchar_t *p = (catnip_uchar_t*) data;
+	const catnip_uchar_t *p_end = p + blen;
+	catnip_i32_t length = 0;
+
+	while (p != p_end) {
+		catnip_uchar_t x;
+
+		CATNIP_ASSERT(p <= p_end);
+		x = *p;
+		if (x <= 0x7fU) {
+			p++;
+      length++;
+		} else {
+			CATNIP_ASSERT(!(x >= 0x80U && x <= 0xbfU)); /* Valid WTF-8 assumption. */
+			if (x <= 0xdfU) {
+				/* 2-byte sequence, one char. */
+				p += 2;
+				length += 1;
+			} else if (x <= 0xefU) {
+				/* 3-byte sequence, one char. */
+				p += 3;
+				length += 1;
+			} else {
+				/* 4-byte sequence, two chars, because non-BMP is
+				 * represented as a surrogate pair in ES view.
+				 */
+				p += 4;
+				length += 2;
+			}
+		}
+		CATNIP_ASSERT(p <= p_end);
+	}
+
+	CATNIP_ASSERT(length <= blen);
+	return length;
 }

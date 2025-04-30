@@ -64,6 +64,9 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_join: fn<[SpiderNumberType.i32, SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_blockutil_hstring_length: fn<[str: SpiderNumberType.i32], SpiderNumberType.i32>([SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_blockutil_hstring_char_at: fn<[str: SpiderNumberType.i32, idx: SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_to_argb: fn<[str: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_pen_update_thsv: fn<[target: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),

@@ -473,7 +473,18 @@ type SB3BlockTypeDefinition = {
             "STRING1": ProjectSB3Input,
             "STRING2": ProjectSB3Input,
         }
-    }
+    },
+    "operator_length": {
+        inputs: {
+            "STRING": ProjectSB3Input,
+        }
+    },
+    "operator_letter_of": {
+        inputs: {
+            "LETTER": ProjectSB3Input,
+            "STRING": ProjectSB3Input,
+        }
+    },
 
     "sensing_dayssince2000": {},
     "sensing_keypressed": {

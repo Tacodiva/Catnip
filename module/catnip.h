@@ -31,6 +31,7 @@ typedef int catnip_bool_t;
 #define CATNIP_NULL 0
 
 typedef catnip_i32_t catnip_codepoint_t;
+typedef catnip_ui32_t catnip_ucodepoint_t;
 
 typedef char catnip_char_t;
 typedef unsigned char catnip_uchar_t;

@@ -113,6 +113,14 @@ catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_join)(const catnip_hstrin
   return catnip_blockutil_hstring_join(runtime, a, b);
 }
 
+catnip_ui32_t CATNIP_EXPORT(catnip_blockutil_hstring_length)(catnip_hstring *str) {
+  return catnip_blockutil_hstring_length(str);
+}
+
+catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_char_at)(catnip_hstring *str, catnip_ui32_t index, catnip_runtime *runtime) {
+  return catnip_blockutil_hstring_char_at(runtime, str, index);
+}
+
 catnip_ui32_t CATNIP_EXPORT(catnip_blockutil_hstring_to_argb)(const catnip_hstring *str) {
   return catnip_blockutil_hstring_to_argb(str);
 }

@@ -14,6 +14,8 @@ catnip_bool_t catnip_blockutil_value_eq(catnip_runtime *runtime, catnip_value a,
 
 catnip_i32_t catnip_blockutil_hstring_cmp(const catnip_hstring *a, const catnip_hstring *b);
 catnip_hstring *catnip_blockutil_hstring_join(catnip_runtime *runtime, const catnip_hstring *a, const catnip_hstring *b);
+catnip_ui32_t catnip_blockutil_hstring_length(catnip_hstring *str);
+catnip_hstring *catnip_blockutil_hstring_char_at(catnip_runtime *runtime, catnip_hstring *str, catnip_ui32_t index);
 catnip_ui32_t catnip_blockutil_hstring_to_argb(const catnip_hstring *str);
 
 void catnip_blockutil_pen_update_thsv(catnip_target *target);

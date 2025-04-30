@@ -29,5 +29,10 @@ export const op_const = new class extends CatnipInputOpType<const_inputs> {
             value: inputs.value,
             format
         }, {});
+
+        // ctx.emitIr<typeof ir_const>(ir_const, {
+        //     value: "🥺"[0],
+        //     format: CatnipValueFormat.I32_HSTRING | CatnipValueFormat.F64_BOXED_I32_HSTRING
+        // }, {});
     }
 }

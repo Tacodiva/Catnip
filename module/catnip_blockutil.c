@@ -141,6 +141,87 @@ catnip_hstring *catnip_blockutil_hstring_join(catnip_runtime *runtime, const cat
   return newStr;
 }
 
+catnip_ui32_t catnip_blockutil_hstring_length(catnip_hstring *str) {
+  return catnip_unicode_wtf8_char_length(catnip_hstring_get_data(str), CATNIP_HSTRING_BYTELENGTH(str));
+}
+
+catnip_hstring *catnip_blockutil_hstring_char_at(catnip_runtime *runtime, catnip_hstring *str, catnip_ui32_t index) {
+
+  const catnip_ui32_t blen = CATNIP_HSTRING_BYTELENGTH(str);
+	const catnip_char_t *p = catnip_hstring_get_data(str);
+	const catnip_char_t *p_end = p + blen;
+
+	catnip_i32_t charIdx = 0;
+
+	while (p != p_end) {
+		catnip_uchar_t x;
+
+		CATNIP_ASSERT(p <= p_end);
+		x = *p;
+		if (x < 0x80U) {
+      if (charIdx == index)
+        return catnip_hstring_new(runtime, p, 1);
+			p++;
+      charIdx++;
+		} else {
+			CATNIP_ASSERT(!(x >= 0x80U && x <= 0xbfU)); /* Valid WTF-8 assumption. */
+			if (x < 0xe0U) {
+				/* 2-byte sequence, one char. */
+        if (charIdx == index) {
+          CATNIP_ASSERT((p + 2) <= p_end);
+          return catnip_hstring_new(runtime, p, 2);
+        }
+				p += 2;
+				charIdx += 1;
+			} else if (x < 0xf0U) {
+				/* 3-byte sequence, one char. */
+        if (charIdx == index) {
+          CATNIP_ASSERT((p + 3) <= p_end);
+          return catnip_hstring_new(runtime, p, 3);
+        }
+				p += 3;
+				charIdx += 1;
+			} else {
+				/* 4-byte sequence, two chars, because non-BMP is
+				 * represented as a surrogate pair in ES view.
+				 */
+        if (charIdx == index || charIdx + 1 == index) {
+          CATNIP_ASSERT((p + 4) <= p_end);
+          // We need to encode a single surrogate pair in wtf8
+
+          // First decode the codepoint
+          catnip_codepoint_t codepoint = 
+            ((x & 0x07) << 18) |
+            ((p[1] & 0x3F) << 12) |
+            ((p[2] & 0x3F) << 6) |
+            (p[3] & 0x3F);
+
+          // Then convert it to the surrogate codepoint
+          codepoint -= 0x10000;
+
+          if (charIdx == index) { // Lower 
+            codepoint = 0xDC00 + (codepoint & 0x3FF);
+          } else { // Upper
+            codepoint = 0xD800 + ((codepoint >> 10) & 0x3FF);
+          }
+
+          // Now, re-encode it
+          char surrogateEncoded[4];
+          catnip_i32_t surrogateLength = catnip_unicode_encode_utf8(codepoint, surrogateEncoded);
+
+          return catnip_hstring_new(runtime, surrogateEncoded, surrogateLength);
+        }
+				p += 4;
+				charIdx += 2;
+			}
+		}
+		CATNIP_ASSERT(p <= p_end);
+	}
+
+  // Index out of range
+  return catnip_hstring_new(runtime, CATNIP_NULL, 0);
+}
+
 inline catnip_i32_t to_hex_value(const catnip_char_t c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'A' && c <= 'F') return (c - 'A') + 10;
