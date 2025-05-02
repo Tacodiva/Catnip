@@ -24,6 +24,7 @@ import { LoopPassTypeAnalysis } from "./passes/AnalysisPassTypeAnalysis";
 import { CatnipEventID, CatnipEvents } from "../CatnipEvents";
 import { CatnipCompilerEvent } from "./CatnipCompilerEvent";
 import binaryen from "binaryen";
+import UTF16 from "../utf16";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -465,7 +466,7 @@ export class CatnipCompiler {
                         const bytes = argValue + CatnipWasmStructHeapString.size;
                         const byteLength = CatnipWasmStructHeapString.getMember(argValue, this.runtimeModule.memory, "bytelen") - CatnipWasmStructHeapString.size;
 
-                        const stringValue = CatnipRuntimeModule.TEXT_DECODER.decode(this.runtimeModule.memory.buffer.slice(bytes, bytes + byteLength));
+                        const stringValue = UTF16.decode(this.runtimeModule.memory.buffer.slice(bytes, bytes + byteLength));
 
                         convertedArgs.push(stringValue);
                     } else {

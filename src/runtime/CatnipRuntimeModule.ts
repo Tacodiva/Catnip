@@ -9,6 +9,7 @@ import { CatnipProject, CatnipProjectDesc } from "./CatnipProject";
 import { CatnipWasmArrayFuncEntry } from "../wasm-interop/CatnipWasmStructFuncEntry";
 import { CatnipRuntimeModuleFunctionsObject } from "./CatnipRuntimeModuleFunctions";
 import { ICatnipRenderer, PEN_ATTRIBUTE_STRIDE_BYTES } from "./ICatnipRenderer";
+import UTF16 from "../utf16";
 
 /*
  * A wrapper for the catnip wasm runtime
@@ -22,7 +23,7 @@ export class CatnipRuntimeModule {
         const imports: CatnipRuntimeModuleImports = {
             catnip: {
                 catnip_import_log: (strPtr: number, strLength: number) => {
-                    const str = CatnipRuntimeModule.TEXT_DECODER.decode(runtimeModule.memory.buffer.slice(strPtr, strPtr + strLength));
+                    const str = UTF16.decode(runtimeModule.memory.buffer.slice(strPtr, strPtr + (strLength * 2)));
                     CatnipRuntimeModule._wasmLogger.log(str);
                 },
                 catnip_import_render_pen_draw_lines: (linesPtr: number, linesLength: number) => {
@@ -47,9 +48,6 @@ export class CatnipRuntimeModule {
 
     private static readonly _logger = createLogger("CatnipRuntime");
     private static readonly _wasmLogger = createLogger("CatnipRuntimeWASM");
-
-    public static readonly TEXT_DECODER = new TextDecoder("utf-8");
-    public static readonly TEXT_ENCODER = new TextEncoder();
 
     public readonly renderer: ICatnipRenderer;
     public readonly module: WebAssembly.Module;
@@ -97,7 +95,8 @@ export class CatnipRuntimeModule {
     }
 
     public allocateHeapString(str: string): number {
-        const encodedStr = CatnipRuntimeModule.TEXT_ENCODER.encode(str);
+        const encodedStr = UTF16.encode(str);
+
         const strPtr = this.allocateMemory(encodedStr.length + CatnipWasmStructHeapString.size, false);
 
         CatnipWasmStructHeapString.set(strPtr, this.memory, {

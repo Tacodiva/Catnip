@@ -1,26 +1,38 @@
 
 #include "./catnip.h"
 
-catnip_char_t *catnip_hstring_get_data(const catnip_hstring *str) {
+catnip_wchar_t *catnip_hstring_get_data(const catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
-  return ((catnip_char_t *)str) + sizeof(catnip_hstring);
+  return ((void *)str) + sizeof(catnip_hstring);
 }
 
 catnip_hstring *catnip_hstring_new_simple(catnip_runtime *runtime, catnip_ui32_t len) {
   // TODO what if len is 0?
-  return (catnip_hstring *) catnip_runtime_gc_new_obj(runtime, sizeof(catnip_hstring) + len);
+  return (catnip_hstring *) catnip_runtime_gc_new_obj(runtime, sizeof(catnip_hstring) + len * sizeof(catnip_wchar_t));
 }
 
-catnip_hstring *catnip_hstring_new(catnip_runtime *runtime, const catnip_char_t *chars, catnip_ui32_t len) {
+
+catnip_hstring *catnip_hstring_new(catnip_runtime *runtime, const catnip_wchar_t *chars, catnip_ui32_t len) {
 
   catnip_hstring *str = catnip_hstring_new_simple(runtime, len);
 
   if (len != 0) {
     CATNIP_ASSERT(chars != CATNIP_NULL);
-    catnip_mem_copy(catnip_hstring_get_data(str), chars, len);
+    catnip_mem_copy(catnip_hstring_get_data(str), chars, len * sizeof(catnip_wchar_t));
   }
 
+  return str;
+}
+
+catnip_hstring *catnip_hstring_new_from_ascii(catnip_runtime *runtime, const catnip_char_t *chars, catnip_ui32_t len) {
+  catnip_hstring *str = catnip_hstring_new_simple(runtime, len);
+  catnip_wchar_t *data = catnip_hstring_get_data(str);
+
+  for (catnip_ui32_t i = 0; i < len; i++) {
+    data[i] = chars[i];
+  }
+  
   return str;
 }
 
@@ -31,28 +43,27 @@ catnip_hstring *catnip_hstring_new_from_cstring(catnip_runtime *runtime, const c
   while (*scan != '\0')
     ++scan;
 
-  return catnip_hstring_new(runtime, (catnip_char_t *)cstr, (catnip_ui32_t)(scan - cstr));
+  return catnip_hstring_new_from_ascii(runtime, cstr, scan - cstr);
 }
 
 void catnip_hstring_print(const catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
-  catnip_import_log(catnip_hstring_get_data(str), CATNIP_HSTRING_BYTELENGTH(str));
+  catnip_import_log(catnip_hstring_get_data(str), CATNIP_HSTRING_LENGTH(str));
 }
 
 // https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_api_string.c#L293
 catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
-  const catnip_char_t *ptr_start = catnip_hstring_get_data(str);
-  const catnip_char_t *ptr_end = ptr_start + CATNIP_HSTRING_BYTELENGTH(str);
+  const catnip_wchar_t *ptr_start = catnip_hstring_get_data(str);
+  const catnip_wchar_t *ptr_end = ptr_start + CATNIP_HSTRING_LENGTH(str);
 
-  const catnip_char_t *ptr = ptr_start;
+  const catnip_wchar_t *ptr = ptr_start;
 
   while (ptr < ptr_end) {
-    const catnip_char_t *tmp = ptr;
-    catnip_codepoint_t cp =
-        catnip_unicode_decode_utf8_checked(&tmp, ptr_start, ptr_end);
+    const catnip_wchar_t *tmp = ptr;
+    catnip_codepoint_t cp = catnip_unicode_decode_utf16(&tmp, ptr_end);
 
     if (!(catnip_unicode_is_whitespace(cp) ||
           catnip_unicode_is_line_terminator(cp)))
@@ -61,28 +72,20 @@ catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str
     ptr = tmp;
   }
 
-  const catnip_char_t *trim_start = ptr;
+  const catnip_wchar_t *trim_start = ptr;
 
   if (trim_start == ptr_end) {
     // Entire string is whitespace
+    // TODO Canonicalize
     return catnip_hstring_new(runtime, CATNIP_NULL, 0);
   }
 
   ptr = ptr_end;
 
   while (ptr > ptr_start) {
-    const catnip_char_t *tmp1 = ptr;
+    const catnip_wchar_t *tmp1 = ptr;
 
-    while (ptr > ptr_start) {
-      --ptr;
-      if (((*ptr) & 0xC0) != 0x80) // Scan backward through the codepoints?
-        break;
-    }
-
-    const catnip_char_t *tmp2 = ptr;
-
-    catnip_codepoint_t cp =
-        catnip_unicode_decode_utf8_checked(&tmp2, ptr_start, ptr_end);
+    catnip_codepoint_t cp = catnip_unicode_decode_utf16_backwards(&ptr, ptr_start);
 
     if (!(catnip_unicode_is_whitespace(cp) ||
           catnip_unicode_is_line_terminator(cp))) {
@@ -91,7 +94,7 @@ catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str
     }
   }
 
-  const catnip_char_t *trim_end = ptr;
+  const catnip_wchar_t *trim_end = ptr;
 
   /* This may happen when forward and backward scanning disagree
 	 * (possible for non-extended-UTF-8 strings). */
@@ -119,15 +122,15 @@ catnip_bool_t catnip_hstring_equal(catnip_hstring *a, catnip_hstring *b) {
   if (a == CATNIP_NULL || b == CATNIP_NULL)
     return CATNIP_FALSE;
 
-  const catnip_ui32_t bytelen = CATNIP_HSTRING_BYTELENGTH(a);
+  const catnip_ui32_t len = CATNIP_HSTRING_LENGTH(a);
 
-  if (bytelen != CATNIP_HSTRING_BYTELENGTH(b))
+  if (len != CATNIP_HSTRING_LENGTH(b))
     return CATNIP_FALSE;
 
-  const catnip_char_t *aDat = catnip_hstring_get_data(a);
-  const catnip_char_t *bDat = catnip_hstring_get_data(b);
+  const catnip_wchar_t *aDat = catnip_hstring_get_data(a);
+  const catnip_wchar_t *bDat = catnip_hstring_get_data(b);
 
-  for (catnip_ui32_t i = 0; i < bytelen; i++) {
+  for (catnip_ui32_t i = 0; i < len; i++) {
     if (aDat[i] != bDat[i]) return CATNIP_FALSE;
   }
 

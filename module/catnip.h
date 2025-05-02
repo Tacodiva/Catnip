@@ -36,6 +36,9 @@ typedef catnip_ui32_t catnip_ucodepoint_t;
 typedef char catnip_char_t;
 typedef unsigned char catnip_uchar_t;
 
+typedef signed short catnip_wchar_t;
+typedef unsigned short catnip_uwchar_t;
+
 
 #ifdef CATNIP_DEBUG
 void catnip_assert(catnip_bool_t assertion, const char* name, const char* func, const char* file, catnip_ui32_t line);

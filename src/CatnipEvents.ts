@@ -2,6 +2,7 @@ import { SpiderNumberType, SpiderValueType } from "wasm-spider";
 import { CatnipRuntimeModule } from './runtime/CatnipRuntimeModule';
 import { CatnipWasmStructHeapString } from "./wasm-interop/CatnipWasmStructHeapString";
 import { CatnipValueFormat } from "./compiler/CatnipValueFormat";
+import UTF16 from "./utf16";
 
 export interface CatnipEventValueTypeInfo<TJavascript = any> {
     readonly format: CatnipValueFormat;
@@ -22,9 +23,6 @@ function createValueTypeInfo<TJavascript>(
     }
 }
 
-const TEXT_DECODER = new TextDecoder("utf-8");
-
-
 export const CatnipEventValueTypes = {
     NUMBER: createValueTypeInfo<number>(
         CatnipValueFormat.F64_NUMBER,
@@ -42,9 +40,9 @@ export const CatnipEventValueTypes = {
         CatnipValueFormat.I32_HSTRING,
         (rt, value: number) => {
             const bytes = value + CatnipWasmStructHeapString.size;
-            const byteLength = CatnipWasmStructHeapString.getMember(value, rt.memory, "bytelen");
+            const byteLength = CatnipWasmStructHeapString.getMember(value, rt.memory, "bytelen") * 2;
 
-            return TEXT_DECODER.decode(rt.memory.buffer.slice(bytes, bytes + byteLength));
+            return UTF16.decode(rt.memory.buffer.slice(bytes, bytes + byteLength));
         },
         (rt, value: string) => {
             return rt.allocateHeapString(String(value));

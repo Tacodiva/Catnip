@@ -347,7 +347,7 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                         ctx.emitWasm(SpiderOpcodes.local_tee, strPtr.ref);
 
                         // Get the first character of the string
-                        ctx.emitWasm(SpiderOpcodes.i32_load8_u, 0, CatnipWasmStructHeapString.size);
+                        ctx.emitWasm(SpiderOpcodes.i32_load16_u, 0, CatnipWasmStructHeapString.size);
 
                         ctx.emitWasmConst(SpiderNumberType.i32, "#".charCodeAt(0));
                         ctx.emitWasm(SpiderOpcodes.i32_eq);

@@ -495,7 +495,7 @@ static catnip_hstring *catnip_numconv_dragon4_convert(catnip_numconv_stringify_c
     q += catnip_numconv_dragon4_format_uint32(q, expt, radix);
   }
 
-  return catnip_hstring_new(nc_ctx->runtime, (catnip_char_t *)buf, (catnip_ui32_t)(q - buf));
+  return catnip_hstring_new_from_ascii(nc_ctx->runtime, (catnip_char_t*) buf, (catnip_ui32_t)(q - buf));
 }
 
 static void catnip_numconv_dragon4_double_to_ctx(catnip_numconv_stringify_ctx *nc_ctx, catnip_f64_t x) {
@@ -710,7 +710,7 @@ catnip_hstring *catnip_numconv_stringify_f64(catnip_runtime *runtime, catnip_f64
       *p++ = '-';
     }
     p += catnip_numconv_dragon4_format_uint32(p, uval, radix);
-    return catnip_hstring_new(nc_ctx->runtime, (catnip_char_t *)buf, (catnip_i32_t)(p - buf));
+    return catnip_hstring_new_from_ascii(nc_ctx->runtime, (catnip_char_t *)buf, (catnip_i32_t)(p - buf));
   }
 
   /*
@@ -817,43 +817,43 @@ zero_skip:
 catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
-  // TODO Account for scratch's broken trim polyfill
+  // TODO Account for scratch's broken trim polyfill?
   str = catnip_hstring_trim(runtime, str);
 
-  catnip_ui32_t p_bytelen = CATNIP_HSTRING_BYTELENGTH(str);
+  catnip_ui32_t p_len = CATNIP_HSTRING_LENGTH(str);
 
-  if (p_bytelen == 0) {
+  if (p_len == 0) {
     // Empty string
     goto parse_fail;
   }
 
-  catnip_char_t *p = catnip_hstring_get_data(str);
+  catnip_wchar_t *p = catnip_hstring_get_data(str);
   catnip_f64_t result;
 
-  catnip_char_t ch = *p;
+  catnip_wchar_t ch = *p;
   catnip_bool_t is_negitive = CATNIP_FALSE;
   if (ch == '+') {
     ++p;
-    --p_bytelen;
+    --p_len;
   } else if (ch == '-') {
     ++p;
-    --p_bytelen;
+    --p_len;
     is_negitive = CATNIP_TRUE;
   }
 
-  if (p_bytelen == 0) {
+  if (p_len == 0) {
     // + or - only
     goto parse_fail;
   }
 
-  if (p_bytelen >= 8 && catnip_util_strcmp(p, "Infinity", 8) == 0) {
+  if (p_len >= 8 && catnip_util_strcmp_w(p, "Infinity", 8) == 0) {
     result = CATNIP_F64_INFINITY;
     goto negcheck_and_ret;
   }
 
   catnip_i32_t radix = 10;
 
-  if ((p_bytelen >= 2) && (*p == '0')) {
+  if ((p_len >= 2) && (*p == '0')) {
     catnip_i32_t detect_radix = -1;
     ch = CATNIP_LOWERCASE_CHAR_ASCII(p[1]);
 
@@ -869,7 +869,7 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
       // TODO Flags stuff here
       radix = detect_radix;
       p += 2;
-      p_bytelen -= 2;
+      p_len -= 2;
     }
   }
 
@@ -891,11 +891,11 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
 
   for (;;) {
 
-    if (p_bytelen == 0)
+    if (p_len == 0)
       break;
     ch = *p++;
 
-    --p_bytelen;
+    --p_len;
 
     /* Most common cases first. */
     if (ch >= (catnip_i32_t)'0' && ch <= (catnip_i32_t)'9') {
@@ -946,15 +946,15 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
       /* Exponent without a sign or with a +/- sign is accepted
        * by all call sites (even JSON.parse()).
        */
-      if (p_bytelen != 0) {
+      if (p_len != 0) {
         ch = *p;
         if (ch == '-') {
           expt_neg = 1;
           p++;
-          --p_bytelen;
+          --p_len;
         } else if (ch == '+') {
           p++;
-          --p_bytelen;
+          --p_len;
         }
       }
       dig_expt = 0;
@@ -1060,7 +1060,7 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
       //   DUK_DDD(DUK_DDDPRINT("parse failed: empty string not allowed (as zero)"));
       //   goto parse_fail;
       // } else if (duk_hstring_get_bytelen(h_str) != 0) {
-      if (CATNIP_HSTRING_BYTELENGTH(str) != 0) {
+      if (CATNIP_HSTRING_LENGTH(str) != 0) {
         // no digits, but not empty (had a +/- sign)
         goto parse_fail;
       }

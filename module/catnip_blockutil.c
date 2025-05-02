@@ -85,19 +85,22 @@ catnip_bool_t catnip_blockutil_value_eq(catnip_runtime *runtime, catnip_value a,
 
 catnip_i32_t catnip_blockutil_hstring_cmp(const catnip_hstring *a, const catnip_hstring *b) {
 
-  const catnip_char_t *aStart = catnip_hstring_get_data(a);
-  const catnip_char_t *aEnd = aStart + CATNIP_HSTRING_BYTELENGTH(a);
-  const catnip_char_t *aCur = aStart;
+  // Fast path if both pointers are equal
+  if (a == b) return 0;
 
-  const catnip_char_t *bStart = catnip_hstring_get_data(b);
-  const catnip_char_t *bEnd = bStart + CATNIP_HSTRING_BYTELENGTH(b);
-  const catnip_char_t *bCur = bStart;
+  const catnip_wchar_t *aStart = catnip_hstring_get_data(a);
+  const catnip_wchar_t *aEnd = aStart + CATNIP_HSTRING_LENGTH(a);
+  const catnip_wchar_t *aCur = aStart;
+
+  const catnip_wchar_t *bStart = catnip_hstring_get_data(b);
+  const catnip_wchar_t *bEnd = bStart + CATNIP_HSTRING_LENGTH(b);
+  const catnip_wchar_t *bCur = bStart;
 
   for (;;) {
     if (aCur < aEnd) {
       if (bCur < bEnd) {
-        catnip_codepoint_t aCodepoint = catnip_unicode_decode_utf8_checked(&aCur, aStart, aEnd);
-        catnip_codepoint_t bCodepoint = catnip_unicode_decode_utf8_checked(&bCur, bStart, bEnd);
+        catnip_codepoint_t aCodepoint = catnip_unicode_decode_utf16(&aCur, aEnd);
+        catnip_codepoint_t bCodepoint = catnip_unicode_decode_utf16(&bCur, bEnd);
 
         aCodepoint = catnip_unicode_to_lowercase(aCodepoint);
         bCodepoint = catnip_unicode_to_lowercase(bCodepoint);
@@ -126,103 +129,37 @@ catnip_i32_t catnip_blockutil_hstring_cmp(const catnip_hstring *a, const catnip_
 
 catnip_hstring *catnip_blockutil_hstring_join(catnip_runtime *runtime, const catnip_hstring *a, const catnip_hstring *b) {
 
-  const catnip_ui32_t aLen = CATNIP_HSTRING_BYTELENGTH(a);
-  const catnip_ui32_t bLen = CATNIP_HSTRING_BYTELENGTH(b);
+  const catnip_ui32_t aLen = CATNIP_HSTRING_LENGTH(a);
+  const catnip_ui32_t bLen = CATNIP_HSTRING_LENGTH(b);
 
   const catnip_ui32_t newLen = aLen + bLen;
+  
 
   catnip_hstring *newStr = catnip_hstring_new_simple(runtime, newLen);
 
-  catnip_char_t *newStrData = catnip_hstring_get_data(newStr);
+  catnip_wchar_t *newStrData = catnip_hstring_get_data(newStr);
   
-  catnip_mem_copy(newStrData, catnip_hstring_get_data(a), aLen);
-  catnip_mem_copy(newStrData + aLen, catnip_hstring_get_data(b), bLen);
+  catnip_mem_copy(newStrData, catnip_hstring_get_data(a), aLen * sizeof(catnip_wchar_t));
+  catnip_mem_copy(newStrData + aLen, catnip_hstring_get_data(b), bLen * sizeof(catnip_wchar_t));
 
   return newStr;
 }
 
 catnip_ui32_t catnip_blockutil_hstring_length(catnip_hstring *str) {
-  return catnip_unicode_wtf8_char_length(catnip_hstring_get_data(str), CATNIP_HSTRING_BYTELENGTH(str));
+  return CATNIP_HSTRING_LENGTH(str);
 }
 
 catnip_hstring *catnip_blockutil_hstring_char_at(catnip_runtime *runtime, catnip_hstring *str, catnip_ui32_t index) {
 
-  const catnip_ui32_t blen = CATNIP_HSTRING_BYTELENGTH(str);
-	const catnip_char_t *p = catnip_hstring_get_data(str);
-	const catnip_char_t *p_end = p + blen;
+  if (index >= CATNIP_HSTRING_LENGTH(str)) {
+    // Index out of range
+    return catnip_hstring_new(runtime, CATNIP_NULL, 0);
+  }
 
-	catnip_i32_t charIdx = 0;
-
-	while (p != p_end) {
-		catnip_uchar_t x;
-
-		CATNIP_ASSERT(p <= p_end);
-		x = *p;
-		if (x < 0x80U) {
-      if (charIdx == index)
-        return catnip_hstring_new(runtime, p, 1);
-			p++;
-      charIdx++;
-		} else {
-			CATNIP_ASSERT(!(x >= 0x80U && x <= 0xbfU)); /* Valid WTF-8 assumption. */
-			if (x < 0xe0U) {
-				/* 2-byte sequence, one char. */
-        if (charIdx == index) {
-          CATNIP_ASSERT((p + 2) <= p_end);
-          return catnip_hstring_new(runtime, p, 2);
-        }
-				p += 2;
-				charIdx += 1;
-			} else if (x < 0xf0U) {
-				/* 3-byte sequence, one char. */
-        if (charIdx == index) {
-          CATNIP_ASSERT((p + 3) <= p_end);
-          return catnip_hstring_new(runtime, p, 3);
-        }
-				p += 3;
-				charIdx += 1;
-			} else {
-				/* 4-byte sequence, two chars, because non-BMP is
-				 * represented as a surrogate pair in ES view.
-				 */
-        if (charIdx == index || charIdx + 1 == index) {
-          CATNIP_ASSERT((p + 4) <= p_end);
-          // We need to encode a single surrogate pair in wtf8
-
-          // First decode the codepoint
-          catnip_codepoint_t codepoint = 
-            ((x & 0x07) << 18) |
-            ((p[1] & 0x3F) << 12) |
-            ((p[2] & 0x3F) << 6) |
-            (p[3] & 0x3F);
-
-          // Then convert it to the surrogate codepoint
-          codepoint -= 0x10000;
-
-          if (charIdx == index) { // Lower 
-            codepoint = 0xDC00 + (codepoint & 0x3FF);
-          } else { // Upper
-            codepoint = 0xD800 + ((codepoint >> 10) & 0x3FF);
-          }
-
-          // Now, re-encode it
-          char surrogateEncoded[4];
-          catnip_i32_t surrogateLength = catnip_unicode_encode_utf8(codepoint, surrogateEncoded);
-
-          return catnip_hstring_new(runtime, surrogateEncoded, surrogateLength);
-        }
-				p += 4;
-				charIdx += 2;
-			}
-		}
-		CATNIP_ASSERT(p <= p_end);
-	}
-
-  // Index out of range
-  return catnip_hstring_new(runtime, CATNIP_NULL, 0);
+  return catnip_hstring_new(runtime, &catnip_hstring_get_data(str)[index], 1);
 }
 
-inline catnip_i32_t to_hex_value(const catnip_char_t c) {
+inline catnip_i32_t to_hex_value(const catnip_wchar_t c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'A' && c <= 'F') return (c - 'A') + 10;
   if (c >= 'a' && c <= 'f') return (c - 'a') + 10;
@@ -231,8 +168,8 @@ inline catnip_i32_t to_hex_value(const catnip_char_t c) {
 
 catnip_ui32_t catnip_blockutil_hstring_to_argb(const catnip_hstring *str) {
 
-  const catnip_char_t *strData = catnip_hstring_get_data(str);
-  const catnip_ui32_t strLen = CATNIP_HSTRING_BYTELENGTH(str);
+  const catnip_wchar_t *strData = catnip_hstring_get_data(str);
+  const catnip_ui32_t strLen = CATNIP_HSTRING_LENGTH(str);
 
   CATNIP_ASSERT(strData[0] == '#');
 
@@ -424,7 +361,7 @@ void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume
   if (CATNIP_F64_ISNAN(cast)) return;
 
   // If the string is whitespace, we don't do anything
-  if (CATNIP_HSTRING_BYTELENGTH(catnip_hstring_trim(target->runtime, costume)) == 0)
+  if (CATNIP_HSTRING_LENGTH(catnip_hstring_trim(target->runtime, costume)) == 0)
     return;
 
   cast = catnip_math_round(cast - 1);
