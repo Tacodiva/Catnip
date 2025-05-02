@@ -241,4 +241,9 @@ export class CatnipProject {
     private _penFlush(): void {
         this.runtimeModule.functions.catnip_runtime_render_pen_flush(this.runtimeInstance.ptr);
     }
+
+    /** Creates a new garbage collectable string associated with this project. */
+    public createNewString(str: string): number {
+        return this.runtimeModule.createNewString(this.runtimeInstance, str);
+    }
 }

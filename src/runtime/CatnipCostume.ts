@@ -22,7 +22,7 @@ export class CatnipCostume {
 
     /** @internal */
     _rewrite(struct: WasmStructWrapper<typeof CatnipWasmStructCostume>) {
-        const namePtr = this.runtime.allocateHeapString(this.name);
+        const namePtr = this.runtime.createCanonHString(this.name);
         struct.setMember("name", namePtr);
     }
 }

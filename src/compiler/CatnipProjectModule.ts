@@ -35,7 +35,7 @@ export class CatnipProjectModule {
         for (let i = 0; i < args.length; i++) {
             const arg = args[i];
             const argInfo = CatnipEventValueTypes[CatnipEvents[event].args[i]] as CatnipEventValueTypeInfo;
-            encodedArgs.push(argInfo.encodeWASM(this.project.runtimeModule, arg));
+            encodedArgs.push(argInfo.encodeWASM(this.project, arg));
         }
 
         eventLambda(...(encodedArgs as any));

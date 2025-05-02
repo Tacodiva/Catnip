@@ -388,11 +388,11 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
 
                     if (ctx !== null) {
                         ctx.pushExpression();
-                        ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("true"));
+                        ctx.emitWasmConst(SpiderNumberType.i32, ctx.createHeapString("true"));
                         const trueExpr = ctx.popExpression();
 
                         ctx.pushExpression();
-                        ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString("false"));
+                        ctx.emitWasmConst(SpiderNumberType.i32, ctx.createHeapString("false"));
                         const falseExpr = ctx.popExpression();
 
                         ctx.emitWasm(SpiderOpcodes.if, trueExpr, falseExpr, SpiderNumberType.i32);

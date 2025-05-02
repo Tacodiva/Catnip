@@ -218,7 +218,7 @@ export class CatnipSprite {
             let namePtr = this.structWrapper.getMember("name");
             // if (namePtr !== 0)
             //     this.runtime.functions.catnip_hstring_deref(namePtr); TODO
-            namePtr = this.runtime.allocateHeapString(this.name);
+            namePtr = this.runtime.createCanonHString(this.name);
             this.structWrapper.setMember("name", namePtr);
             this._rewriteName = false;
         }

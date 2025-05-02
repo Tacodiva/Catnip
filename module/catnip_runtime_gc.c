@@ -49,7 +49,7 @@ catnip_gc_page *gc_next_page(catnip_runtime *runtime) {
   return page;
 }
 
-catnip_obj_head *catnip_gc_new_immortal(catnip_ui32_t size) {
+catnip_obj_head *catnip_gc_new_immortal(catnip_ui32_t size) {  
   CATNIP_ASSERT(size >= sizeof(catnip_obj_head));
 
   catnip_obj_head *objHead = catnip_mem_alloc(size);

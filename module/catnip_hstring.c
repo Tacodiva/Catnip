@@ -8,7 +8,6 @@ catnip_wchar_t *catnip_hstring_get_data(const catnip_hstring *str) {
 }
 
 catnip_hstring *catnip_hstring_new_simple(catnip_runtime *runtime, catnip_ui32_t len) {
-  // TODO what if len is 0?
   return (catnip_hstring *) catnip_runtime_gc_new_obj(runtime, sizeof(catnip_hstring) + len * sizeof(catnip_wchar_t));
 }
 
@@ -76,8 +75,7 @@ catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str
 
   if (trim_start == ptr_end) {
     // Entire string is whitespace
-    // TODO Canonicalize
-    return catnip_hstring_new(runtime, CATNIP_NULL, 0);
+    return CATNIP_STRING_BLANK;
   }
 
   ptr = ptr_end;

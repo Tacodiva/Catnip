@@ -57,7 +57,7 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
             this._broadcastGeneric.body.emit(SpiderOpcodes.local_get, broadcastName);
             this._broadcastGeneric.body.emitConstant(
                 SpiderNumberType.i32,
-                this.compiler.runtimeModule.allocateHeapString(broadcastInfo.broadcastName)
+                this.compiler.runtimeModule.createCanonHString(broadcastInfo.broadcastName)
             );
             this._broadcastGeneric.body.emit(
                 SpiderOpcodes.call,

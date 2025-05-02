@@ -265,10 +265,8 @@ export class CatnipCompilerWasmGenContext {
         }
     }
 
-    // TODO This will leak memory :c
-    // TODO Keep a map of duplicate strings.
-    public alloateHeapString(str: string): number {
-        return this.runtimeModule.allocateHeapString(str);
+    public createHeapString(str: string): number {
+        return this.runtimeModule.createCanonHString(str);
     }
 
     public emitWasmConst(type: SpiderNumberType, value: number | bigint): void {

@@ -688,14 +688,11 @@ catnip_hstring *catnip_numconv_stringify_f64(catnip_runtime *runtime, catnip_f64
     is_neg = CATNIP_FALSE;
   }
 
-  // TODO These can all share the same string, no need to create new ones every time
   if (CATNIP_F64_ISNAN(x)) {
-    return catnip_hstring_new_from_cstring(nc_ctx->runtime, "NaN");
+    return CATNIP_STRING_NAN;
   } else if (CATNIP_F64_ISINFINITE(x)) {
-    if (is_neg)
-      return catnip_hstring_new_from_cstring(nc_ctx->runtime, "-Infinity");
-    else
-      return catnip_hstring_new_from_cstring(nc_ctx->runtime, "Infinity");
+    if (is_neg) return CATNIP_STRING_NEG_INFINITY;
+    else return CATNIP_STRING_POS_INFINITY;
   } // TODO Investigate 0 shortcut
 
   catnip_ui32_t uval = (catnip_ui32_t)x;

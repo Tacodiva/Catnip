@@ -481,7 +481,7 @@ export class CatnipCompiler {
                         throw new Error("Callback must return a value.");
 
                     if (CatnipValueFormatUtils.isAlways(returnFormat, CatnipValueFormat.I32_HSTRING)) {
-                        return this.runtimeModule.allocateHeapString("" + returnValue);
+                        return this.runtimeModule.createCanonHString("" + returnValue);
                     } else {
                         if (typeof returnValue !== "number")
                             throw new Error("Expected callback return of type number.");

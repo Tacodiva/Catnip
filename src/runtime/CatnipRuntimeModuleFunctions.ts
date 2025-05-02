@@ -11,6 +11,8 @@ function fn<TArgs extends SpiderValueType[], TResult extends SpiderValueType | u
 }
 
 export const CatnipRuntimeModuleFunctions = {
+    catnip_init: fn<[]>([], undefined),
+    
     catnip_mem_alloc: fn<[length: SpiderNumberType.i32, zero: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_mem_free: fn<[ptr: SpiderNumberType.i32], undefined>
@@ -32,9 +34,8 @@ export const CatnipRuntimeModuleFunctions = {
         threadList: SpiderNumberType.i32
     ], undefined>([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_runtime_render_pen_flush: fn<[runtime: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
-
-    main: fn<[ptr: SpiderNumberType.i32], undefined>
-        ([SpiderNumberType.i32], undefined),
+    catnip_runtime_new_hstring: fn<[runtime: SpiderNumberType.i32, length: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
 
     catnip_target_new: fn<[runtime: SpiderNumberType.i32, sprite: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

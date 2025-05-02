@@ -61,7 +61,7 @@ export class CatnipCompilerEvent {
 
         for (let i = 0; i < rawArgs.length; i++) {
             decodedArgs.push(
-                this._eventArgInfos[i].decodeWASM(this.compiler.runtimeModule, rawArgs[i])
+                this._eventArgInfos[i].decodeWASM(this.compiler.project, rawArgs[i])
             );
         }
 

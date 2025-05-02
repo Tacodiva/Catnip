@@ -1,27 +1,9 @@
 
 #include "./catnip.h"
 
-void CATNIP_EXPORT(main)(catnip_runtime *runtime) {
-  catnip_f64_t first;
-  catnip_f64_t second;
-  catnip_f64_t nth;
-
-  for (catnip_ui32_t i = 0; i < 100000; i++) {
-    first = 0;
-    second = 1;
-    nth = 1;
-
-    for (catnip_ui32_t j = 0; j < 1200; j++) {
-      nth = first + second;
-      first = second;
-      second = nth;
-    }
-  }
-
-  catnip_hstring *str = catnip_numconv_stringify_f64(runtime, nth);
-  catnip_blockutil_debug_log(str);
+void CATNIP_EXPORT(catnip_init)() {
+  catnip_strings_init();
 }
-
 
 void *CATNIP_EXPORT(catnip_mem_alloc)(catnip_ui32_t length, catnip_bool_t zero) {
   void *ptr = catnip_mem_alloc(length);
@@ -42,6 +24,7 @@ catnip_f64_t CATNIP_EXPORT(catnip_numconv_parse)(catnip_hstring *str, catnip_run
   return catnip_numconv_parse(runtime, str);
 }
 
+
 catnip_runtime *CATNIP_EXPORT(catnip_runtime_new)() {
   return catnip_runtime_new();
 }
@@ -56,6 +39,10 @@ void CATNIP_EXPORT(catnip_runtime_start_threads)(catnip_runtime *runtime, catnip
 
 void CATNIP_EXPORT(catnip_runtime_render_pen_flush)(catnip_runtime *runtime) {
   catnip_runtime_render_pen_flush(runtime);
+}
+
+catnip_hstring *CATNIP_EXPORT(catnip_runtime_new_hstring)(catnip_runtime *runtime, catnip_ui32_t length) {
+  return catnip_hstring_new_simple(runtime, length);
 }
 
 

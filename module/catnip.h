@@ -64,6 +64,7 @@ typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 #include "./catnip_mem.h"
 #include "./catnip_unicode.h"
 #include "./catnip_hstring.h"
+#include "./catnip_strings.h"
 #include "./catnip_import.h"
 #include "./catnip_numconv.h"
 #include "./catnip_value.h"

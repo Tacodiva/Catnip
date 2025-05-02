@@ -69,7 +69,7 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         const format = this._getFormat(ir.inputs);
 
         if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_HSTRING)) {
-            ctx.emitWasmConst(SpiderNumberType.i32, ctx.alloateHeapString(Cast.toString(value)));
+            ctx.emitWasmConst(SpiderNumberType.i32, ctx.createHeapString(Cast.toString(value)));
             return;
         }
 
@@ -79,7 +79,7 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         }
 
         if (CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
-            const stringPtr = ctx.alloateHeapString(Cast.toString(value));
+            const stringPtr = ctx.createHeapString(Cast.toString(value));
             ctx.emitWasmConst(SpiderNumberType.i64, VALUE_STRING_MASK | BigInt(stringPtr));
             ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
             return;

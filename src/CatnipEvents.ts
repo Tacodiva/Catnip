@@ -3,18 +3,19 @@ import { CatnipRuntimeModule } from './runtime/CatnipRuntimeModule';
 import { CatnipWasmStructHeapString } from "./wasm-interop/CatnipWasmStructHeapString";
 import { CatnipValueFormat } from "./compiler/CatnipValueFormat";
 import UTF16 from "./utf16";
+import { CatnipProject } from "./runtime/CatnipProject";
 
 export interface CatnipEventValueTypeInfo<TJavascript = any> {
     readonly format: CatnipValueFormat;
 
-    decodeWASM(runtime: CatnipRuntimeModule, value: any): TJavascript;
-    encodeWASM(runtime: CatnipRuntimeModule, value: TJavascript): any;
+    decodeWASM(project: CatnipProject, value: any): TJavascript;
+    encodeWASM(project: CatnipProject, value: TJavascript): any;
 }
 
 function createValueTypeInfo<TJavascript>(
     format: CatnipValueFormat,
-    decodeWASM: (runtime: CatnipRuntimeModule, value: any) => TJavascript,
-    encodeWASM: (runtime: CatnipRuntimeModule, value: TJavascript) => any
+    decodeWASM: (project: CatnipProject, value: any) => TJavascript,
+    encodeWASM: (project: CatnipProject, value: TJavascript) => any
 ): CatnipEventValueTypeInfo<TJavascript> {
     return {
         format,
@@ -26,33 +27,33 @@ function createValueTypeInfo<TJavascript>(
 export const CatnipEventValueTypes = {
     NUMBER: createValueTypeInfo<number>(
         CatnipValueFormat.F64_NUMBER,
-        (rt, value: number) => value,
-        (rt, value: number) => value
+        (proj, value: number) => value,
+        (proj, value: number) => value
     ),
 
     NUMBER_I32: createValueTypeInfo<number>(
         CatnipValueFormat.I32_NUMBER,
-        (rt, value: number) => value,
-        (rt, value: number) => value
+        (proj, value: number) => value,
+        (proj, value: number) => value
     ),
 
     STRING: createValueTypeInfo<string>(
         CatnipValueFormat.I32_HSTRING,
-        (rt, value: number) => {
+        (proj, value: number) => {
             const bytes = value + CatnipWasmStructHeapString.size;
-            const byteLength = CatnipWasmStructHeapString.getMember(value, rt.memory, "bytelen") * 2;
+            const byteLength = CatnipWasmStructHeapString.getMember(value, proj.runtimeModule.memory, "bytelen") * 2;
 
-            return UTF16.decode(rt.memory.buffer.slice(bytes, bytes + byteLength));
+            return UTF16.decode(proj.runtimeModule.memory.buffer.slice(bytes, bytes + byteLength));
         },
-        (rt, value: string) => {
-            return rt.allocateHeapString(String(value));
+        (proj, value: string) => {
+            return proj.createNewString(String(value));
         }
     ),
 
     POINTER: createValueTypeInfo<number>(
         CatnipValueFormat.I32,
-        (rt, value: number) => value,
-        (rt, value: number) => value
+        (proj, value: number) => value,
+        (proj, value: number) => value
     ),
 } satisfies Record<string, CatnipEventValueTypeInfo<any>>;
 

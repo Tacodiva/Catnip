@@ -62,7 +62,7 @@ export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_i
             ctx.emitWasm(SpiderOpcodes.i32_add);
             ctx.emitWasm(SpiderOpcodes.f64_load, 3, 0);
         }, (ctx) => {
-            ctx.emitWasmConst(SpiderNumberType.i64, VALUE_STRING_MASK | BigInt(ctx.alloateHeapString("")));
+            ctx.emitWasmConst(SpiderNumberType.i64, VALUE_STRING_MASK | BigInt(ctx.createHeapString("")));
             ctx.emitWasm(SpiderOpcodes.f64_reinterpret_i64);    
         },
         SpiderNumberType.f64);

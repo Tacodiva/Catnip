@@ -153,7 +153,7 @@ catnip_hstring *catnip_blockutil_hstring_char_at(catnip_runtime *runtime, catnip
 
   if (index >= CATNIP_HSTRING_LENGTH(str)) {
     // Index out of range
-    return catnip_hstring_new(runtime, CATNIP_NULL, 0);
+    return CATNIP_STRING_BLANK;
   }
 
   return catnip_hstring_new(runtime, &catnip_hstring_get_data(str)[index], 1);
