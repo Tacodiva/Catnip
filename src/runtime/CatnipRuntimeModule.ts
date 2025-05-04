@@ -158,7 +158,17 @@ export class CatnipRuntimeModule {
     }
 
     public createRuntimeInstance(): WasmStructWrapper<typeof CatnipWasmStructRuntime> {
-        return new WasmStructWrapper(this.functions.catnip_runtime_new(), () => this.memory, CatnipWasmStructRuntime);
+        const runtime = new WasmStructWrapper(this.functions.catnip_runtime_new(), () => this.memory, CatnipWasmStructRuntime);
+
+        const rngState = new BigUint64Array(2);
+        crypto.getRandomValues(rngState);
+
+        const runtimeState = runtime.getMemberWrapper("random_state").getInnerWrapper();
+
+        runtimeState.setMember("state0", rngState[0]);
+        runtimeState.setMember("state0", rngState[1]);
+
+        return runtime;
     }
 
     public allocateStruct<T extends WasmStruct<any>>(struct: T, zero: boolean = true): WasmStructWrapper<T> {
@@ -168,7 +178,7 @@ export class CatnipRuntimeModule {
     public setValue(ptr: WasmUnionWrapper<typeof CatnipWasmUnionValue>, value: number | string) {
         if (typeof value === "number") {
             if (Number.isNaN(value)) {
-                // TODO This is probably not necessary
+                // This is probably not necessary
                 ptr.set({
                     index: 1,
                     value: {

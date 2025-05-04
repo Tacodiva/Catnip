@@ -59,11 +59,10 @@ export class CatnipIr implements CatnipReadonlyIr {
     private _returnLocationVariable: CatnipIrTransientVariable | null;
     public get returnLocationVariable(): CatnipIrTransientVariable {
         if (this._returnLocationVariable === null) {
-            if (this.hasReturnLocation) {
+            if (!this.hasReturnLocation)
                 throw new Error("Function does not have a return location");
-            } else {
-                this._returnLocationVariable = new CatnipIrTransientVariable(this, CatnipValueFormat.I32, "Return Location");
-            }
+
+            this._returnLocationVariable = new CatnipIrTransientVariable(this, CatnipValueFormat.I32_NUMBER, "Return Location");
         }
         return this._returnLocationVariable;
     }
@@ -101,7 +100,7 @@ export class CatnipIr implements CatnipReadonlyIr {
             return;
         }
 
-        this._entrypoint = new CatnipIrFunction(this, "script_" + this.scriptID);
+        this._entrypoint = new CatnipIrFunction(this, `script_${this.scriptID}` + (this.trigger.inputs.id === undefined ? "" : "_"+this.trigger.inputs.id));
         this._functions.push(this._entrypoint);
 
         const ctx = new CatnipCompilerIrGenContext(this);
@@ -169,6 +168,7 @@ export class CatnipIr implements CatnipReadonlyIr {
                 this._transientVariableNames.add(possibleName);
                 return possibleName;
             }
+            ++i;
         }
     }
 

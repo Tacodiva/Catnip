@@ -1,5 +1,6 @@
 import { CatnipWasmStructIO } from "./CatnipWasmStructIO";
 import { CatnipWasmStructList } from "./CatnipWasmStructList";
+import { CatnipWasmStructRandomState } from "./CatnipWasmStructRandomState";
 import { CatnipWasmPtrRuntimeGcStats } from "./CatnipWasmStructRuntimeGcStats";
 import { CatnipWasmPtrSprite } from "./CatnipWasmStructSprite";
 import { CatnipWasmPtrTarget } from "./CatnipWasmStructTarget";
@@ -25,5 +26,7 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     pen_line_buffer: WasmPtrVoid,
 
     io: new WasmPtr(CatnipWasmStructIO),
+
+    random_state: new WasmPtr(CatnipWasmStructRandomState),
 
 });

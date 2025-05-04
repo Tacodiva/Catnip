@@ -30,7 +30,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
 
         ctx.emitInput(inputs.count, CatnipValueFormat.I32_NUMBER);
         ctx.emitIr(ir_transient_tee, { transient: loopCount }, {});
-        ctx.emitIr<typeof ir_const>(ir_const, { value: 0, format: CatnipValueFormat.I32_NUMBER }, {});
+        ctx.emitIrConst(0, CatnipValueFormat.I32_NUMBER);
         ctx.emitIr(ir_i32_cmp_gt, {}, {});
 
         ctx.emitIr(
@@ -38,7 +38,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
             {
                 true_branch: ctx.emitBranch((loopHead) => {
                     ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
-                    ctx.emitIr<typeof ir_const>(ir_const, { value: 1, format: CatnipValueFormat.I32_NUMBER }, {});
+                    ctx.emitIrConst(1, CatnipValueFormat.I32_NUMBER);
                     ctx.emitIr(ir_i32_sub, {}, {});
                     ctx.emitIr(ir_transient_store, { transient: loopCount }, {});
 

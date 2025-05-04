@@ -39,6 +39,7 @@ export const ir_is_key_down = new class extends CatnipIrInputOpType {
 
         }
 
-        throw new Error("Not supported :c");
+        ctx.emitWasmGetRuntime();
+        ctx.emitWasmRuntimeFunctionCall("catnip_io_is_key_pressed");
     }
 }

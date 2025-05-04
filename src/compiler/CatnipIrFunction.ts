@@ -135,6 +135,8 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
     constructor(ir: CatnipIr, name: string, branch?: CatnipIrBasicBlock) {
         this.ir = ir;
         this.spiderFunction = this.spiderModule.createFunction();
+
+        console.log(`${name} => ${this.spiderModule.functions.indexOf(this.spiderFunction)}`)
         this.spiderThreadParam = this.spiderFunction.addParameter(SpiderNumberType.i32);
 
         this.name = name;

@@ -78,6 +78,7 @@ struct catnip_runtime {
     catnip_pen_line *pen_line_buffer;
 
     catnip_io *io;
+    catnip_math_random_state* random_state;
 };
 
 catnip_runtime *catnip_runtime_new();

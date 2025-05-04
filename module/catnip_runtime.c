@@ -32,6 +32,8 @@ catnip_runtime *catnip_runtime_new() {
   rt->io = catnip_mem_alloc(sizeof(catnip_io));
   catnip_mem_zero(rt->io, sizeof(catnip_io));
 
+  rt->random_state = catnip_mem_alloc(sizeof(catnip_math_random_state));
+
   return rt;
 }
 

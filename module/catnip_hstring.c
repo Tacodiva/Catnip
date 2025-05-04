@@ -134,3 +134,21 @@ catnip_bool_t catnip_hstring_equal(catnip_hstring *a, catnip_hstring *b) {
 
   return CATNIP_TRUE;
 }
+
+catnip_bool_t catnip_hstring_contains_char(catnip_hstring *str, catnip_wchar_t c) {
+
+  catnip_wchar_t *strData = catnip_hstring_get_data(str);
+  catnip_ui32_t strLen = CATNIP_HSTRING_LENGTH(str);
+  catnip_wchar_t *strDataEnd = strData + strLen;
+
+  while (strData != strDataEnd) {
+
+    if (*strData == c) return CATNIP_TRUE;
+
+    ++strData;
+    
+    CATNIP_ASSERT(strData <= strDataEnd);
+  }
+
+  return CATNIP_FALSE;
+}

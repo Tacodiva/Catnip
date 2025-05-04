@@ -3,6 +3,7 @@ export interface CatnipCompilerConfig {
     enable_binaryen_optimizer?: boolean,
     binaryen_dump?: false | "wat" | "as" | "stack",
     ir_dump?: boolean;
+    wasm_dump?: boolean;
     enable_tail_call?: boolean;
     enable_optimization_variable_inlining?: boolean;
     /** Slows execution down, but useful for testing variable inlining */
@@ -17,6 +18,7 @@ export function catnipCreateDefaultCompilerConfig(): CatnipCompilerConfig {
         enable_binaryen_optimizer: true,
         binaryen_dump: false,
         ir_dump: false,
+        wasm_dump: false,
         enable_tail_call: true,
         enable_optimization_variable_inlining: true,
         enable_optimization_variable_inlining_force: false,
@@ -27,11 +29,8 @@ export function catnipCreateDefaultCompilerConfig(): CatnipCompilerConfig {
     def.enable_binaryen_optimizer = false;
     // def.binaryen_dump = "stack";
     // def.ir_dump = true;
-    def.enable_optimization_type_analysis = false;
-
-    if (globalThis.document && window.location.href.search("binaryen") !== -1) {
-        def.enable_binaryen_optimizer = true;
-    }
+    // def.enable_optimization_type_analysis = false;
+    // def.wasm_dump = true;
 
     return def;
 }

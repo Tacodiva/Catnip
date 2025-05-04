@@ -418,6 +418,9 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
 }
 
 export function readSB3(sb3: ProjectSB3): CatnipProjectDesc {
+    // const sb3Start = 
+    console.time("SB3 Parse");
+
     const meta = new SB3ReadMetadata();
 
     const spritesDesc: CatnipSpriteDesc[] = [];
@@ -433,6 +436,7 @@ export function readSB3(sb3: ProjectSB3): CatnipProjectDesc {
         scriptReader.readScripts();
     }
 
+    console.timeEnd("SB3 Parse");
     return {
         sprites: spritesDesc
     };

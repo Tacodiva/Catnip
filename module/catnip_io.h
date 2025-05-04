@@ -14,6 +14,7 @@ struct catnip_io {
 
 typedef struct catnip_io catnip_io;
 
+catnip_bool_t catnip_io_is_key_pressed(catnip_runtime *runtime, catnip_value key);
 void catnip_io_key_pressed(catnip_runtime *runtime, catnip_ui32_t charCode);
 void catnip_io_key_released(catnip_runtime *runtime, catnip_ui32_t charCode);
 void catnip_io_mouse_move(catnip_runtime *runtime, catnip_f64_t x, catnip_f64_t y);

@@ -190,32 +190,6 @@ export class CatnipProject {
         this._projectModule = await compiler.createModule();
         console.timeEnd("compile");
 
-        if (globalThis.document && window.location.href.search("download") !== -1) {
-            const downloadURL = (data: string, fileName: string) => {
-                const a = document.createElement('a')
-                a.href = data
-                a.download = fileName
-                document.body.appendChild(a)
-                a.style.display = 'none'
-                a.click()
-                a.remove()
-            }
-
-            const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
-
-                const blob = new Blob([data], {
-                    type: mimeType
-                })
-
-                const url = window.URL.createObjectURL(blob)
-
-                downloadURL(url, fileName)
-
-                setTimeout(() => window.URL.revokeObjectURL(url), 1000)
-            }
-            downloadBlob(writeModule(compiler.spiderModule), "module.wasm", "application/wasm");
-        }
-
         // const stage = [...this._sprites.values()][0];
         // const printVariable = stage.getVariable("2");
 

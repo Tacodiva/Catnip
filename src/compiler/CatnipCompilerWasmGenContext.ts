@@ -445,7 +445,7 @@ export class CatnipCompilerWasmGenContext {
                         } else {
                             CatnipCompilerWasmGenContext.logger.assert(
                                 false,
-                                true, "Unsupported stack I32 type."
+                                true, `Unsupported stack I32 type '${CatnipValueFormatUtils.stringify(valueFormat)}'.`
                             );
                         }
                         break;
@@ -544,7 +544,7 @@ export class CatnipCompilerWasmGenContext {
 
     public finish() {
         if (this._unreleasedLocalCount !== 0)
-            CatnipCompilerLogger.warn("WASM generation has unreleased locals.");
+            CatnipCompilerLogger.warn(`WASM generation has unreleased locals.`);
 
         for (const procedureArgs of this._procedureArgs) {
             if (procedureArgs !== undefined && procedureArgs.length !== 0) {

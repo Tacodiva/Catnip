@@ -159,6 +159,42 @@ catnip_hstring *catnip_blockutil_hstring_char_at(catnip_runtime *runtime, catnip
   return catnip_hstring_new(runtime, &catnip_hstring_get_data(str)[index], 1);
 }
 
+catnip_bool_t catnip_blockutil_hstring_contains(catnip_hstring *str, catnip_hstring *contains) {
+
+  const catnip_ui32_t strLen = CATNIP_HSTRING_LENGTH(str);
+  const catnip_wchar_t *strDatStart = catnip_hstring_get_data(str);
+  const catnip_wchar_t *strDatEnd = strDatStart + strLen;
+
+  const catnip_ui32_t containsLen = CATNIP_HSTRING_LENGTH(contains);
+  const catnip_wchar_t *containsDatStart = catnip_hstring_get_data(contains);
+  const catnip_wchar_t *containsDatEnd = containsDatStart + containsLen;
+
+  if (containsLen > strLen) return CATNIP_FALSE;
+
+  const catnip_ui32_t indexToCheck = strLen - containsLen;
+
+  for (catnip_ui32_t start = 0; start <= indexToCheck; start++) {
+
+    const catnip_wchar_t *pStr = &strDatStart[start];
+    const catnip_wchar_t *pContains = &containsDatStart[0];
+
+    for (;;) {
+      if (pContains >= containsDatEnd) return CATNIP_TRUE;
+      if (pStr >= strDatEnd) break;
+
+      catnip_codepoint_t strCodepoint = catnip_unicode_decode_utf16(&pStr, strDatEnd); 
+      catnip_codepoint_t containsCodepoint = catnip_unicode_decode_utf16(&pContains, containsDatEnd); 
+
+      strCodepoint = catnip_unicode_to_lowercase(strCodepoint);
+      containsCodepoint = catnip_unicode_to_lowercase(containsCodepoint);
+
+      if (strCodepoint != containsCodepoint) break;
+    }    
+  }
+
+  return CATNIP_FALSE;
+}
+
 inline catnip_i32_t to_hex_value(const catnip_wchar_t c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'A' && c <= 'F') return (c - 'A') + 10;
@@ -373,4 +409,39 @@ void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume
   if (cast < 0) cast += target->sprite->costume_count;
 
   target->costume = (catnip_ui32_t) cast;
+}
+
+inline catnip_bool_t is_int(catnip_value value, catnip_f64_t valueNumber) {
+
+  if (CATNIP_VALUE_IS_STRING(value)) {
+    // If the string contains a '.' we consider it not an int
+    return !catnip_hstring_contains_char(CATNIP_VALUE_AS_STRING(value), '.');
+  } else {
+    return CATNIP_F64_FLOOR(valueNumber) == valueNumber;
+  }
+}
+
+catnip_f64_t catnip_blockutil_operator_random(catnip_runtime *runtime, catnip_value a, catnip_value b) {
+
+  const catnip_f64_t aVal = catnip_value_to_number(runtime, a);
+  const catnip_f64_t bVal = catnip_value_to_number(runtime, b);
+
+  catnip_f64_t low, high;
+
+  if (aVal < bVal) {
+    low = aVal;
+    high = bVal;
+  } else {
+    low = bVal;
+    high = aVal;
+  }
+
+  if (low == high) return low;
+
+  if (is_int(a, aVal) && is_int(b, bVal)) {
+    // Both values are an integer, truncate the result to an int
+    return low + CATNIP_F64_FLOOR(catnip_math_random(runtime) * ((high + 1) - low));
+  }
+
+  return (catnip_math_random(runtime) * (high - low)) + low;
 }

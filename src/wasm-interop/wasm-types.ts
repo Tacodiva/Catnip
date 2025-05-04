@@ -171,6 +171,25 @@ export const WasmUInt16 = {
     }
 } satisfies WasmType<number, WasmValueWrapper<WasmType<number, any>>>;
 
+export const WasmUInt64 = {
+    size: 8,
+    name: "uint64",
+    alignment: 8,
+
+    set(ptr: number, buffer: DataView, value: number | bigint): void {
+        buffer.setBigUint64(ptr, BigInt(value), true);
+    },
+
+    get(ptr: number, buffer: DataView): bigint {
+        return buffer.getBigUint64(ptr, true);
+    },
+
+    getWrapper(ptr: number, buffer: DataView | (() => DataView)): WasmValueWrapper<WasmType<bigint, any>> {
+        return new WasmValueWrapper(ptr, buffer, this);
+    }
+} satisfies WasmType<bigint, WasmValueWrapper<WasmType<bigint, any>>>;
+
+
 export const WasmVoid = {
     size: null,
     name: "void",

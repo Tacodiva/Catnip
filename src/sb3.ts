@@ -344,7 +344,19 @@ type SB3BlockTypeDefinition = {
             "X": ProjectSB3Input,
             "Y": ProjectSB3Input,
         }
-    }
+    },
+    "motion_setx": {
+        inputs: {
+            "X": ProjectSB3Input,
+        }
+    },
+    "motion_sety": {
+        inputs: {
+            "Y": ProjectSB3Input,
+        }
+    },
+    "motion_xposition": {},
+    "motion_yposition": {},
 
     "looks_say": {
         inputs: {
@@ -419,6 +431,11 @@ type SB3BlockTypeDefinition = {
             "SUBSTACK": ProjectSB3Input,
         },
     },
+    "control_stop": {
+        fields: {
+            "STOP_OPTION": ProjectSB3Field<null, SB3BlockControlStopOption>
+        }
+    }
 
     "operator_add": {
         inputs: {
@@ -462,10 +479,32 @@ type SB3BlockTypeDefinition = {
             "OPERAND2": ProjectSB3Input,
         }
     },
+    "operator_mod": {
+        inputs: {
+            "NUM1": ProjectSB3Input,
+            "NUM2": ProjectSB3Input,
+        }
+    },
     "operator_or": {
         inputs: {
             "OPERAND1": ProjectSB3Input,
             "OPERAND2": ProjectSB3Input,
+        }
+    },
+    "operator_round": {
+        inputs: {
+            "NUM": ProjectSB3Input,
+        }
+    },
+    "operator_and": {
+        inputs: {
+            "OPERAND1": ProjectSB3Input,
+            "OPERAND2": ProjectSB3Input,
+        }
+    },
+    "operator_not": {
+        inputs: {
+            "OPERAND": ProjectSB3Input,
         }
     },
     "operator_join": {
@@ -483,6 +522,26 @@ type SB3BlockTypeDefinition = {
         inputs: {
             "LETTER": ProjectSB3Input,
             "STRING": ProjectSB3Input,
+        }
+    },
+    "operator_contains": {
+        inputs: {
+            "STRING1": ProjectSB3Input,
+            "STRING2": ProjectSB3Input,
+        }
+    },
+    "operator_mathop": {
+        inputs: {
+            "NUM": ProjectSB3Input,
+        },
+        fields: {
+            "OPERATOR": ProjectSB3Field<null, SB3BlockOperatorMathOp>
+        }
+    },
+    "operator_random": {
+        inputs: {
+            "FROM": ProjectSB3Input,
+            "TO": ProjectSB3Input,
         }
     },
 
@@ -621,6 +680,11 @@ type SB3BlockTypeDefinition = {
             "COLOR_PARAM": ProjectSB3Input,
         }
     },
+    "pen_changePenSizeBy": {
+        inputs: {
+            "COLOR": ProjectSB3Input,
+        }
+    },
     "pen_setPenColorParamTo": {
         inputs: {
             "VALUE": ProjectSB3Input,
@@ -633,3 +697,27 @@ type SB3BlockTypeDefinition = {
         }
     }
 };
+
+export enum SB3BlockOperatorMathOp {
+    ABS = "abs",
+    FLOOR = "floor",
+    CEILING = "ceiling",
+    SQRT = "sqrt",
+    SIN = "sin",
+    COS = "cos",
+    TAN = "tan",
+    ASIN = "asin",
+    ACOS = "acos",
+    ATAN = "atan",
+    LN = "ln",
+    LOG = "log",
+    POW_E = "e ^",
+    POW_10 = "10 ^"
+}
+
+export enum SB3BlockControlStopOption {
+    ALL = "all",
+    OTHER_IN_SPRITE = "other scripts in sprite",
+    OTHER_IN_STAGE = "other scripts in stage",
+    THIS_SCRIPT = "this script"
+}

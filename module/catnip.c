@@ -108,6 +108,10 @@ catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_char_at)(catnip_hstring *
   return catnip_blockutil_hstring_char_at(runtime, str, index);
 }
 
+catnip_bool_t CATNIP_EXPORT(catnip_blockutil_hstring_contains)(catnip_hstring *str, catnip_hstring *contains) {
+  return catnip_blockutil_hstring_contains(str, contains);
+}
+
 catnip_ui32_t CATNIP_EXPORT(catnip_blockutil_hstring_to_argb)(const catnip_hstring *str) {
   return catnip_blockutil_hstring_to_argb(str);
 }
@@ -140,6 +144,9 @@ void CATNIP_EXPORT(catnip_blockutil_costume_set)(catnip_hstring *costume, catnip
   catnip_blockutil_costume_set(target, costume);
 }
 
+catnip_f64_t CATNIP_EXPORT(catnip_blockutil_operator_random)(catnip_f64_t a, catnip_f64_t b, catnip_runtime *runtime) {
+  return catnip_blockutil_operator_random(runtime, (catnip_value) a, (catnip_value) b);
+}
 
 void CATNIP_EXPORT(catnip_thread_resize_stack)(catnip_thread *thread, catnip_ui32_t extraCapacity) {
   catnip_thread_resize_stack(thread, extraCapacity);
@@ -150,10 +157,49 @@ catnip_list *CATNIP_EXPORT(catnip_list_new)(catnip_ui32_t item_size, catnip_ui32
   return catnip_list_new(item_size, capacity);
 }
 
+
 catnip_f64_t CATNIP_EXPORT(catnip_math_fmod)(catnip_f64_t x, catnip_f64_t y) {
   return catnip_math_fmod(x, y);
 }
 
+catnip_f64_t CATNIP_EXPORT(catnip_math_round)(catnip_f64_t n) {
+  return catnip_math_round(n);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_log)(catnip_f64_t x) {
+  return catnip_math_log(x);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_exp)(catnip_f64_t x) {
+  return catnip_math_exp(x);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_pow)(catnip_f64_t x, catnip_f64_t y) {
+  return catnip_math_pow(x, y);
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_sin)(catnip_f64_t x) {
+  return catnip_math_round(catnip_math_sin((CATNIP_F64_PI * x) / 180) * 1e10) / 1e10;
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_cos)(catnip_f64_t x) {
+  return catnip_math_round(catnip_math_cos((CATNIP_F64_PI * x) / 180) * 1e10) / 1e10;
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_tan)(catnip_f64_t x) {
+  x = catnip_math_fmod(x, 360);
+  if (x == -270 || x == 90) return CATNIP_F64_INFINITY;
+  if (x == 270 || x == -90) return -CATNIP_F64_INFINITY;
+  return catnip_math_round(catnip_math_tan((CATNIP_F64_PI * x) / 180) * 1e10) / 1e10;
+}
+
+catnip_f64_t CATNIP_EXPORT(catnip_math_atan)(catnip_f64_t x) {
+  return catnip_math_atan(x) * 180 / CATNIP_F64_PI;
+}
+
+catnip_bool_t CATNIP_EXPORT(catnip_io_is_key_pressed)(catnip_f64_t key, catnip_runtime *runtime) {
+  return catnip_io_is_key_pressed(runtime, (catnip_value) key);
+}
 
 void CATNIP_EXPORT(catnip_io_key_pressed)(catnip_runtime *runtime, catnip_ui32_t keyCode) {
   catnip_io_key_pressed(runtime, keyCode);

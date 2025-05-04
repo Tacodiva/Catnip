@@ -18,6 +18,8 @@ import { ir_external_callback_command } from "./ir/core/external_callback_comman
 import { ir_external_callback_input } from "./ir/core/external_callback_input";
 import { CatnipCompilerValue } from "./CatnipCompilerValue";
 import { CatnipValueFormatUtils } from './CatnipValueFormatUtils';
+import { ir_const } from "./ir/core/const";
+import { catnip_compiler_constant } from "./cast";
 
 export class CatnipCompilerIrGenContext {
     emitWasmRuntimeFunctionCall(arg0: string) {
@@ -230,6 +232,10 @@ export class CatnipCompilerIrGenContext {
             block: block ?? this._body,
             removed: false
         };
+    }
+
+    public emitIrConst(value: catnip_compiler_constant, format?: CatnipValueFormat) {
+        this.emitIr<typeof ir_const>(ir_const, { value, format }, {});
     }
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD, block?: CatnipIrBasicBlock) {

@@ -27,7 +27,6 @@ export const ir_event_trigger = new class extends CatnipIrScriptTriggerType<ir_e
     }
 
     public postIR(ctx: CatnipCompilerIrGenContext, inputs: ir_event_trigger_inputs): void {
-        super.postIR(ctx, inputs);
         ctx.emitIr(ir_thread_terminate, {}, {});
     }
 };

@@ -68,6 +68,8 @@ export const CatnipRuntimeModuleFunctions = {
     catnip_blockutil_hstring_length: fn<[str: SpiderNumberType.i32], SpiderNumberType.i32>([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_char_at: fn<[str: SpiderNumberType.i32, idx: SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_blockutil_hstring_contains: fn<[str: SpiderNumberType.i32, contains: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_to_argb: fn<[str: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_pen_update_thsv: fn<[target: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
@@ -81,13 +83,26 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
     catnip_blockutil_costume_set: fn<[costumeString: SpiderNumberType.i32, target: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_blockutil_operator_random: fn<[a: SpiderNumberType.f64, b: SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.f64>
+        ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.f64),
 
     catnip_list_new: fn<[itemSize: SpiderNumberType.i32, capacity: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
 
     catnip_math_fmod: fn<[a: SpiderNumberType.f64, b: SpiderNumberType.f64], SpiderNumberType.f64>
         ([SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_round: fn<[SpiderNumberType.f64], SpiderNumberType.f64>([SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_log: fn<[SpiderNumberType.f64], SpiderNumberType.f64>([SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_exp: fn<[SpiderNumberType.f64], SpiderNumberType.f64>([SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_pow: fn<[SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.f64>
+        ([SpiderNumberType.f64, SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_sin: fn<[SpiderNumberType.f64], SpiderNumberType.f64>([SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_cos: fn<[SpiderNumberType.f64], SpiderNumberType.f64>([SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_tan: fn<[SpiderNumberType.f64], SpiderNumberType.f64>([SpiderNumberType.f64], SpiderNumberType.f64),
+    catnip_math_atan: fn<[SpiderNumberType.f64], SpiderNumberType.f64>([SpiderNumberType.f64], SpiderNumberType.f64),
 
+    catnip_io_is_key_pressed: fn<[keyCode: SpiderNumberType.f64, rt: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_io_key_pressed: fn<[rt: SpiderNumberType.i32, keyCode: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_io_key_released: fn<[rt: SpiderNumberType.i32, keyCode: SpiderNumberType.i32]>

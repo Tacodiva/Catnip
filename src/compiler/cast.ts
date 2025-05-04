@@ -153,6 +153,19 @@ export class Cast {
     // Stuff below here was written by me :3
     //
 
+    static readonly KEY_NAME_TO_CODE: Map<string, number> = new Map([
+        ['space', 32],
+        ['left arrow', 37],
+        ['up arrow', 38],
+        ['right arrow', 39],
+        ['down arrow', 40],
+        ['enter', 13],
+    ]);
+
+    static readonly KEY_CODE_TO_NAME: Map<number, string> = new Map(
+        Array.from(this.KEY_NAME_TO_CODE, ([key, value]) => [value, key])
+    );
+
     static toRGB(value: catnip_compiler_constant): number {
         if (typeof (value) === "string" && value.charAt(0) === "#") {
 
@@ -185,20 +198,20 @@ export class Cast {
             if (key >= 48 && key <= 90)
                 return key;
 
-            if (key === " ".charCodeAt(0)) return key;
-
-            throw new Error(`Unknown key code ${key}`);
+            if (this.KEY_CODE_TO_NAME.has(key))
+                return key;
         }
 
         key = "" + key;
 
-        if (key.length === 1) {
-            const code = key.toUpperCase().charCodeAt(0);
-            if (code >= 48 && code <= 90)
-                return code;
-        }
+        let code = this.KEY_NAME_TO_CODE.get(key);
 
-        if (key === "space") return " ".charCodeAt(0);
+        if (code !== undefined) return code;
+
+        code = key.toUpperCase().charCodeAt(0);
+
+        if (code >= 48 && code <= 90) return code;
+        if (key === " ") return code;
 
         throw new Error(`Unknown key code '${key}'`);
     }

@@ -47,6 +47,7 @@ void catnip_assert(catnip_bool_t assertion, const char* name, const char* func, 
 #define CATNIP_ASSERT(assertion)
 #endif
 
+typedef struct catnip_math_random_state catnip_math_random_state;
 typedef struct catnip_costume catnip_costume;
 typedef struct catnip_runtime catnip_runtime;
 typedef struct catnip_target catnip_target;

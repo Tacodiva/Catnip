@@ -51,7 +51,7 @@ export const CatnipEventValueTypes = {
     ),
 
     POINTER: createValueTypeInfo<number>(
-        CatnipValueFormat.I32,
+        CatnipValueFormat.I32_NUMBER,
         (proj, value: number) => value,
         (proj, value: number) => value
     ),

@@ -216,8 +216,6 @@ export class CatnipSprite {
     _rewrite() {
         if (this._rewriteName) {
             let namePtr = this.structWrapper.getMember("name");
-            // if (namePtr !== 0)
-            //     this.runtime.functions.catnip_hstring_deref(namePtr); TODO
             namePtr = this.runtime.createCanonHString(this.name);
             this.structWrapper.setMember("name", namePtr);
             this._rewriteName = false;
