@@ -26,9 +26,10 @@ export function catnipCreateDefaultCompilerConfig(): CatnipCompilerConfig {
         enable_warp_timer: false,
     } as CatnipCompilerConfig;
 
-    def.enable_binaryen_optimizer = false;
-    // def.binaryen_dump = "stack";
+    // def.enable_binaryen_optimizer = false;
+    def.binaryen_dump = "stack";
     // def.ir_dump = true;
+    // def.enable_optimization_variable_inlining = false;
     // def.enable_optimization_type_analysis = false;
     // def.wasm_dump = true;
 

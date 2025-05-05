@@ -29,6 +29,8 @@ export const ir_is_key_down = new class extends CatnipIrInputOpType {
 
         if (keyInput.isConstant) {
 
+            ctx.emitWasm(SpiderOpcodes.drop);
+
             let keyCode = Cast.toKeyCode(keyInput.constantValue);
 
             ctx.emitWasmGetRuntime();

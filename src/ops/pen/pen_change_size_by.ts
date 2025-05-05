@@ -23,6 +23,6 @@ export const op_pen_change_size_by = new class extends CatnipCommandOpType<pen_c
 
 registerSB3CommandBlock("pen_changePenSizeBy", (ctx, block) => 
     op_pen_change_size_by.create({
-        size: ctx.readInput(block.inputs.COLOR)
+        size: ctx.readInput(block.inputs.SIZE)
     })
 );

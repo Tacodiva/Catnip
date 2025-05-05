@@ -22,27 +22,19 @@ export const ir_replace_list_item = new class extends CatnipIrCommandOpType<repl
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<replace_list_item_ir_inputs>, branch: CatnipIrBasicBlock): void {
         const list = ir.inputs.list;
         const target = ir.inputs.target;
-        const indexFormat = ir.operands[1].format; // TODO optimize constant here
-
         const listOffset = list._index * CatnipWasmStructList.size;
 
-        if (CatnipValueFormatUtils.isSometimes(indexFormat, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
-            // If the index could be a string, we need to check if it's one of the special values "last", "any" or "random"
-
-
-        }
-
-        ir_cast.cast(ctx, indexFormat, CatnipValueFormat.I32_NUMBER);
-
-        const indexVariable = ctx.createLocal(SpiderNumberType.i32);
-        ctx.emitWasm(SpiderOpcodes.local_set, indexVariable.ref);
+        const uncastIndexVariable = ctx.createLocal(CatnipValueFormatUtils.getFormatSpiderType(ir.operands[1].format));
+        ctx.emitWasm(SpiderOpcodes.local_set, uncastIndexVariable.ref);
 
         const valueVariable = ctx.createLocal(SpiderNumberType.f64);
         ctx.emitWasm(SpiderOpcodes.local_set, valueVariable.ref);
 
+        ctx.emitWasm(SpiderOpcodes.local_get, uncastIndexVariable.ref);
+
         ir_get_list_item.emitBoundsCheck(ctx, {
-            allowEqualToLength: false
-        }, indexVariable, target, list, (ctx) => {
+            allowEqualToLength: false, allowLast: true,
+        }, ir.operands[1], target, list, (ctx, indexVariable) => {
             // Get the pointer to the list's data
             ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
             ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("list_table"));
@@ -59,7 +51,7 @@ export const ir_replace_list_item = new class extends CatnipIrCommandOpType<repl
             ctx.emitWasm(SpiderOpcodes.f64_store, 3, 0);
         }, () => {}, undefined);
 
-        ctx.releaseLocal(indexVariable);
+        ctx.releaseLocal(uncastIndexVariable);
         ctx.releaseLocal(valueVariable);
     }
 

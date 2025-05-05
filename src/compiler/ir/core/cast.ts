@@ -49,8 +49,24 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
         isString: (ctx: CatnipCompilerWasmGenContext, format: CatnipValueFormat) => CatnipValueFormat | void,
         isNumber: (ctx: CatnipCompilerWasmGenContext, format: CatnipValueFormat) => CatnipValueFormat | void): CatnipValueFormat | void {
 
-        CatnipCompilerLogger.assert(CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.F64_BOXED_I32_HSTRING));
-        CatnipCompilerLogger.assert(CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.F64_NUMBER_OR_NAN));
+        if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
+            // We do a block so if there is a br in the lambda, the index stays the same
+            ctx.emitWasm(SpiderOpcodes.drop);
+            ctx.pushExpression();
+            isNumber(ctx, format);
+            ctx.emitWasm(SpiderOpcodes.block, ctx.popExpression());
+            return;
+        }
+
+        if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
+            ctx.emitWasm(SpiderOpcodes.drop);
+            ctx.pushExpression();
+            isString(ctx, format);
+            ctx.emitWasm(SpiderOpcodes.block, ctx.popExpression());
+            return;
+        }
+
+        CatnipCompilerLogger.assert(CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64));
 
         ctx.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
         ctx.emitWasm(SpiderOpcodes.i64_const, 32);

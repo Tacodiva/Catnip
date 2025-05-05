@@ -96,6 +96,10 @@ catnip_bool_t CATNIP_EXPORT(catnip_blockutil_value_eq)(catnip_f64_t a, catnip_f6
   return catnip_blockutil_value_eq(runtime, CATNIP_VALUE_FROM_F64(a), CATNIP_VALUE_FROM_F64(b));
 }
 
+catnip_bool_t CATNIP_EXPORT(catnip_blockutil_hstring_eq_strict)(const catnip_hstring *a, const catnip_hstring *b) {
+  return catnip_hstring_equal(a, b);
+}
+
 catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_join)(const catnip_hstring *a, const catnip_hstring *b, catnip_runtime *runtime) {
   return catnip_blockutil_hstring_join(runtime, a, b);
 }
@@ -115,6 +119,7 @@ catnip_bool_t CATNIP_EXPORT(catnip_blockutil_hstring_contains)(catnip_hstring *s
 catnip_ui32_t CATNIP_EXPORT(catnip_blockutil_hstring_to_argb)(const catnip_hstring *str) {
   return catnip_blockutil_hstring_to_argb(str);
 }
+
 
 void CATNIP_EXPORT(catnip_blockutil_pen_update_thsv)(catnip_target *target) {
   catnip_blockutil_pen_update_thsv(target);
@@ -147,6 +152,7 @@ void CATNIP_EXPORT(catnip_blockutil_costume_set)(catnip_hstring *costume, catnip
 catnip_f64_t CATNIP_EXPORT(catnip_blockutil_operator_random)(catnip_f64_t a, catnip_f64_t b, catnip_runtime *runtime) {
   return catnip_blockutil_operator_random(runtime, (catnip_value) a, (catnip_value) b);
 }
+
 
 void CATNIP_EXPORT(catnip_thread_resize_stack)(catnip_thread *thread, catnip_ui32_t extraCapacity) {
   catnip_thread_resize_stack(thread, extraCapacity);
@@ -196,6 +202,7 @@ catnip_f64_t CATNIP_EXPORT(catnip_math_tan)(catnip_f64_t x) {
 catnip_f64_t CATNIP_EXPORT(catnip_math_atan)(catnip_f64_t x) {
   return catnip_math_atan(x) * 180 / CATNIP_F64_PI;
 }
+
 
 catnip_bool_t CATNIP_EXPORT(catnip_io_is_key_pressed)(catnip_f64_t key, catnip_runtime *runtime) {
   return catnip_io_is_key_pressed(runtime, (catnip_value) key);

@@ -13,6 +13,7 @@ import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
 import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipValueFormat } from "./CatnipValueFormat";
+import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
 export interface CatnipReadonlyIr {
     readonly compiler: CatnipCompiler;
@@ -296,6 +297,8 @@ export class CatnipIr implements CatnipReadonlyIr {
                             break;
                     }
                 }
+                string += " ";
+                string += CatnipValueFormatUtils.stringify(variableInfo.variable.format);
                 string += ">";
             }
             if (hasTransients) string += "\n";

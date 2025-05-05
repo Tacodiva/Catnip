@@ -312,6 +312,10 @@ export class SB3ScriptReader {
     }
 
     public readInput(input: ProjectSB3Input | string | null): CatnipInputOp {
+
+        // This can happen if one of the inputs is named incorrectly
+        if (input === undefined) throw new Error("Undefined block input.");
+
         const inputOrBlockID = this.readInputOrBlockID(input);
 
         if (Array.isArray(inputOrBlockID)) {

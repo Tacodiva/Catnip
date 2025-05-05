@@ -464,7 +464,7 @@ export class CatnipCompilerWasmGenContext {
             // this.emitWasm(SpiderOpcodes.f64_convert_i32_u);
             // ctx.emitWasmGetRuntime();
             // this.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
-            // this.emitWasmRuntimeFunctionCall("catnip_blockutil_debug_log");
+            // this.emitWasmRuntimeFunctionCall("catnip_blockutil_debuug_log");
 
 
             this.emitWasmGetThread();

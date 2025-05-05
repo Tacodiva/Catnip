@@ -1,3 +1,4 @@
+import { Cast } from "../../compiler/cast";
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../compiler/CatnipValueFormatUtils";
@@ -15,7 +16,12 @@ export const op_const = new class extends CatnipInputOpType<const_inputs> {
 
         switch (typeof (inputs.value)) {
             case "string":
-                format = CatnipValueFormat.I32_HSTRING | CatnipValueFormat.F64_BOXED_I32_HSTRING;
+                format = CatnipValueFormat.F64_BOXED_I32_HSTRING;
+
+                const neumericValue = Cast.toNumber(inputs.value);
+
+                if (Cast.toString(neumericValue) === inputs.value)
+                    format |= CatnipValueFormatUtils.getNumberFormat(neumericValue);
                 break;
             case "number":
                 format = CatnipValueFormatUtils.getNumberFormat(inputs.value);

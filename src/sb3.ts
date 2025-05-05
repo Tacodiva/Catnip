@@ -682,7 +682,7 @@ type SB3BlockTypeDefinition = {
     },
     "pen_changePenSizeBy": {
         inputs: {
-            "COLOR": ProjectSB3Input,
+            "SIZE": ProjectSB3Input,
         }
     },
     "pen_setPenColorParamTo": {

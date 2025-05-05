@@ -113,7 +113,7 @@ catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str
   return catnip_hstring_new(runtime, trim_start, (catnip_ui32_t) (trim_end - trim_start));
 }
 
-catnip_bool_t catnip_hstring_equal(catnip_hstring *a, catnip_hstring *b) {
+catnip_bool_t catnip_hstring_equal(const catnip_hstring *a, const catnip_hstring *b) {
   if (a == b)
     return CATNIP_TRUE;
 

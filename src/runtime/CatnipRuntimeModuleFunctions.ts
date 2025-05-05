@@ -63,6 +63,8 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_value_eq: fn<[SpiderNumberType.f64, SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], SpiderNumberType.i32),
+    catnip_blockutil_hstring_eq_strict: fn<[SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_join: fn<[SpiderNumberType.i32, SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_hstring_length: fn<[str: SpiderNumberType.i32], SpiderNumberType.i32>([SpiderNumberType.i32], SpiderNumberType.i32),

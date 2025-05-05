@@ -19,24 +19,19 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         return CatnipCompilerValue.constant(ir.inputs.value, this._getFormat(ir.inputs));
     }
 
-    private _valueToNumber(value: catnip_compiler_constant): number {
-        if (value === undefined) return NaN;
-        return +value;
-    }
-
     private _isValidNumber(inputs: const_ir_inputs): boolean {
-        return "" + (this._valueToNumber(inputs.value)) === inputs.value;
+        return Cast.toString(Cast.toNumber(inputs.value)) === inputs.value;
     }
 
     private _getFormat(inputs: const_ir_inputs): CatnipValueFormat {
         if (inputs.format === undefined) {
             if (this._isValidNumber(inputs))
-                return CatnipValueFormatUtils.getNumberFormat(this._valueToNumber(inputs.value));
+                return CatnipValueFormatUtils.getNumberFormat(Cast.toNumber(inputs.value));
 
             return CatnipValueFormat.I32_HSTRING;
-        } else if (inputs.format === CatnipValueFormat.F64) {
+        } else if (CatnipValueFormatUtils.isSometimes(inputs.format, CatnipValueFormat.F64_NUMBER_OR_NAN) && CatnipValueFormatUtils.isSometimes(inputs.format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
             if (this._isValidNumber(inputs))
-                return CatnipValueFormatUtils.getNumberFormat(this._valueToNumber(inputs.value));
+                return CatnipValueFormatUtils.getNumberFormat(Cast.toNumber(inputs.value));
 
             return CatnipValueFormat.F64_BOXED_I32_HSTRING;
         } else {

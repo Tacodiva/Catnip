@@ -17,6 +17,7 @@ export const ir_cmp_lt = new class extends CatnipIrInputOpType<{}> {
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<{}>): void {
         // TODO optimize like cmp_gt
+        ctx.emitWasmGetRuntime();
         ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp");
         ctx.emitWasmConst(SpiderNumberType.i32, 0);
         ctx.emitWasm(SpiderOpcodes.i32_lt_s);
