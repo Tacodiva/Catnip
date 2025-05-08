@@ -156,7 +156,14 @@ catnip_hstring *catnip_blockutil_hstring_char_at(catnip_runtime *runtime, catnip
     return CATNIP_STRING_BLANK;
   }
 
-  return catnip_hstring_new(runtime, &catnip_hstring_get_data(str)[index], 1);
+  catnip_wchar_t character = catnip_hstring_get_data(str)[index];
+
+  if (character >= 32 && character <= 126) {
+    // It's ASCII printable, we keep strings for these chars pre-cached
+    return CATNIP_STRING_PRINTABLE_ASCII_CHAR[character - 32];
+  }
+
+  return catnip_hstring_new(runtime, &character, 1);
 }
 
 catnip_bool_t catnip_blockutil_hstring_contains(catnip_hstring *str, catnip_hstring *contains) {

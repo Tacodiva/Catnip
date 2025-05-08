@@ -25,10 +25,16 @@ catnip_hstring *CATNIP_STRING_BLANK;
 catnip_hstring *CATNIP_STRING_NAN;
 catnip_hstring *CATNIP_STRING_POS_INFINITY;
 catnip_hstring *CATNIP_STRING_NEG_INFINITY;
+catnip_hstring *CATNIP_STRING_PRINTABLE_ASCII_CHAR[95];
 
 void catnip_strings_init() {
-  CATNIP_STRING_BLANK = get_canon("");
+  CATNIP_STRING_BLANK = catnip_import_get_canon_string(CATNIP_NULL, 0);
   CATNIP_STRING_NAN = get_canon("NaN");
   CATNIP_STRING_POS_INFINITY = get_canon("Infinity");
   CATNIP_STRING_NEG_INFINITY = get_canon("-Infinity");
+
+  for (catnip_ui32_t i = 0; i < 95; i++) {
+    catnip_wchar_t asciiChar = i + 32;
+    CATNIP_STRING_PRINTABLE_ASCII_CHAR[i] = catnip_import_get_canon_string(&asciiChar, 1);
+  }
 }

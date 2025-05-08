@@ -29,10 +29,10 @@ struct catnip_target {
     catnip_value *variable_table;
     catnip_list *list_table;
 
-    catnip_i32_t position_x;
-    catnip_i32_t position_y;
-    catnip_i32_t direction;
-    catnip_i32_t size;
+    catnip_f64_t position_x;
+    catnip_f64_t position_y;
+    catnip_f64_t direction;
+    catnip_f64_t size;
     catnip_ui32_t costume;
 
     catnip_bool_t pen_down;
@@ -62,6 +62,6 @@ struct catnip_target {
 
 catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *sprite);
 void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList);
-void catnip_target_set_xy(catnip_target* target, catnip_i32_t x, catnip_i32_t y);
+void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y);
 
 #endif

@@ -179,8 +179,8 @@ void gc_iterate_roots(catnip_runtime *runtime, void(*func)(catnip_value*, catnip
 }
 
 void gc_mark_root(catnip_value *value, catnip_runtime *runtime) {
-
-  if (value->parts.upper == CATINP_VALUE_STRING_UPPER) {
+  
+  if (CATNIP_VALUE_IS_STRING(*value)) {
 
     catnip_obj_head *strHead = (catnip_obj_head *) value->parts.lower;
 
@@ -197,7 +197,7 @@ void gc_mark_root(catnip_value *value, catnip_runtime *runtime) {
 
 void gc_move_root(catnip_value *value, catnip_runtime *runtime) {
 
-  if (value->parts.upper == CATINP_VALUE_STRING_UPPER) {
+  if (CATNIP_VALUE_IS_STRING(*value)) {
 
     catnip_obj_head *strHead = (catnip_obj_head *) value->parts.lower;
     

@@ -18,7 +18,7 @@ import { CatnipCompilerProcedureSubsystem } from "./subsystems/CatnipCompilerPro
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipEventID } from "../CatnipEvents";
 import { CatnipValueFormat } from "./CatnipValueFormat";
-import { VALUE_I32_UPPER, VALUE_STRING_UPPER } from "../wasm-interop/CatnipWasmStructValue";
+import { VALUE_STRING_UPPER } from "../wasm-interop/CatnipWasmStructValue";
 import { CatnipProject } from "../runtime/CatnipProject";
 
 export interface CatnipCompilerWasmLocal {
@@ -103,8 +103,7 @@ export class CatnipCompilerWasmGenContext {
 
                 switch (variableInfo.variable.type) {
                     case SpiderNumberType.i32:
-                        // Load from the upper 4 bits to undo the boxing we did
-                        this.emitWasmConst(SpiderNumberType.i32, location.stackOffset - this._func.stackSize + 4);
+                        this.emitWasmConst(SpiderNumberType.i32, location.stackOffset - this._func.stackSize);
                         this.emitWasm(SpiderOpcodes.i32_add);
                         this.emitWasm(SpiderOpcodes.i32_load, 2, 0);
                         break;
@@ -368,7 +367,8 @@ export class CatnipCompilerWasmGenContext {
             this.pushExpression();
             // if {
             this.emitWasmGetThread();
-            this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
+            CatnipCompilerLogger.assert(targetFunc.stackSize % 8 === 0);
+            this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize / 8);
             this.emitWasmRuntimeFunctionCall("catnip_thread_resize_stack");
 
             this.emitWasmGetStackPtr();
@@ -379,9 +379,9 @@ export class CatnipCompilerWasmGenContext {
             this.emitWasmConst(SpiderNumberType.i32, targetFunc.stackSize);
             this.emitWasm(SpiderOpcodes.i32_add);
             this.emitWasm(SpiderOpcodes.local_set, newStackPtrVar.ref);
+            // }
 
             this.emitWasm(SpiderOpcodes.if, this.popExpression());
-            // }
 
             for (const transientVariable of targetFunc.externalValues) {
 
@@ -428,20 +428,19 @@ export class CatnipCompilerWasmGenContext {
                         // We store it as a boxed f64 then undo this when we load it from the stack again
                         if (CatnipValueFormatUtils.isAlways(valueFormat, CatnipValueFormat.I32_HSTRING)) {
                             // This is so GC can track we're using this string
-                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset + 4);
+                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset);
 
                             // Store the upper bits
                             this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
-                            this.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER)
-                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset);
+                            this.emitWasmConst(SpiderNumberType.i32, VALUE_STRING_UPPER);
+                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset + 4);
                         } else if (CatnipValueFormatUtils.isAlways(valueFormat, CatnipValueFormat.I32_NUMBER)) {
-                            // This is so GC knows to ignore this
-                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset + 4);
-
-                            // Store the upper bits
-                            this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
-                            this.emitWasmConst(SpiderNumberType.i32, VALUE_I32_UPPER)
                             this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset);
+
+                            // Clear the upper bits
+                            this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar.ref);
+                            this.emitWasmConst(SpiderNumberType.i32, 0);
+                            this.emitWasm(SpiderOpcodes.i32_store, 2, transientVariable.location.stackOffset + 4);
                         } else {
                             CatnipCompilerWasmGenContext.logger.assert(
                                 false,
@@ -450,7 +449,7 @@ export class CatnipCompilerWasmGenContext {
                         }
                         break;
                     case SpiderNumberType.f64:
-                        this.emitWasm(SpiderOpcodes.f64_store, 2, transientVariable.location.stackOffset);
+                        this.emitWasm(SpiderOpcodes.f64_store, 3, transientVariable.location.stackOffset);
                         break;
                     default:
                         CatnipCompilerWasmGenContext.logger.assert(
@@ -460,15 +459,7 @@ export class CatnipCompilerWasmGenContext {
                 }
             }
 
-            // this.emitWasm(SpiderOpcodes.local_get, newStackPtrVar.ref);
-            // this.emitWasm(SpiderOpcodes.f64_convert_i32_u);
-            // ctx.emitWasmGetRuntime();
-            // this.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
-            // this.emitWasmRuntimeFunctionCall("catnip_blockutil_debuug_log");
-
-
             this.emitWasmGetThread();
-
             this.emitWasm(SpiderOpcodes.local_get, newStackPtrVar.ref);
             this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
 

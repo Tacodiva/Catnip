@@ -1,9 +1,9 @@
-import { CatnipInputOp, CatnipInputOpType, CatnipOp } from "..";
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { ir_letter_of } from "../../compiler/ir/operators/letter_of";
 import { registerSB3InputBlock } from "../../sb3_ops";
+import { CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
 
 export type letter_of_inputs = { string: CatnipInputOp, letter: CatnipInputOp };
 

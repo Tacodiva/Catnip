@@ -15,7 +15,7 @@ export const ir_get_xy = new class extends CatnipIrInputOpType<get_xy_ir_inputs>
     public getOperandCount(): number { return 0; }
     
     public getResult(ir: CatnipReadonlyIrInputOp<get_xy_ir_inputs, CatnipIrOpBranches<{}>, this>, state?: CatnipCompilerState): CatnipCompilerValue {
-        return CatnipCompilerValue.dynamic(CatnipValueFormat.I32_NUMBER);
+        return CatnipCompilerValue.dynamic(CatnipValueFormat.F64_NUMBER);
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<get_xy_ir_inputs, {}>): void {
@@ -30,6 +30,6 @@ export const ir_get_xy = new class extends CatnipIrInputOpType<get_xy_ir_inputs>
             offset = CatnipWasmStructTarget.getMemberOffset("position_y");
         }
         
-        ctx.emitWasm(SpiderOpcodes.i32_load, 2, offset);
+        ctx.emitWasm(SpiderOpcodes.f64_load, 3, offset);
     }
 }

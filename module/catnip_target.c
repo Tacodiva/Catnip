@@ -51,7 +51,7 @@ void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr e
   target = target->next_sprite;
 }
 
-void catnip_target_set_xy(catnip_target* target, catnip_i32_t x, catnip_i32_t y) {
+void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {
 
   // TODO We need to do fencing here, but that requires information about the costume we don't have yet.
 
@@ -59,10 +59,10 @@ void catnip_target_set_xy(catnip_target* target, catnip_i32_t x, catnip_i32_t y)
     catnip_runtime_render_pen_draw_line(
       target->runtime,
       target,
-      target->position_x,
-      target->position_y,
-      x,
-      y
+      (catnip_f32_t) target->position_x,
+      (catnip_f32_t) target->position_y,
+      (catnip_f32_t) x,
+      (catnip_f32_t) y
     );
   }
 

@@ -17,10 +17,10 @@ export const CatnipWasmStructTarget = new WasmStruct("catnip_target", {
     variable_table: new WasmPtr(new WasmArray(CatnipWasmUnionValue, null)),
     list_table: new WasmPtr(new WasmArray(CatnipWasmStructList, null)),
 
-    position_x: WasmInt32,
-    position_y: WasmInt32,
-    direction: WasmInt32,
-    size: WasmInt32,
+    position_x: WasmFloat64,
+    position_y: WasmFloat64,
+    direction: WasmFloat64,
+    size: WasmFloat64,
     costume: WasmUInt32,
 
     pen_down: WasmBool32,

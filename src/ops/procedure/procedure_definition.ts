@@ -52,6 +52,10 @@ export const procedure_trigger = new class extends CatnipScriptTriggerType<proce
 registerSB3HatBlock("procedures_definition", (ctx, block) => {
 
     const procPrototypeID = ctx.readBlockID(block.inputs.custom_block);
+
+    if (procPrototypeID === null)
+        throw new Error(`Could not find procedure prototype.`);
+
     const procPrototype = ctx.getBlock(procPrototypeID) as ProjectSB3Block<"procedures_prototype">;
 
     if (procPrototype.opcode !== "procedures_prototype")

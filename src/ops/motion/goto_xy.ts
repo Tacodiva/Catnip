@@ -15,8 +15,8 @@ export const op_goto_xy = new class extends CatnipCommandOpType<goto_xy_inputs> 
     }
     
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: goto_xy_inputs): void {
-        ctx.emitInput(inputs.x, CatnipValueFormat.I32_NUMBER);
-        ctx.emitInput(inputs.y, CatnipValueFormat.I32_NUMBER);
+        ctx.emitInput(inputs.x, CatnipValueFormat.F64_NUMBER);
+        ctx.emitInput(inputs.y, CatnipValueFormat.F64_NUMBER);
 
         ctx.emitIr(ir_set_xy, { }, {});
     }

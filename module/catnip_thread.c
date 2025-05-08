@@ -1,7 +1,7 @@
 
 #include "./catnip.h"
 
-const catnip_ui32_t INITIAL_STACK_SIZE = 128;
+const catnip_ui32_t INITIAL_STACK_SIZE = 16;
 
 catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entrypoint) {
   CATNIP_ASSERT(target != CATNIP_NULL);
@@ -14,7 +14,7 @@ catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entr
   thread->target = target;
   thread->status = CATNIP_THREAD_STATUS_RUNNING;
 
-  thread->stack_start = catnip_mem_alloc(INITIAL_STACK_SIZE);
+  thread->stack_start = catnip_mem_alloc(INITIAL_STACK_SIZE * sizeof(catnip_value));
   thread->stack_ptr = thread->stack_start;
   thread->stack_end = thread->stack_start + INITIAL_STACK_SIZE;
 
@@ -65,11 +65,11 @@ void catnip_thread_resize_stack(catnip_thread *thread, catnip_ui32_t extraCapaci
     newStackCapacity += extraCapacity - oldStackRemainingCapacity;
   }
 
-  void *newStack = catnip_mem_alloc(newStackCapacity);
+  catnip_value *newStack = catnip_mem_alloc(newStackCapacity * sizeof(catnip_value));
 
   const catnip_i32_t oldStackLength = thread->stack_ptr - thread->stack_start;
 
-  catnip_mem_copy(newStack, thread->stack_start, oldStackLength);
+  catnip_mem_copy(newStack, thread->stack_start, oldStackLength * sizeof(catnip_value));
 
   thread->stack_start = newStack;
   thread->stack_end = newStack + newStackCapacity;

@@ -54,7 +54,7 @@ void CATNIP_EXPORT(catnip_target_start_new_thread)(catnip_target *target, catnip
   catnip_target_start_new_thread(target, entrypoint, threadList);
 }
 
-void CATNIP_EXPORT(catnip_target_set_xy)(catnip_i32_t x, catnip_i32_t y, catnip_target *target) {
+void CATNIP_EXPORT(catnip_target_set_xy)(catnip_f64_t x, catnip_f64_t y, catnip_target *target) {
   catnip_target_set_xy(target, x, y);
 }
 

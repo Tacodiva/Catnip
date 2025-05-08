@@ -14,6 +14,7 @@ import { CatnipIrProcedureBranch } from "../../compiler/ir/procedure/CatinpIrPro
 import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { op_nop } from "../core/nop";
+import { op_log } from "../core/log";
 
 type procedure_call_inputs = { sprite: CatnipSpriteID, procedure: CatnipProcedureID, args: { input: CatnipInputOp, format: CatnipValueFormat }[] };
 
@@ -22,7 +23,7 @@ export const op_procedure_call = new class extends CatnipCommandOpType<procedure
     public *getInputsAndSubstacks(ir: CatnipIr, inputs: procedure_call_inputs): IterableIterator<CatnipOp> {
         for (const arg of inputs.args) yield arg.input;
     }
-    
+
     public *getExternalBranches(ir: CatnipIr, inputs: procedure_call_inputs): IterableIterator<CatnipIrExternalBranch> {
         yield new CatnipIrProcedureBranch(ir.compiler, inputs.sprite, inputs.procedure);
     }
@@ -44,6 +45,16 @@ registerSB3CommandBlock("procedures_call", (ctx, block) => {
     const procedureInfo = ctx.meta.getProcedure(proccode);
 
     if (procedureInfo === null) {
+
+        switch (proccode) {
+            case "\u200B\u200Blog\u200B\u200B %s":
+                return op_log.create({ msg: ctx.readInput(block.inputs[Object.keys(block.inputs)[0]]), type: "log" });
+            case "\u200B\u200Bwarn\u200B\u200B %s":
+                return op_log.create({ msg: ctx.readInput(block.inputs[Object.keys(block.inputs)[0]]), type: "warn" });
+            case "\u200B\u200Berror\u200B\u200B %s":
+                return op_log.create({ msg: ctx.readInput(block.inputs[Object.keys(block.inputs)[0]]), type: "error" });
+        }
+
         CatnipCompilerLogger.warn(`Unknown procedure opcode '${proccode}'.`);
         return op_nop.create({});
     }
@@ -72,7 +83,7 @@ registerSB3CommandBlock("procedures_call", (ctx, block) => {
             argFormat = CatnipValueFormat.I32_BOOLEAN;
         else argFormat = CatnipValueFormat.F64;
 
-        args.push({input: argInput, format: argFormat});
+        args.push({ input: argInput, format: argFormat });
     }
 
     return op_procedure_call.create({

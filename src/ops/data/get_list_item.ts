@@ -31,6 +31,7 @@ export const op_get_list_item = new class extends CatnipInputOpType<get_list_ite
 
 registerSB3InputBlock("data_itemoflist", (ctx, block) => {
     const listInfo = ctx.getList(block.fields.LIST);
+    
     return op_get_list_item.create({
         sprite: listInfo.spriteID,
         list: listInfo.listID,

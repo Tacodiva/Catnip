@@ -19,6 +19,7 @@
     },
     "include": [
         "src",
-        "renderer"
+        "renderer",
+        "playground"
     ],
 }

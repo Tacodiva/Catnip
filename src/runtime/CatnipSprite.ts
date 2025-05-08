@@ -249,7 +249,7 @@ export class CatnipSprite {
             this._rewriteVariables.clear();
         }
 
-        if (this._rewriteVariableList) {
+        if (this._rewriteListsList) {
             let listsPtr = this.structWrapper.getMember("lists");
             if (listsPtr !== 0)
                 this.runtime.freeMemory(listsPtr);
