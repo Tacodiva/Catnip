@@ -7,7 +7,7 @@ import { ir_branch } from "../../compiler/ir/core/branch";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { op_const } from "../core/const";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
-import { CatnipProcedureID, CatnipProcedureTriggerArgType } from "./procedure_definition";
+import { CatnipProcedureID, procedure_trigger } from "./procedure_definition";
 import { SB3ReadLogger } from "../../sb3_logger";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipIrProcedureBranch } from "../../compiler/ir/procedure/CatinpIrProcedureBranch";
@@ -15,8 +15,18 @@ import { CatnipIrExternalBranch } from "../../compiler/CatnipIrBranch";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { op_nop } from "../core/nop";
 import { op_log } from "../core/log";
+import { CatnipCompilerProcedureSubsystem } from "../../compiler/subsystems/CatnipCompilerProcedureSubsystem";
+import { CatnipScriptTrigger } from "../CatnipScriptTrigger";
+import { CatnipIrProcedureTriggerArg, CatnipIrScriptProcedureTrigger } from "../../compiler/ir/procedure/procedure_trigger";
+import { CatnipValueFormatUtils } from "../../compiler/CatnipValueFormatUtils";
 
-type procedure_call_inputs = { sprite: CatnipSpriteID, procedure: CatnipProcedureID, args: { input: CatnipInputOp, format: CatnipValueFormat }[] };
+type procedure_call_inputs = {
+    sprite: CatnipSpriteID,
+    procedure: CatnipProcedureID,
+    // Is the target procedure warp?
+    procedureIsWarp: boolean,
+    args: { input: CatnipInputOp, format: CatnipValueFormat }[]
+};
 
 export const op_procedure_call = new class extends CatnipCommandOpType<procedure_call_inputs> {
 
@@ -25,18 +35,45 @@ export const op_procedure_call = new class extends CatnipCommandOpType<procedure
     }
 
     public *getExternalBranches(ir: CatnipIr, inputs: procedure_call_inputs): IterableIterator<CatnipIrExternalBranch> {
-        yield new CatnipIrProcedureBranch(ir.compiler, inputs.sprite, inputs.procedure);
+        yield new CatnipIrProcedureBranch(ir.compiler, inputs.sprite, inputs.procedure, ir.isWarp || inputs.procedureIsWarp);
+    }
+
+    public preAnalyze(ir: CatnipIr, inputs: procedure_call_inputs): void {
+        if (ir.isWarp && !inputs.procedureIsWarp) {
+            // We need to make sure a warp varient of the procedure exists.
+
+            const subsystem = ir.compiler.getSubsystem(CatnipCompilerProcedureSubsystem);
+            
+            if (subsystem.tryGetProcedureInfo(inputs.sprite, inputs.procedure, true) === undefined) {
+                // The varient doesn't exit, let's create it!
+
+                const noWarpVarient = subsystem.getProcedureInfo(inputs.sprite, inputs.procedure, false);
+
+                ir.compiler.createIR({
+                    commands: noWarpVarient.ir.commands,
+                    scriptID: noWarpVarient.ir.scriptID,
+                    spriteID: noWarpVarient.ir.spriteID,
+                    trigger: procedure_trigger.create({
+                        id: inputs.procedure,
+                        args: (noWarpVarient.ir.trigger as CatnipIrScriptProcedureTrigger).inputs.args,
+                        warp: true
+                    })
+                });
+            }
+        }
     }
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: procedure_call_inputs): void {
+        const warpTarget = ctx.isWarp || inputs.procedureIsWarp;
+
         for (let i = 0; i < inputs.args.length; i++) {
             const argInput = inputs.args[i];
 
             ctx.emitInput(argInput.input, argInput.format);
-            ctx.emitIr(ir_procedure_arg_set, { argIdx: i, sprite: inputs.sprite, procedure: inputs.procedure }, {});
+            ctx.emitIr(ir_procedure_arg_set, { argIdx: i, sprite: inputs.sprite, isWarp: warpTarget, procedure: inputs.procedure }, {});
         }
 
-        ctx.emitIr(ir_branch, {}, { branch: new CatnipIrProcedureBranch(ctx.compiler, inputs.sprite, inputs.procedure) });
+        ctx.emitIr(ir_branch, {}, { branch: new CatnipIrProcedureBranch(ctx.compiler, inputs.sprite, inputs.procedure, warpTarget) });
     }
 }
 
@@ -66,29 +103,25 @@ registerSB3CommandBlock("procedures_call", (ctx, block) => {
 
         const argInputBlock = block.inputs[argInfo.id];
         let argInput: CatnipInputOp;
-        let argFormat: CatnipValueFormat;
 
         if (argInputBlock === undefined) {
-            if (argInfo.type === CatnipProcedureTriggerArgType.BOOLEAN) {
+            if (CatnipValueFormatUtils.isAlways(argInfo.format, CatnipValueFormat.I32_BOOLEAN)) {
                 argInput = op_const.create({ value: false });
             } else {
-                SB3ReadLogger.assert(argInfo.type === CatnipProcedureTriggerArgType.STRING_OR_NUMBER);
+                SB3ReadLogger.assert(CatnipValueFormatUtils.isSometimes(argInfo.format, CatnipValueFormat.F64));
                 argInput = op_const.create({ value: "" });
             }
         } else {
             argInput = ctx.readInput(argInputBlock);
         }
 
-        if (argInfo.type === CatnipProcedureTriggerArgType.BOOLEAN)
-            argFormat = CatnipValueFormat.I32_BOOLEAN;
-        else argFormat = CatnipValueFormat.F64;
-
-        args.push({ input: argInput, format: argFormat });
+        args.push({ input: argInput, format: argInfo.format });
     }
 
     return op_procedure_call.create({
         sprite: ctx.spriteDesc.id,
         procedure: procedureInfo.procedureID,
+        procedureIsWarp: procedureInfo.warp,
         args
     });
 });

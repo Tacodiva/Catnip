@@ -499,8 +499,8 @@ export class CatnipCompilerWasmGenContext {
         return args[args.length - 1];
     }
 
-    public createProcedureArgLocal(spriteID: CatnipSpriteID, procedureID: CatnipProcedureID, argIdx: number): CatnipCompilerWasmLocal {
-        const procedure = this.compiler.getSubsystem(CatnipCompilerProcedureSubsystem).getProcedureInfo(spriteID, procedureID);
+    public createProcedureArgLocal(spriteID: CatnipSpriteID, procedureID: CatnipProcedureID, isWarp: boolean, argIdx: number): CatnipCompilerWasmLocal {
+        const procedure = this.compiler.getSubsystem(CatnipCompilerProcedureSubsystem).getProcedureInfo(spriteID, procedureID, isWarp);
         const argumentInfo = procedure.inputs.args[argIdx];
         const argumentType = CatnipValueFormatUtils.getFormatSpiderType(argumentInfo.format);
 

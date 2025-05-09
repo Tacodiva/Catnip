@@ -10,13 +10,8 @@ import { CatnipScriptTriggerType } from "../CatnipScriptTrigger";
 
 export type CatnipProcedureID = string;
 
-export enum CatnipProcedureTriggerArgType {
-    STRING_OR_NUMBER,
-    BOOLEAN
-}
-
 export interface CatinpProcedureTriggerArg {
-    type: CatnipProcedureTriggerArgType,
+    format: CatnipValueFormat,
     name: string,
 }
 
@@ -32,11 +27,10 @@ export const procedure_trigger = new class extends CatnipScriptTriggerType<proce
         const args: CatnipIrProcedureTriggerArg[] = [];
 
         for (const arg of inputs.args) {
-            const format = arg.type === CatnipProcedureTriggerArgType.BOOLEAN ? CatnipValueFormat.I32_BOOLEAN : CatnipValueFormat.F64;
             args.push({
-                format,
+                format: arg.format,
                 name: arg.name,
-                variable: new CatnipIrTransientVariable(ir, format, arg.name)
+                variable: new CatnipIrTransientVariable(ir, arg.format, arg.name)
             });
         }
 
@@ -76,12 +70,12 @@ registerSB3HatBlock("procedures_definition", (ctx, block) => {
         const inputBlock = ctx.getBlock(inputBlockID) as 
             ProjectSB3Block<"argument_reporter_string_number"> | ProjectSB3Block<"argument_reporter_boolean">;
 
-        let type: CatnipProcedureTriggerArgType;
+        let format: CatnipValueFormat;
 
         if (inputBlock.opcode === "argument_reporter_string_number") {
-            type = CatnipProcedureTriggerArgType.STRING_OR_NUMBER;
+            format = CatnipValueFormat.F64;
         } else if (inputBlock.opcode === "argument_reporter_boolean") {
-            type = CatnipProcedureTriggerArgType.BOOLEAN;
+            format = CatnipValueFormat.I32_BOOLEAN;
         } else {
             throw new Error(`Unexpected block '${(inputBlock as ProjectSB3Block).opcode}' (block ${inputBlockID}). Expected 'argument_reporter_string_number' or 'argument_reporter_boolean'.`)
         }
@@ -91,12 +85,12 @@ registerSB3HatBlock("procedures_definition", (ctx, block) => {
         sb3Args.push({
             id: inputID,
             name: inputName,
-            type
+            format
         });
 
         catnipArgs.push({
             name: inputName,
-            type
+            format: format
         });
     }
 

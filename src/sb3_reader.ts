@@ -1,8 +1,9 @@
+import { CatnipValueFormat } from "./compiler/CatnipValueFormat";
 import { createLogger, Logger } from "./log";
 import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./ops";
 import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
 import { op_const } from "./ops/core/const";
-import { CatnipProcedureID, CatnipProcedureTriggerArgType } from "./ops/procedure/procedure_definition";
+import { CatnipProcedureID } from "./ops/procedure/procedure_definition";
 import { CatnipCostumeDesc } from "./runtime/CatnipCostume";
 import { CatnipListDesc, CatnipListID } from "./runtime/CatnipList";
 import { CatnipProjectDesc } from "./runtime/CatnipProject";
@@ -28,7 +29,7 @@ export interface SB3ListInfo {
 export interface SB3ProcedureArgumentInfo {
     readonly id: string;
     readonly name: string;
-    readonly type: CatnipProcedureTriggerArgType;
+    readonly format: CatnipValueFormat;
 }
 
 export interface SB3ProcedureInfo {

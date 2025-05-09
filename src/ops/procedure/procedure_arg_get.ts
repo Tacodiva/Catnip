@@ -8,9 +8,8 @@ import { CatnipIrProcedureTriggerArg, ir_procedure_trigger, ir_procedure_trigger
 import { SB3ReadLogger } from "../../sb3_logger";
 import { registerSB3InputBlock } from "../../sb3_ops";
 import { CatnipInputOpType, CatnipOp } from "../CatnipOp";
-import { CatnipProcedureTriggerArgType } from "./procedure_definition";
 
-type procedure_arg_get_inputs = { argName: string, type: CatnipProcedureTriggerArgType };
+type procedure_arg_get_inputs = { argName: string, format: CatnipValueFormat };
 
 export const op_procedure_arg_get = new class extends CatnipInputOpType<procedure_arg_get_inputs> {
     public *getInputsAndSubstacks(): IterableIterator<CatnipOp> {}
@@ -36,11 +35,11 @@ export const op_procedure_arg_get = new class extends CatnipInputOpType<procedur
         if (argIdx === -1) {
             CatnipCompilerLogger.warn(`Can't find procedure argument with name '${inputs.argName}' in script ${ctx.ir.entrypoint.name}`);
 
-            if (inputs.type === CatnipProcedureTriggerArgType.BOOLEAN) {
+            if (inputs.format === CatnipValueFormat.I32_BOOLEAN) {
                 ctx.emitIrConst(false, CatnipValueFormat.I32_BOOLEAN);
             } else {
-                SB3ReadLogger.assert(inputs.type === CatnipProcedureTriggerArgType.STRING_OR_NUMBER);
-                ctx.emitIrConst("", CatnipValueFormat.I32_HSTRING);
+                SB3ReadLogger.assert(inputs.format === CatnipValueFormat.F64);
+                ctx.emitIrConst("", CatnipValueFormat.F64);
             }
         } else {
             const argVariable = procedureArguments[argIdx].variable;
@@ -51,10 +50,10 @@ export const op_procedure_arg_get = new class extends CatnipInputOpType<procedur
 
 registerSB3InputBlock("argument_reporter_string_number", (ctx, block) => op_procedure_arg_get.create({
     argName: "" + block.fields.VALUE[0],
-    type: CatnipProcedureTriggerArgType.STRING_OR_NUMBER
+    format: CatnipValueFormat.F64
 }));
 
 registerSB3InputBlock("argument_reporter_boolean", (ctx, block) => op_procedure_arg_get.create({
     argName: "" + block.fields.VALUE[0],
-    type: CatnipProcedureTriggerArgType.BOOLEAN
+    format: CatnipValueFormat.I32_BOOLEAN
 }));

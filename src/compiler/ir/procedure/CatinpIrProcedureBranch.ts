@@ -11,17 +11,19 @@ export class CatnipIrProcedureBranch extends CatnipIrExternalBranch {
     public readonly compiler: CatnipCompiler;
     public readonly spriteID: CatnipSpriteID;
     public readonly procedureID: CatnipProcedureID;
+    public readonly isWarp: boolean;
 
-    public constructor(compiler: CatnipCompiler, spriteID: CatnipSpriteID, procedureID: CatnipProcedureID) {
+    public constructor(compiler: CatnipCompiler, spriteID: CatnipSpriteID, procedureID: CatnipProcedureID, isWarp: boolean) {
         super();
         this.compiler = compiler;
         this.spriteID = spriteID;
         this.procedureID = procedureID;
+        this.isWarp = isWarp;
     }
 
     protected _tryResolveIR(): CatnipIr | null {
         const procedureSubsystem = this.compiler.getSubsystem(CatnipCompilerProcedureSubsystem);
-        const procedureInfo = procedureSubsystem.tryGetProcedureInfo(this.spriteID, this.procedureID);
+        const procedureInfo = procedureSubsystem.tryGetProcedureInfo(this.spriteID, this.procedureID, this.isWarp);
 
         if (procedureInfo === undefined) return null;
 

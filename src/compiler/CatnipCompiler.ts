@@ -1,7 +1,7 @@
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipCompilerConfig, catnipCreateDefaultCompilerConfig } from "./CatnipCompilerConfig";
-import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
+import { CatnipIr, CatnipIrInfo, CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
 import { LoopPassVariableInlining } from "./passes/PostAnalysisPassVariableInlining";
 import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunctionIndexAllocation";
@@ -159,12 +159,12 @@ export class CatnipCompiler {
 
         for (const sprite of this.project.sprites) {
             for (const script of sprite.scripts) {
-                this.addIR(new CatnipIr(this, {
+                this.createIR({
                     commands: script.commands,
                     scriptID: script.id,
                     spriteID: sprite.id,
                     trigger: script.trigger
-                }))
+                });
             }
         }
 
@@ -324,9 +324,11 @@ export class CatnipCompiler {
         return projectModule;
     }
 
-    public addIR(ir: CatnipIr) {
-        CatnipCompilerLogger.assert(this._stage === null || this._stage < CatnipCompilerStage.IR_GEN);
+    public createIR(info: CatnipIrInfo): CatnipIr {
+        CatnipCompilerLogger.assert(this._stage !== null && this._stage < CatnipCompilerStage.IR_GEN);
+        const ir = new CatnipIr(this, info);
         this._irs.push(ir);
+        return ir;
     }
 
     public addEventListener(id: CatnipEventID, func: SpiderFunction) {
@@ -427,6 +429,8 @@ export class CatnipCompiler {
                     analyzeOp(ir, analysis, inputOrSubstack);
                 }
             }
+
+            op.type.preAnalyze(ir, op.inputs);
 
             analysis.externalBranches.push(...op.type.getExternalBranches(ir, op.inputs));
             analysis.isYielding ||= op.type.isYielding(ir, op.inputs);

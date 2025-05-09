@@ -29,6 +29,8 @@ export abstract class CatnipOpType<TInputs extends CatnipOpInputs> {
         return false;
     }
 
+    public preAnalyze(ir: CatnipIr, inputs: TInputs) {};
+
     public abstract generateIr(ctx: CatnipCompilerIrGenContext, inputs: TInputs): void;
 }
 
