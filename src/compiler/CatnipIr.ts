@@ -1,10 +1,12 @@
 
 import { CatnipCommandList } from "../ops";
+import { CatnipScriptTrigger } from "../ops/CatnipScriptTrigger";
 import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipCompiler, CatnipIrPreAnalysis } from "./CatnipCompiler";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
+import { CatnipCompilerStage } from "./CatnipCompilerStage";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipIrBranchType } from "./CatnipIrBranch";
@@ -26,6 +28,12 @@ export interface CatnipReadonlyIr {
     getUniqueTransientVariableName(name: string): string;
 }
 
+export interface CatnipIrInfo {
+    spriteID: CatnipSpriteID;
+    scriptID: CatnipSpriteID;
+    commands: CatnipCommandList;
+    trigger: CatnipScriptTrigger;
+}
 
 export class CatnipIr implements CatnipReadonlyIr {
 
@@ -77,17 +85,17 @@ export class CatnipIr implements CatnipReadonlyIr {
 
     public readonly isWarp: boolean;
 
-    public constructor(compiler: CatnipCompiler, script: CatnipScript) {
+    public constructor(compiler: CatnipCompiler, info: CatnipIrInfo) {
         this.compiler = compiler;
         this._entrypoint = null;
         this._functions = [];
-        this.spriteID = script.sprite.id;
-        this.scriptID = script.id;
-        this.commands = script.commands;
+        this.spriteID = info.spriteID;
+        this.scriptID = info.scriptID;
+        this.commands = info.commands;
 
         this._transientVariableNames = new Set();
 
-        this.trigger = script.trigger.type.createTriggerIR(this, script.trigger.inputs);
+        this.trigger = info.trigger.type.createTriggerIR(this, info.trigger.inputs);
 
         this._returnLocationVariable = null;
         this.isWarp = this.trigger.type.isWarp(this, this.trigger.inputs);
@@ -96,6 +104,8 @@ export class CatnipIr implements CatnipReadonlyIr {
     }
 
     public createCommandIR() {
+        CatnipCompilerLogger.assert(this.compiler.stage === CatnipCompilerStage.IR_GEN);
+
         if (this._entrypoint !== null) {
             CatnipCompilerLogger.warn("IR created twice.");
             return;
@@ -113,6 +123,8 @@ export class CatnipIr implements CatnipReadonlyIr {
     }
 
     public createWASM() {
+        CatnipCompilerLogger.assert(this.compiler.stage === CatnipCompilerStage.IR_WASM_GEN);
+        
         for (const func of this.functions) {
             const wasmGenCtx = new CatnipCompilerWasmGenContext(func);
             wasmGenCtx.emitOps(func.body);
@@ -121,6 +133,8 @@ export class CatnipIr implements CatnipReadonlyIr {
     }
 
     public createFunction(body?: CatnipIrBasicBlock): CatnipIrFunction {
+        CatnipCompilerLogger.assert(this.compiler.stage === CatnipCompilerStage.IR_GEN);
+
         const func = new CatnipIrFunction(
             this,
             `${this.entrypoint.name}_func${this._functions.length}`,
@@ -174,6 +188,8 @@ export class CatnipIr implements CatnipReadonlyIr {
     }
 
     public setPreAnalysis(preAnalysis: CatnipIrPreAnalysis) {
+        CatnipCompilerLogger.assert(this.compiler.stage === CatnipCompilerStage.IR_PRE_ANLYSIS);
+
         if (this._preAnalysis !== null)
             CatnipCompilerLogger.warn("IR already has a pre analysis.");
         this._preAnalysis = preAnalysis;

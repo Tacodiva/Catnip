@@ -16,13 +16,10 @@ export class CatnipCostume {
         this.sprite = sprite;
         this.index = index;
         this.name = desc.name;
-
-        CatnipWasmStructCostume
     }
 
     /** @internal */
-    _rewrite(struct: WasmStructWrapper<typeof CatnipWasmStructCostume>) {
-        const namePtr = this.runtime.createCanonHString(this.name);
-        struct.setMember("name", namePtr);
+    _write(struct: WasmStructWrapper<typeof CatnipWasmStructCostume>) {
+        struct.setMember("name", this.runtime.createCanonHString(this.name));
     }
 }

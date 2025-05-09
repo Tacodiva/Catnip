@@ -221,8 +221,31 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
                     if (ctx !== null) {
                         this.cast(ctx, src, CatnipValueFormat.F64_INT);
-                        // TODO We need to check if the F64 is in range.
+
+                        const value = ctx.createLocal(SpiderNumberType.f64);
+                        ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
+
+                        ctx.emitWasmConst(SpiderNumberType.f64, -2147483648); // Min 32-bit signed integer
+                        ctx.emitWasm(SpiderOpcodes.f64_lt);
+
+                        ctx.pushExpression();
+                        ctx.emitWasmConst(SpiderNumberType.f64, -2147483648);
+                        ctx.emitWasm(SpiderOpcodes.local_set, value.ref);
+                        ctx.emitWasm(SpiderOpcodes.if, ctx.popExpression());
+
+                        ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
+                        ctx.emitWasmConst(SpiderNumberType.f64, 2147483647); // Max 32-bit signed integer
+                        ctx.emitWasm(SpiderOpcodes.f64_gt);
+
+                        ctx.pushExpression();
+                        ctx.emitWasmConst(SpiderNumberType.f64, 2147483647);
+                        ctx.emitWasm(SpiderOpcodes.local_set, value.ref);
+                        ctx.emitWasm(SpiderOpcodes.if, ctx.popExpression());
+
+                        ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
                         ctx.emitWasm(SpiderOpcodes.i32_trunc_f64_s);
+                        
+                        ctx.releaseLocal(value);
                     }
 
                     return CatnipValueFormat.I32_NUMBER;

@@ -34,7 +34,7 @@ export const op_procedure_arg_get = new class extends CatnipInputOpType<procedur
         }
 
         if (argIdx === -1) {
-            CatnipCompilerLogger.warn(`Can't find procedure argument with name '${inputs.argName}'`);
+            CatnipCompilerLogger.warn(`Can't find procedure argument with name '${inputs.argName}' in script ${ctx.ir.entrypoint.name}`);
 
             if (inputs.type === CatnipProcedureTriggerArgType.BOOLEAN) {
                 ctx.emitIrConst(false, CatnipValueFormat.I32_BOOLEAN);

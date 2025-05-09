@@ -29,7 +29,7 @@ export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_i
 
         const list = ir.inputs.list;
         const target = ir.inputs.target;
-        const listOffset = list._index * CatnipWasmStructList.size;
+        const listOffset = list.index * CatnipWasmStructList.size;
 
         this.emitBoundsCheck(ctx, { allowEqualToLength: false, allowLast: true },
             ir.operands[0], target, list, (ctx, indexVariable) => {
@@ -120,7 +120,7 @@ export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_i
                         // The index is 'last', we need to find the last index and jump to the end
                         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
                         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("list_table"));
-                        ctx.emitWasm(SpiderOpcodes.i32_load, 2, list._index * CatnipWasmStructList.size + CatnipWasmStructList.getMemberOffset("length"));
+                        ctx.emitWasm(SpiderOpcodes.i32_load, 2, list.index * CatnipWasmStructList.size + CatnipWasmStructList.getMemberOffset("length"));
 
                         // Subtract 1
                         ctx.emitWasmConst(SpiderNumberType.i32, 1);
@@ -177,7 +177,7 @@ export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_i
 
         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("list_table"));
-        ctx.emitWasm(SpiderOpcodes.i32_load, 2, list._index * CatnipWasmStructList.size + CatnipWasmStructList.getMemberOffset("length"));
+        ctx.emitWasm(SpiderOpcodes.i32_load, 2, list.index * CatnipWasmStructList.size + CatnipWasmStructList.getMemberOffset("length"));
 
         if (cfg.allowEqualToLength) {
             ctx.emitWasm(SpiderOpcodes.i32_gt_s);

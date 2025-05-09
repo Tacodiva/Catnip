@@ -22,7 +22,7 @@ export const ir_delete_list_item = new class extends CatnipIrCommandOpType<delet
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<delete_list_item_ir_inputs>, branch: CatnipIrBasicBlock): void {
         const list = ir.inputs.list;
         const target = ir.inputs.target;
-        const listOffset = list._index * CatnipWasmStructList.size;
+        const listOffset = list.index * CatnipWasmStructList.size;
 
         ir_get_list_item.emitBoundsCheck(ctx, { allowEqualToLength: false, allowLast: true },
             ir.operands[0], target, list, (ctx, indexVariable) => {

@@ -23,7 +23,7 @@ export const ir_clear_list = new class extends CatnipIrCommandOpType<clear_list_
         const list = ir.inputs.list;
         const target = ir.inputs.target;
         
-        const listOffset = list._index * CatnipWasmStructList.size;
+        const listOffset = list.index * CatnipWasmStructList.size;
 
         // To clear a list, we just set its length to 0
         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);

@@ -50,6 +50,9 @@ export const ir_mod = new class extends CatnipIrInputOpType {
         ctx.emitWasm(SpiderOpcodes.if, ctx.popExpression());
 
         ctx.emitWasm(SpiderOpcodes.local_get, result.ref);
+
+        ctx.releaseLocal(modulus);
+        ctx.releaseLocal(result);
     }
 }
 

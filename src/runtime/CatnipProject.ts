@@ -1,15 +1,11 @@
-import { SpiderModule, compileModule, createModule, writeModule } from "wasm-spider";
 import { CatnipCompiler } from "../compiler/CatnipCompiler";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
-import { CatnipWasmStructSprite } from "../wasm-interop/CatnipWasmStructSprite";
 import { WasmPtr, WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipRuntimeModule } from "./CatnipRuntimeModule";
-import { CatnipScript } from "./CatnipScript";
 import { CatnipSprite, CatnipSpriteDesc, CatnipSpriteID } from "./CatnipSprite";
-import { CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
-import { CatnipWasmUnionValue } from "../wasm-interop/CatnipWasmStructValue";
-import { CatnipEventArgs, CatnipEventID, CatnipEventListener } from "../CatnipEvents";
-import { CatnipProjectModule } from "../compiler/CatnipProjectModule";
+import { CatnipEventID, CatnipEventListener } from "../CatnipEvents";
+import { CatnipCompilerConfig } from "../compiler/CatnipCompilerConfig";
+import { CatnipProjectModule } from "./CatnipProjectModule";
 
 export interface CatnipProjectDesc {
     sprites: CatnipSpriteDesc[];
@@ -25,40 +21,45 @@ export class CatnipProject {
     public readonly runtimeModule: CatnipRuntimeModule;
     public readonly runtimeInstance: WasmStructWrapper<typeof CatnipWasmStructRuntime>;
 
-    private _projectModule: CatnipProjectModule | null;
-
     private readonly _sprites: Map<CatnipSpriteID, CatnipSprite>;
-    private _rewriteSpritesList: boolean;
-    private _rewriteSprites: Set<CatnipSprite>;
+    public get sprites(): IterableIterator<CatnipSprite> { return this._sprites.values(); }
 
     private readonly _events: Map<CatnipEventID, EventInfo>;
 
-    private _recompileScripts: Set<CatnipScript>;
-
     /** @internal */
-    public constructor(runtime: CatnipRuntimeModule, desc: CatnipProjectDesc) {
+    constructor(runtime: CatnipRuntimeModule, desc: CatnipProjectDesc) {
         this.runtimeModule = runtime;
         this.runtimeInstance = this.runtimeModule.createRuntimeInstance();
 
         this._sprites = new Map();
-        this._projectModule = null;
-
-        this._rewriteSpritesList = true;
-        this._rewriteSprites = new Set();
-        this._recompileScripts = new Set();
 
         this._events = new Map();
 
         for (const spriteDesc of desc.sprites)
-            this.createSprite(spriteDesc);
+            this._sprites.set(spriteDesc.id, new CatnipSprite(this, spriteDesc));
+
+        ///
+
+        const spritesArray = this.runtimeModule.allocateMemory(this._sprites.size * WasmPtr.size);
+
+        this.runtimeInstance.setMember("sprite_count", this._sprites.size);
+        this.runtimeInstance.setMember("sprites", spritesArray);
+
+        let i = 0;
+        for (const sprite of this._sprites.values()) {
+            WasmPtr.set(spritesArray + (i * WasmPtr.size), this.runtimeModule.memory, sprite.structWrapper.ptr);
+            ++i;
+        }
     }
 
-    public createSprite(desc: CatnipSpriteDesc): CatnipSprite {
-        const sprite = new CatnipSprite(this, desc);
-        this._sprites.set(sprite.id, sprite);
-        this._rewriteSpritesList = true;
-        this._rewriteSprites.add(sprite);
-        return sprite;
+    public async compile(config?: CatnipCompilerConfig): Promise<CatnipProjectModule> {
+        const compiler = new CatnipCompiler(this, config);
+
+        console.time("compile");
+        const module = await compiler.createModule();
+        console.timeEnd("compile");
+
+        return module;
     }
 
     public getSprite(id: CatnipSpriteID): CatnipSprite {
@@ -70,19 +71,6 @@ export class CatnipProject {
 
     public tryGetSprite(id: CatnipSpriteID): CatnipSprite | undefined {
         return this._sprites.get(id);
-    }
-
-    public deleteSprite(sprite: CatnipSprite): boolean {
-        if (this._sprites.delete(sprite.id)) {
-            this._rewriteSprites.delete(sprite);
-            this._rewriteSpritesList = true;
-            return true;
-        }
-        return false;
-    }
-
-    public rewrite(): Promise<void> {
-        return this._rewrite();
     }
 
     private _getEventInfo<TEventID extends CatnipEventID>(event: TEventID): EventInfo<TEventID> {
@@ -121,99 +109,6 @@ export class CatnipProject {
 
     public getRawEventListeners<TEventID extends CatnipEventID>(event: TEventID): readonly ((...args: any[]) => void)[] {
         return this._events.get(event)?.rawListeners ?? [];
-    }
-
-    public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>): void {
-        if (this._projectModule === null) this.rewrite();
-        this._projectModule!.triggerEvent(event, ...args);
-    }
-
-    /** @internal */
-    _addRewriteSprite(sprite: CatnipSprite) {
-        this._rewriteSprites.add(sprite);
-    }
-
-    /** @internal */
-    _removeRewriteSprite(sprite: CatnipSprite) {
-        this._rewriteSprites.delete(sprite);
-    }
-
-    /** @internal */
-    _addRecompileScript(sprite: CatnipScript) {
-        this._recompileScripts.add(sprite);
-    }
-
-    /** @internal */
-    _removeRecompileScript(sprite: CatnipScript) {
-        this._recompileScripts.delete(sprite);
-    }
-
-    private async _rewrite(): Promise<void> {
-        if (this._rewriteSpritesList) {
-            let spritesArray = this.runtimeInstance.getMember("sprites");
-            if (spritesArray !== 0)
-                this.runtimeModule.freeMemory(spritesArray);
-
-            spritesArray = this.runtimeModule.allocateMemory(this._sprites.size * WasmPtr.size);
-
-            this.runtimeInstance.setMember("sprite_count", this._sprites.size);
-            this.runtimeInstance.setMember("sprites", spritesArray);
-
-            let i = 0;
-            for (const sprite of this._sprites.values()) {
-                WasmPtr.set(spritesArray + (i * WasmPtr.size), this.runtimeModule.memory, sprite.structWrapper.ptr);
-                ++i;
-            }
-
-            this._rewriteSpritesList = false;
-        }
-
-        if (this._rewriteSprites.size !== 0) {
-            for (const sprite of this._rewriteSprites)
-                sprite._rewrite();
-        }
-
-        await this._recompile();
-    }
-
-    private async _recompile(): Promise<void> {
-        if (this._recompileScripts.size === 0) return;
-
-
-        const compiler = new CatnipCompiler(this);
-
-        console.time("compile");
-        for (const script of this._recompileScripts) {
-            compiler.addScript(script);
-        }
-
-        this._projectModule = await compiler.createModule();
-        console.timeEnd("compile");
-
-        // const stage = [...this._sprites.values()][0];
-        // const printVariable = stage.getVariable("2");
-
-        // for (let tick = 1; tick <= 20; tick++) {
-        //     // console.time("" + tick);
-        //     this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-        //     // console.timeEnd("" + tick);
-        //     // if (printVariable !== undefined) {
-        //     //     console.log("nth = " + printVariable.sprite.defaultTarget.structWrapper.getMemberWrapper("variable_table").getInnerWrapper().getElementWrapper(printVariable._index).getMemberWrapper(0).get());
-        //     // }
-        // }
-    }
-
-    public start(): void {
-        this._projectModule?.triggerEvent("PROJECT_START");
-    }
-
-    public step(): void {
-        this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-        this._penFlush();
-    }
-
-    private _penFlush(): void {
-        this.runtimeModule.functions.catnip_runtime_render_pen_flush(this.runtimeInstance.ptr);
     }
 
     /** Creates a new garbage collectable string associated with this project. */

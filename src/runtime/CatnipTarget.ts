@@ -50,53 +50,43 @@ export class CatnipTarget {
         this._variables = desc.variables;
         this._lists = desc.lists;
         this._currentCostume = desc.currentCostume;
-    }
 
-    /** @internal */
-    _rewrite() {
+        const variableTable = this.structWrapper
+            .getMemberWrapper("variable_table")
+            .getInnerWrapper();
 
-        if (this._variables !== null) {
-            const variableTable = this.structWrapper
-                .getMemberWrapper("variable_table")
-                .getInnerWrapper();
+        for (const { id, value } of this._variables) {
+            const variable = this.sprite.getVariable(id);
+            if (variable === undefined) continue; // TODO Warn?
 
-            for (const { id, value } of this._variables) {
-                const variable = this.sprite.getVariable(id);
-                if (variable === undefined) continue; // TODO Warn?
-
-                this.runtime.setValue(
-                    variableTable.getElementWrapper(variable._index),
-                    value
-                );
-            }
-
-            this._variables = null;
+            this.runtime.setValue(
+                variableTable.getElementWrapper(variable.index),
+                value
+            );
         }
 
-        if (this._lists !== null) {
-            const listTable = this.structWrapper
-                .getMemberWrapper("list_table")
-                .getInnerWrapper();
+        const listTable = this.structWrapper
+            .getMemberWrapper("list_table")
+            .getInnerWrapper();
 
-            for (const { id, value } of this._lists) {
-                const list = this.sprite.getList(id);
-                if (list === undefined) continue; // TODO Warn?
+        for (const { id, value } of this._lists) {
+            const list = this.sprite.getList(id);
+            if (list === undefined) continue; // TODO Warn?
 
-                const listWrapper = listTable.getElementWrapper(list._index);
-                const listDataPtr = this.runtime.allocateMemory(CatnipWasmUnionValue.size * value.length);
+            const listWrapper = listTable.getElementWrapper(list.index);
+            const listDataPtr = this.runtime.allocateMemory(CatnipWasmUnionValue.size * value.length);
 
-                listWrapper.setMember("length", value.length);
-                listWrapper.setMember("capacity", value.length);
-                listWrapper.setMember("data", listDataPtr);
+            listWrapper.setMember("length", value.length);
+            listWrapper.setMember("capacity", value.length);
+            listWrapper.setMember("data", listDataPtr);
 
-                for (let itemIndex = 0; itemIndex < value.length; itemIndex++) {
-                    const listItem = value[itemIndex];
+            for (let itemIndex = 0; itemIndex < value.length; itemIndex++) {
+                const listItem = value[itemIndex];
 
-                    this.runtime.setValue(
-                        CatnipWasmUnionValue.getWrapper(listDataPtr + itemIndex * CatnipWasmUnionValue.size, listWrapper.bufferProvider),
-                        listItem
-                    );
-                }
+                this.runtime.setValue(
+                    CatnipWasmUnionValue.getWrapper(listDataPtr + itemIndex * CatnipWasmUnionValue.size, listWrapper.bufferProvider),
+                    listItem
+                );
             }
         }
 

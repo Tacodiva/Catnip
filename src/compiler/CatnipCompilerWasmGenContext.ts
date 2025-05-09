@@ -535,11 +535,11 @@ export class CatnipCompilerWasmGenContext {
 
     public finish() {
         if (this._unreleasedLocalCount !== 0)
-            CatnipCompilerLogger.warn(`WASM generation has unreleased locals.`);
+            CatnipCompilerLogger.warn(`WASM generation of function '${this.func.name}' has unreleased locals.`);
 
         for (const procedureArgs of this._procedureArgs) {
             if (procedureArgs !== undefined && procedureArgs.length !== 0) {
-                CatnipCompilerLogger.warn(`WASM generation has unreleased procedure args.`);
+                CatnipCompilerLogger.warn(`WASM generation of function '${this.func.name}' has unreleased procedure args.`);
                 break;
             }
         }

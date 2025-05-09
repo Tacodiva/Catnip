@@ -1,14 +1,12 @@
-import { CatnipOps } from "./ops";
 import { CatnipRuntimeModule } from "./runtime/CatnipRuntimeModule";
 import JSZip from "jszip";
 import { readSB3 } from "./sb3_reader";
 import { ICatnipRenderer } from "./runtime/ICatnipRenderer";
 import { DummyRenderer } from "./runtime/DummyRenderer";
-import { CatnipWasmStructTarget } from "./wasm-interop/CatnipWasmStructTarget";
-import { CatnipProject } from "./runtime/CatnipProject";
+import { CatnipProjectModule } from "./runtime/CatnipProjectModule";
 
 
-export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer): Promise<CatnipProject> {
+export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer): Promise<CatnipProjectModule> {
 
     const jszip = new JSZip();
 
@@ -269,15 +267,13 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
 
     const project = runtime.loadProject(projectDesc);
 
-    // const project = await runtime.initialize();
-
     project.registerEventListener("PROJECT_BROADCAST", (name, listPtr) => {
         console.log(`Broadcast received '${name}' (${listPtr})`);
     });
-    
-    await project.rewrite();
-    
-    project.start();
 
-    return project;
+    const projectModule = await project.compile();
+
+    projectModule.start();
+
+    return projectModule;
 }

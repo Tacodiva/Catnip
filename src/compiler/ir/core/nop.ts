@@ -10,6 +10,6 @@ export const ir_nop = new class extends CatnipIrCommandOpType<ir_nop_inputs> {
     public generateWasm(): void { }
 
     public stringifyInputs(inputs: ir_nop_inputs): string {
-        return `'${inputs.comment}'` ?? "";
+        return `'${inputs.comment ?? ""}'`;
     }
 }

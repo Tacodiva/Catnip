@@ -110,7 +110,7 @@ export class CatnipRuntimeModule {
         this.functions.catnip_init();
     }
 
-    public loadProject(projectDesc: CatnipProjectDesc) {
+    public loadProject(projectDesc: CatnipProjectDesc): CatnipProject {
         return new CatnipProject(this, projectDesc);
     }
 

@@ -26,7 +26,7 @@ export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_input
         const variable = ir.inputs.variable;
         const target = ir.inputs.target;
         
-        const variableOffset = variable._index * CatnipWasmUnionValue.size;
+        const variableOffset = variable.index * CatnipWasmUnionValue.size;
 
         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("variable_table"));

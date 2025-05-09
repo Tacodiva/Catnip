@@ -18,7 +18,7 @@ export const ir_push_list_item = new class extends CatnipIrCommandOpType<push_li
         const list = ir.inputs.list;
         const target = ir.inputs.target;
         
-        const listOffset = list._index * CatnipWasmStructList.size;
+        const listOffset = list.index * CatnipWasmStructList.size;
 
         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("list_table"));

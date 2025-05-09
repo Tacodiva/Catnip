@@ -1,6 +1,5 @@
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
-import { CatnipProjectModule, CatnipProjectModuleEvent } from "./CatnipProjectModule";
 import { CatnipCompilerConfig, catnipCreateDefaultCompilerConfig } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
@@ -9,7 +8,7 @@ import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunction
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreAnalysisPassAnalyzeFunctionCallers";
 import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
-import { compileModule, createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
+import { createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
@@ -25,6 +24,7 @@ import { CatnipEventID, CatnipEvents } from "../CatnipEvents";
 import { CatnipCompilerEvent } from "./CatnipCompilerEvent";
 import binaryen from "binaryen";
 import UTF16 from "../utf16";
+import { CatnipProjectModule, CatnipProjectModuleEvent } from "../runtime/CatnipProjectModule";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -50,6 +50,9 @@ export class CatnipCompiler {
     public readonly config: Readonly<CatnipCompilerConfig>;
 
     private readonly _passes: Map<CatnipCompilerPassStage, CatnipCompilerPass[]>;
+    private _stage: CatnipCompilerStage | null;
+
+    public get stage() { return this._stage; }
 
     public readonly spiderModule: SpiderModule;
     public readonly spiderMemory: SpiderImportMemory;
@@ -62,7 +65,7 @@ export class CatnipCompiler {
     private readonly _callbacks: Map<catnip_compiler_callback, CallbackInfo>;
     private readonly _events: Map<CatnipEventID, CatnipCompilerEvent>;
 
-    private readonly _scripts: Map<CatnipSpriteID, Map<CatnipScriptID, CatnipIr>>;
+    private readonly _irs: CatnipIr[];
 
     private readonly _freeFunctionTableIndices: number[];
     private _functionTableOffset: number;
@@ -74,6 +77,7 @@ export class CatnipCompiler {
         this.project = project;
         this.config = config ? { ...config } : catnipCreateDefaultCompilerConfig();
         this._passes = new Map();
+        this._stage = null;
 
         this.addPass(PreLoopPassAnalyzeFunctionCallers);
 
@@ -107,7 +111,7 @@ export class CatnipCompiler {
             runtimeFuncs.set(funcName, this.spiderModule.importFunction("catnip", funcName, funcType));
         }
 
-        this._scripts = new Map();
+        this._irs = [];
 
         this._freeFunctionTableIndices = [];
         this._functionTableIndexCount = 0;
@@ -130,6 +134,8 @@ export class CatnipCompiler {
     }
 
     public addPass(pass: CatnipCompilerPass) {
+        CatnipCompilerLogger.assert(this._stage === null);
+
         const stage = pass.stage;
         let passes = this._passes.get(stage);
 
@@ -142,64 +148,74 @@ export class CatnipCompiler {
         passes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     }
 
-    private _runPass(ir: CatnipReadonlyIr, stage: CatnipCompilerPassStage) {
-        for (const pass of this._passes.get(stage) ?? []) {
-            pass.run(ir);
-        }
-    }
-
-    private *_enumerateScripts(): IterableIterator<CatnipIr> {
-        for (const spriteScripts of this._scripts.values()) {
-            yield* spriteScripts.values();
-        }
-    }
-
-    public addScript(script: CatnipScript): void {
-        const ir = new CatnipIr(this, script);
-
-        let spriteScripts = this._scripts.get(ir.spriteID);
-
-        if (spriteScripts === undefined) {
-            spriteScripts = new Map();
-            this._scripts.set(ir.spriteID, spriteScripts);
-        }
-
-        if (spriteScripts.has(ir.scriptID))
-            this.removeScript(ir.spriteID, ir.scriptID);
-
-        spriteScripts.set(ir.scriptID, ir);
-    }
-
-    public removeScript(spriteID: CatnipSpriteID, scriptID: CatnipScriptID) {
-        throw new Error("Not supported.");
-    }
-
-    _createCommandIR(ir: CatnipIr) {
-        ir.createCommandIR();
-
-        this._runPass(ir, CatnipCompilerStage.PASS_PRE_ANALYSIS);
-        this._runPass(ir, CatnipCompilerStage.PASS_ANALYSIS);
-        this._runPass(ir, CatnipCompilerStage.PASS_POST_ANALYSIS);
-        this._runPass(ir, CatnipCompilerStage.PASS_PRE_WASM_GEN);
-
-        if (this.config.ir_dump) {
-            console.log("" + ir);
-        }
+    private _transitionStage(stage: CatnipCompilerStage | null) {
+        // TODO timing
+        this._stage = stage;
     }
 
     public async createModule(): Promise<CatnipProjectModule> {
 
+        this._transitionStage(CatnipCompilerStage.IR_CREATION);
+
+        for (const sprite of this.project.sprites) {
+            for (const script of sprite.scripts) {
+                this.addIR(new CatnipIr(this, {
+                    commands: script.commands,
+                    scriptID: script.id,
+                    spriteID: sprite.id,
+                    trigger: script.trigger
+                }))
+            }
+        }
+
+        //////
+
+        this._transitionStage(CatnipCompilerStage.IR_PRE_ANLYSIS);
+
         this._preAnalyzeIRs();
 
-        for (const scriptIR of this._enumerateScripts()) {
+        //////
+
+        this._transitionStage(CatnipCompilerStage.IR_GEN);
+
+        for (const scriptIR of this._irs) {
             if (!scriptIR.hasCommandIR)
-                this._createCommandIR(scriptIR);
+                scriptIR.createCommandIR();
         }
 
-        for (const scriptIR of this._enumerateScripts()) {
-            scriptIR.createWASM();
+        //////
+
+        const runPass = (stage: CatnipCompilerPassStage) => {
+            this._transitionStage(stage);
+
+            for (const ir of this._irs) {
+                for (const pass of this._passes.get(stage) ?? []) {
+                    pass.run(ir);
+                }
+            }
         }
         
+        runPass(CatnipCompilerStage.PASS_PRE_ANALYSIS);
+        runPass(CatnipCompilerStage.PASS_ANALYSIS);
+        runPass(CatnipCompilerStage.PASS_POST_ANALYSIS);
+        runPass(CatnipCompilerStage.PASS_PRE_WASM_GEN);
+
+        //////
+
+        this._transitionStage(CatnipCompilerStage.IR_WASM_GEN);
+
+        for (const scriptIR of this._irs) {
+
+            if (this.config.ir_dump)
+                console.log(""+scriptIR);
+
+            scriptIR.createWASM();
+        }
+
+        //////
+
+        this._transitionStage(CatnipCompilerStage.EVENT_WASM_GEN);
+
         for (const subsystem of this._subsystems.values()) {
             if (subsystem.addEvents)
                 subsystem.addEvents();
@@ -211,6 +227,10 @@ export class CatnipCompiler {
                 this._getEvent(eventID).generateFunction();
             }
         }
+
+        //////
+
+        this._transitionStage(CatnipCompilerStage.MODULE_CREATION);
 
         const functionsElement = this._createFunctionsElement();
 
@@ -294,17 +314,24 @@ export class CatnipCompiler {
 
         const projectModule = new CatnipProjectModule(this.project, instance, events);
 
-        // for (const eventInfo of functions.values()) {
-        //     this.spiderModule.exports.splice(this.spiderModule.exports.indexOf(eventInfo.export), 1);
-        //     this.spiderModule.functions.splice(this.spiderModule.functions.indexOf(eventInfo.func), 1);
-        // }
-
         this._deleteFunctionsElement(functionsElement);
+
+        // TODO There's definitly more stuff to clean up
+        this._transitionStage(null);
+
+        this._irs.length = 0;
 
         return projectModule;
     }
 
+    public addIR(ir: CatnipIr) {
+        CatnipCompilerLogger.assert(this._stage === null || this._stage < CatnipCompilerStage.IR_GEN);
+        this._irs.push(ir);
+    }
+
     public addEventListener(id: CatnipEventID, func: SpiderFunction) {
+        CatnipCompilerLogger.assert(this._stage === null || this._stage < CatnipCompilerStage.MODULE_CREATION);
+
         this._getEvent(id).addListener(func);
     }
 
@@ -329,7 +356,7 @@ export class CatnipCompiler {
         const spiderFns: SpiderFunctionDefinition[] = new Array(this._functionTableIndexCount);
         spiderFns.fill(this._spiderFunctionNop);
 
-        for (const ir of this._enumerateScripts()) {
+        for (const ir of this._irs) {
             for (const func of ir.functions) {
                 if (func.hasFunctionTableIndex) {
                     CatnipCompilerLogger.assert(spiderFns[func.functionTableIndex - this._functionTableOffset] === this._spiderFunctionNop);
@@ -354,6 +381,8 @@ export class CatnipCompiler {
     }
 
     public allocateFunctionTableIndex(): number {
+        CatnipCompilerLogger.assert(this._stage === null || this._stage < CatnipCompilerStage.MODULE_CREATION);
+
         if (this._freeFunctionTableIndices.length !== 0)
             return this._freeFunctionTableIndices.pop()!;
 
@@ -361,6 +390,8 @@ export class CatnipCompiler {
     }
 
     public freeFunctionTableIndex(idx: number) {
+        CatnipCompilerLogger.assert(this._stage === null || this._stage < CatnipCompilerStage.MODULE_CREATION);
+
         this._freeFunctionTableIndices.push(idx);
     }
 
@@ -373,6 +404,8 @@ export class CatnipCompiler {
         TSubsystem extends CatnipCompilerSubsystem =
         TClass extends CatnipCompilerSubsystemClass<infer I> ? I : never
     >(subsystemClass: TClass): TSubsystem {
+        CatnipCompilerLogger.assert(this._stage === null || this._stage < CatnipCompilerStage.EVENT_WASM_GEN);
+
         const mapSubsystem = this._subsystems.get(subsystemClass);
 
         if (mapSubsystem !== undefined)
@@ -401,7 +434,7 @@ export class CatnipCompiler {
 
         const analyses: Map<CatnipIr, CatnipIrPreAnalysis> = new Map();
 
-        for (const ir of this._enumerateScripts()) {
+        for (const ir of this._irs) {
             const analysis: CatnipIrPreAnalysis = {
                 isYielding: false,
                 externalBranches: []
@@ -440,6 +473,8 @@ export class CatnipCompiler {
         argFormats: CatnipValueFormat[],
         returnFormat: CatnipValueFormat | null,
     ): SpiderImportFunction {
+        CatnipCompilerLogger.assert(this._stage === null || this._stage < CatnipCompilerStage.MODULE_CREATION);
+
         let callbackInfo = this._callbacks.get(callback);
 
         if (callbackInfo !== undefined) return callbackInfo.import;

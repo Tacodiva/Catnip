@@ -39,7 +39,7 @@ export class CatnipIrProcedureBranch extends CatnipIrExternalBranch {
         if (ir === null) return null;
 
         if (!ir.hasCommandIR)
-            this.compiler._createCommandIR(ir);
+            ir.createCommandIR();
 
         return ir.entrypoint.body;
     }

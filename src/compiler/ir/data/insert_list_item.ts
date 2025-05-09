@@ -22,7 +22,7 @@ export const ir_insert_list_item = new class extends CatnipIrCommandOpType<inser
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<insert_list_item_ir_inputs>, branch: CatnipIrBasicBlock): void {
         const list = ir.inputs.list;
         const target = ir.inputs.target;
-        const listOffset = list._index * CatnipWasmStructList.size;
+        const listOffset = list.index * CatnipWasmStructList.size;
 
         const uncastIndexVariable = ctx.createLocal(CatnipValueFormatUtils.getFormatSpiderType(ir.operands[1].format));
         ctx.emitWasm(SpiderOpcodes.local_set, uncastIndexVariable.ref);
