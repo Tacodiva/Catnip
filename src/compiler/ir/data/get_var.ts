@@ -3,7 +3,7 @@ import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWa
 import { CatnipVariable } from "../../../runtime/CatnipVariable";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipTarget } from '../../../runtime/CatnipTarget';
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
@@ -17,7 +17,7 @@ export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_input
 
     public getOperandCount(): number { return 0; }
 
-    public getResult(ir: CatnipReadonlyIrInputOp<get_var_ir_inputs>, state?: CatnipCompilerState): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp<get_var_ir_inputs>, state?: CatnipCompilerState): CatnipCompilerValue {
         if (state === undefined) return CatnipCompilerValue.dynamic(CatnipValueFormat.F64);
         return state.getVariableValue(ir.inputs.variable);
     }    

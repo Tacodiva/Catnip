@@ -1,4 +1,4 @@
-import { CatnipIrCommandOpType, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOpType, CatnipIrOp } from "../../CatnipIrOp";
 
 export const ir_barrier = new class extends CatnipIrCommandOpType<{}> {
     public constructor() { super("core_barrier"); }

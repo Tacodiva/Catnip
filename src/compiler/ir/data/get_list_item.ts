@@ -1,7 +1,7 @@
 import { SpiderNumberType, SpiderOpcodes, SpiderValueType } from "wasm-spider";
 import { CatnipCompilerWasmGenContext, CatnipCompilerWasmLocal } from "../../CatnipCompilerWasmGenContext";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipTarget } from '../../../runtime/CatnipTarget';
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
@@ -20,7 +20,7 @@ export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_i
 
     public getOperandCount(): number { return 1; }
 
-    public getResult(ir: CatnipReadonlyIrInputOp<get_list_item_ir_inputs>, state?: CatnipCompilerState): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp<get_list_item_ir_inputs>, state?: CatnipCompilerState): CatnipCompilerValue {
         return CatnipCompilerValue.dynamic(CatnipValueFormat.F64);
     }
 

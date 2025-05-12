@@ -1,8 +1,7 @@
 
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
-import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 
 export const ir_pen_set_size = new class extends CatnipIrCommandOpType<{}> {

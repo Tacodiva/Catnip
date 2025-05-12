@@ -1,6 +1,6 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { CatnipReadonlyIr } from "../CatnipIr";
+import { CatnipIr } from "../CatnipIr";
 import { CatnipIrBranch, CatnipIrBranchType, CatnipIrInternalBranch } from "../CatnipIrBranch";
 import { ir_yield, yield_ir_branches, yield_ir_inptus } from "../ir/core/yield";
 import { CatnipCompilerPass } from "./CatnipCompilerPass";
@@ -9,7 +9,7 @@ export const PreWasmPassFunctionIndexAllocation: CatnipCompilerPass = {
 
     stage: CatnipCompilerStage.PASS_PRE_WASM_GEN,
 
-    run(ir: CatnipReadonlyIr): void {
+    run(ir: CatnipIr): void {
 
         if (ir.trigger.type.requiresFunctionIndex(ir, ir.trigger.inputs))
             ir.entrypoint.assignFunctionTableIndex();

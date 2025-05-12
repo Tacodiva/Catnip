@@ -1,6 +1,6 @@
 
 import { CatnipIrTransientVariable } from "../../../compiler/CatnipIrTransientVariable";
-import { CatnipIrCommandOpType, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOpType, CatnipIrOp } from "../../CatnipIrOp";
 
 export type ir_transient_create = { transient: CatnipIrTransientVariable };
 

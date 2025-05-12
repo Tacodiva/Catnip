@@ -1,5 +1,5 @@
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
-import { CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
+import { CatnipIr } from "./CatnipIr";
 import { ir_barrier } from "./ir/core/barrier";
 
 
@@ -19,9 +19,9 @@ export abstract class CatnipIrScriptTriggerType<TInputs extends CatnipIrScriptTr
         return { type: this, ir, inputs }
     }
 
-    public abstract requiresFunctionIndex(ir: CatnipReadonlyIr, inputs: TInputs): boolean;
+    public abstract requiresFunctionIndex(ir: CatnipIr, inputs: TInputs): boolean;
 
-    public requiresReturnLocation(ir: CatnipReadonlyIr, inputs: TInputs) {
+    public requiresReturnLocation(ir: CatnipIr, inputs: TInputs) {
         return false;
     }
 
@@ -33,7 +33,7 @@ export abstract class CatnipIrScriptTriggerType<TInputs extends CatnipIrScriptTr
         ctx.emitIr(ir_barrier, {}, {});
     }
 
-    public isWarp(ir: CatnipReadonlyIr, inputs: TInputs): boolean {
+    public isWarp(ir: CatnipIr, inputs: TInputs): boolean {
         return false;
     }
 }

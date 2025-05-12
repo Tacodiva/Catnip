@@ -1,5 +1,5 @@
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 
@@ -10,7 +10,7 @@ export const ir_contains = new class extends CatnipIrInputOpType {
         return 2;
     }
 
-    public getResult(ir: CatnipReadonlyIrInputOp): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp): CatnipCompilerValue {
         // if (ir.operands[0].isConstant && ir.operands[1].isConstant) {
         //     return CatnipCompilerValue.constant(
         //         ir.operands[0].asConstantString().toLowerCase().indexOf(ir.operands[1].asConstantString().toLowerCase()) !== -1,

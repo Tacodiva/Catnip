@@ -1,7 +1,5 @@
-import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIr } from "./CatnipIr";
-import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
-import { CatnipIrFunction } from "./CatnipIrFunction";
+import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 
 export enum CatnipIrBranchType {
     INTERNAL,
@@ -9,8 +7,6 @@ export enum CatnipIrBranchType {
 }
 
 export type CatnipIrBranch = CatnipIrInternalBranch | CatnipIrExternalBranch;
-
-export type CatnipReadonlyIrBranch = CatnipReadonlyIrInternalBranch | CatnipReadonlyIrExternalBranch;
 
 abstract class CatnipIrBranchBase {
     abstract readonly branchType: CatnipIrBranchType;
@@ -35,12 +31,7 @@ abstract class CatnipIrBranchBase {
     protected abstract _isYielding(visited: Set<CatnipIrBasicBlock>): boolean;
 }
 
-export interface CatnipReadonlyIrExternalBranch extends CatnipIrBranchBase {
-    readonly branchType: CatnipIrBranchType.EXTERNAL;
-    readonly returnLocation: CatnipIrBranch | null;
-}
-
-export abstract class CatnipIrExternalBranch extends CatnipIrBranchBase implements CatnipReadonlyIrExternalBranch {
+export abstract class CatnipIrExternalBranch extends CatnipIrBranchBase {
     public readonly branchType = CatnipIrBranchType.EXTERNAL;
 
     public returnLocation: CatnipIrBranch | null;
@@ -93,14 +84,7 @@ export abstract class CatnipIrExternalBranch extends CatnipIrBranchBase implemen
     protected abstract _tryResolveBlock(): CatnipIrBasicBlock | null;
 }
 
-export interface CatnipReadonlyIrInternalBranch extends CatnipIrBranchBase {
-    readonly branchType: CatnipIrBranchType.INTERNAL;
-    readonly bodyResolved: true;
-    readonly isYieldingResolved: true;
-    readonly body: CatnipIrBasicBlock;
-}
-
-export class CatnipIrInternalBranch extends CatnipIrBranchBase implements CatnipReadonlyIrInternalBranch {
+export class CatnipIrInternalBranch extends CatnipIrBranchBase {
     public readonly branchType = CatnipIrBranchType.INTERNAL;
     public readonly bodyResolved = true;
     public readonly isYieldingResolved = true;

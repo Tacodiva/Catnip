@@ -3,7 +3,7 @@ import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerStack } from "../CatnipCompilerStack";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipCompilerState } from "../CatnipCompilerState";
-import { CatnipReadonlyIr } from "../CatnipIr";
+import { CatnipIr } from "../CatnipIr";
 import { CatnipIrBasicBlock } from "../CatnipIrBasicBlock";
 import { CatnipIrBranchType } from "../CatnipIrBranch";
 import { CatnipIrFunction } from "../CatnipIrFunction";
@@ -193,7 +193,7 @@ export const LoopPassTypeAnalysis: CatnipCompilerPass = {
 
     stage: CatnipCompilerStage.PASS_ANALYSIS,
 
-    run(ir: CatnipReadonlyIr): void {
+    run(ir: CatnipIr): void {
         for (const func of ir.functions) {
             doTypeAnalysis(func as CatnipIrFunction);
         }

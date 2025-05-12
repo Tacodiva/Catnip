@@ -1,5 +1,5 @@
 import { CatnipCompilerValue } from "../../../CatnipCompilerValue";
-import { CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType } from "../../../CatnipIrOp";
 import { CatnipValueFormat } from "../../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../../CatnipValueFormatUtils";
 
@@ -10,7 +10,7 @@ export abstract class MathopIrInputOpType extends CatnipIrInputOpType {
         return 1;
     }
 
-    public getResult(ir: CatnipReadonlyIrInputOp): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp): CatnipCompilerValue {
         if (ir.operands[0].isConstant) {
             const constResult = this._calculateConstant(ir.operands[0].asConstantNumber());
             if (constResult !== null)

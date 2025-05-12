@@ -1,6 +1,6 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { Cast } from "../../cast";
@@ -12,7 +12,7 @@ export const ir_not = new class extends CatnipIrInputOpType {
         return 1;
     }
 
-    public getResult(ir: CatnipReadonlyIrInputOp): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp): CatnipCompilerValue {
         if (ir.operands[0].isConstant) {
             const value = !ir.operands[0].asConstantBoolean();
             return CatnipCompilerValue.constant(value, CatnipValueFormat.I32_BOOLEAN);

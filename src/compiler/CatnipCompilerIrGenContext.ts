@@ -6,7 +6,7 @@ import { CatnipWasmEnumThreadStatus } from "../wasm-interop/CatnipWasmEnumThread
 import { CatnipIrTransientVariable } from './CatnipIrTransientVariable';
 import { CatnipCompilerReadonlyStack } from "./CatnipCompilerStack";
 import { CatnipIrBranch, CatnipIrBranchType, CatnipIrExternalBranch, CatnipIrInternalBranch } from "./CatnipIrBranch";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipReadonlyIrOp } from "./CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipIrOp } from "./CatnipIrOp";
 import { ir_yield } from "./ir/core/yield";
 import { ir_cast } from "./ir/core/cast";
 import { ir_loop_jmp } from "./ir/core/loop_jmp";
@@ -107,7 +107,7 @@ export class CatnipCompilerIrGenContext {
 
         if (op.type.isInput) {
             this._body.stack.push(
-                op.type.getResult(op as CatnipReadonlyIrOp<TInputs, TBranches, CatnipIrInputOpType<TInputs, CatnipIrOpBranchesDefinition>>),
+                op.type.getResult(op as CatnipIrOp<TInputs, TBranches, CatnipIrInputOpType<TInputs, CatnipIrOpBranchesDefinition>>),
                 op as CatnipIrInputOp
             );
         }

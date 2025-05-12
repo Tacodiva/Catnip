@@ -1,6 +1,6 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
@@ -12,7 +12,7 @@ export const ir_add = new class extends CatnipIrInputOpType {
         return 2;
     }
 
-    public getResult(ir: CatnipReadonlyIrOp): CatnipCompilerValue {
+    public getResult(ir: CatnipIrOp): CatnipCompilerValue {
         if (ir.operands[0].isConstant && ir.operands[1].isConstant) {
             const value = ir.operands[0].asConstantNumber() + ir.operands[1].asConstantNumber();
             return CatnipCompilerValue.constant(value, CatnipValueFormatUtils.getNumberFormat(value));

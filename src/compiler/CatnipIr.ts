@@ -1,7 +1,7 @@
 
 import { CatnipCommandList } from "../ops";
 import { CatnipScriptTrigger } from "../ops/CatnipScriptTrigger";
-import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
+import { CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipCompiler, CatnipIrPreAnalysis } from "./CatnipCompiler";
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
@@ -10,23 +10,13 @@ import { CatnipCompilerStage } from "./CatnipCompilerStage";
 import { CatnipCompilerWasmGenContext } from "./CatnipCompilerWasmGenContext";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipIrBranchType } from "./CatnipIrBranch";
-import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
-import { CatnipIrOp, CatnipReadonlyIrOp } from "./CatnipIrOp";
+import { CatnipIrExternalValueSourceType, CatnipIrFunction, CatnipIrExternalLocationType } from "./CatnipIrFunction";
+import { CatnipIrOp } from "./CatnipIrOp";
 import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
-export interface CatnipReadonlyIr {
-    readonly compiler: CatnipCompiler;
-    readonly entrypoint: CatnipReadonlyIrFunction;
-    readonly functions: readonly CatnipReadonlyIrFunction[];
-    readonly trigger: CatnipIrScriptTrigger;
-    readonly preAnalysis: Readonly<CatnipIrPreAnalysis>;
-
-    forEachOp(lambda: (op: CatnipReadonlyIrOp) => void): void;
-    getUniqueTransientVariableName(name: string): string;
-}
 
 export interface CatnipIrInfo {
     spriteID: CatnipSpriteID;
@@ -35,7 +25,7 @@ export interface CatnipIrInfo {
     trigger: CatnipScriptTrigger;
 }
 
-export class CatnipIr implements CatnipReadonlyIr {
+export class CatnipIr {
 
     public readonly compiler: CatnipCompiler;
     public readonly spriteID: CatnipSpriteID;

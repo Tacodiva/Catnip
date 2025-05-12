@@ -2,7 +2,7 @@
 import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
 import { CatnipIrTransientVariable } from "../../../compiler/CatnipIrTransientVariable";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpType, CatnipReadonlyIrInputOp, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 
 export type ir_transient_load_inputs = { transient: CatnipIrTransientVariable };
@@ -12,7 +12,7 @@ export const ir_transient_load = new class extends CatnipIrInputOpType<ir_transi
 
     public getOperandCount(): number { return 0; }
 
-    public getResult(ir: CatnipReadonlyIrInputOp<ir_transient_load_inputs>): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp<ir_transient_load_inputs>): CatnipCompilerValue {
         return CatnipCompilerValue.dynamic(ir.inputs.transient.format);
     }
 
@@ -20,7 +20,7 @@ export const ir_transient_load = new class extends CatnipIrInputOpType<ir_transi
         ctx.emitWasm(SpiderOpcodes.local_get, ctx.getTransientVariableRef(ir.inputs.transient));
     }
 
-    public *getTransientVariables(ir: CatnipReadonlyIrOp<ir_transient_load_inputs, {}, CatnipIrOpType<ir_transient_load_inputs, {}>>): IterableIterator<CatnipIrTransientVariable> {
+    public *getTransientVariables(ir: CatnipIrOp<ir_transient_load_inputs, {}, CatnipIrOpType<ir_transient_load_inputs, {}>>): IterableIterator<CatnipIrTransientVariable> {
         yield ir.inputs.transient;
     }
 }

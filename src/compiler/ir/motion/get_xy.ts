@@ -1,6 +1,6 @@
 
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrInputOpType, CatnipIrOp, CatnipIrOpBranches, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp, CatnipIrOpBranches } from "../../CatnipIrOp";
 import { CatnipCompilerState } from "../../CatnipCompilerState";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
@@ -14,7 +14,7 @@ export const ir_get_xy = new class extends CatnipIrInputOpType<get_xy_ir_inputs>
     
     public getOperandCount(): number { return 0; }
     
-    public getResult(ir: CatnipReadonlyIrInputOp<get_xy_ir_inputs, CatnipIrOpBranches<{}>, this>, state?: CatnipCompilerState): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp<get_xy_ir_inputs, CatnipIrOpBranches<{}>, this>, state?: CatnipCompilerState): CatnipCompilerValue {
         return CatnipCompilerValue.dynamic(CatnipValueFormat.F64_NUMBER);
     }
 

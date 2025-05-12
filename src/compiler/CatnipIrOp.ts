@@ -1,9 +1,9 @@
 import { CatnipCompilerWasmGenContext } from "../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
+import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 import { CatnipCompilerValue } from "./CatnipCompilerValue";
 import { CatnipCompilerState } from "../compiler/CatnipCompilerState";
 import { CatnipValueFormat } from "./CatnipValueFormat";
-import { CatnipIrBranch, CatnipReadonlyIrBranch } from "./CatnipIrBranch";
+import { CatnipIrBranch } from "./CatnipIrBranch";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipTarget } from "../runtime/CatnipTarget";
@@ -16,32 +16,11 @@ export type CatnipIrOpBranches<TBranches extends CatnipIrOpBranchesDefinition = 
     [K in keyof TBranches]: CatnipIrBranch;
 }
 
-export type CatnipReadonlyIrOpBranches<TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition> = {
-    [K in keyof TBranches]: CatnipReadonlyIrBranch;
-}
-
-export interface CatnipReadonlyIrOp<
-    TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-    TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition, 
-    TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
-> {
-    readonly type: TOpType;
-    readonly inputs: Readonly<TInputs>;
-    readonly branches: CatnipReadonlyIrOpBranches<TBranches>;
-    readonly block: CatnipReadonlyIrBasicBlock;
-
-    readonly operands: readonly CatnipCompilerValue[];
-
-    readonly next: CatnipReadonlyIrOp | null;
-    readonly prev: CatnipReadonlyIrOp | null;
-    readonly removed?: boolean;
-}
-
 export interface CatnipIrOp<
     TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
     TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition, 
     TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
-> extends CatnipReadonlyIrOp<TInputs, TBranches, TOpType> {
+> {
     readonly type: TOpType;
     readonly inputs: TInputs;
     readonly branches: CatnipIrOpBranches<TBranches>;
@@ -61,13 +40,6 @@ export type CatnipIrInputOp<
     TOpType extends CatnipIrInputOpType<TInputs,TBranches> = CatnipIrInputOpType<TInputs,TBranches>
 > = CatnipIrOp<TInputs, TBranches, TOpType>;
 
-export type CatnipReadonlyIrInputOp<
-    TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-    TBranches extends CatnipIrOpBranches = CatnipIrOpBranches,
-    TOpType extends CatnipIrInputOpType<TInputs,TBranches> = CatnipIrInputOpType<TInputs,TBranches>
-> = CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
-
-
 export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBranches extends CatnipIrOpBranchesDefinition> {
     public readonly name: string;
     public readonly abstract isInput: boolean;
@@ -76,7 +48,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         this.name = name;
     }
 
-    public abstract getOperandCount(inputs: TInputs, branches: CatnipReadonlyIrOpBranches<TBranches>): number;
+    public abstract getOperandCount(inputs: TInputs, branches: CatnipIrOpBranches<TBranches>): number;
 
     public abstract generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<TInputs, TBranches>, block: CatnipIrBasicBlock): void;
 
@@ -88,7 +60,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         return false;
     }
 
-    public doesContinue(ir: CatnipReadonlyIrOp<TInputs, TBranches>) {
+    public doesContinue(ir: CatnipIrOp<TInputs, TBranches>) {
         const branchNames = Object.keys(ir.branches);
         if (branchNames.length === 0) return true;
         for (const branchName of branchNames) {
@@ -99,9 +71,9 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         return false;
     }
 
-    public *getTransientVariables(ir: CatnipReadonlyIrOp<TInputs, TBranches>): IterableIterator<CatnipIrTransientVariable> {}
+    public *getTransientVariables(ir: CatnipIrOp<TInputs, TBranches>): IterableIterator<CatnipIrTransientVariable> {}
 
-    public applyState(ir: CatnipReadonlyIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
+    public applyState(ir: CatnipIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
 
     public stringifyInputs(inputs: TInputs): string {
         return JSON.stringify(inputs, (key: string, value: any) => {
@@ -118,7 +90,7 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         })
     }
 
-    public isBarrier(ir: CatnipReadonlyIrOp<TInputs, TBranches>): boolean {
+    public isBarrier(ir: CatnipIrOp<TInputs, TBranches>): boolean {
         return false;
     }
 }
@@ -127,9 +99,9 @@ export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {},
 
     public readonly isInput: true = true;
 
-    public abstract getResult(ir: CatnipReadonlyIrInputOp<TInputs, CatnipIrOpBranches<TBranches>, this>, state?: CatnipCompilerState): CatnipCompilerValue;
+    public abstract getResult(ir: CatnipIrInputOp<TInputs, CatnipIrOpBranches<TBranches>, this>, state?: CatnipCompilerState): CatnipCompilerValue;
 
-    public tryCast(ir: CatnipReadonlyIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
+    public tryCast(ir: CatnipIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
         return false;
     }
 }

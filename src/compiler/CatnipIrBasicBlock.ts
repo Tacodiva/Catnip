@@ -1,54 +1,10 @@
 import { CatnipCompilerStack } from "./CatnipCompilerStack";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
-import { CatnipIrFunction, CatnipReadonlyIrFunction } from "./CatnipIrFunction";
-import { CatnipIrOp, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipReadonlyIrOp } from "./CatnipIrOp";
-import { CatnipIrBranch, CatnipIrBranchType } from "./CatnipIrBranch";
+import { CatnipIrFunction } from "./CatnipIrFunction";
+import { CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipIrOp } from "./CatnipIrOp";
+import { CatnipIrBranchType } from "./CatnipIrBranch";
 
-export interface CatnipReadonlyIrBasicBlock {
-    readonly isLoop: boolean;
-    readonly head: CatnipReadonlyIrOp | null;
-    readonly tail: CatnipReadonlyIrOp | null;
-    readonly func: CatnipReadonlyIrFunction;
-
-    readonly isFuncBody: boolean;
-
-    isYielding(visited?: Set<CatnipIrBasicBlock>): boolean;
-    doesContinue(): boolean;
-
-    insertOpFirst<
-        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-        TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition,
-        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
-    >(type: TOpType, inputs: TInputs, branches: CatnipIrOpBranches<TBranches>): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
-
-    insertOpLast<
-        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-        TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition,
-        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
-    >(type: TOpType, inputs: TInputs, branches: CatnipIrOpBranches<TBranches>): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
-
-    replaceOp<
-        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-        TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition,
-        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
-    >(op: CatnipReadonlyIrOp, type: TOpType, inputs: TInputs, branches: CatnipIrOpBranches<TBranches>): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
-
-    insertOpBefore<
-        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-        TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition,
-        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
-    >(type: TOpType, inputs: TInputs, branches: CatnipIrOpBranches<TBranches>, after: CatnipReadonlyIrOp): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
-
-    insertOpAfter<
-        TInputs extends CatnipIrOpInputs = CatnipIrOpInputs,
-        TBranches extends CatnipIrOpBranchesDefinition = CatnipIrOpBranchesDefinition,
-        TOpType extends CatnipIrOpType<TInputs, TBranches> = CatnipIrOpType<TInputs, TBranches>
-    >(before: CatnipReadonlyIrOp, type: TOpType, inputs: TInputs, branches: CatnipIrOpBranches<TBranches>): CatnipReadonlyIrOp<TInputs, TBranches, TOpType>;
-
-    removeOp(op: CatnipReadonlyIrOp): void;
-}
-
-export class CatnipIrBasicBlock implements CatnipReadonlyIrBasicBlock {
+export class CatnipIrBasicBlock {
 
     private _func: CatnipIrFunction | null;
 

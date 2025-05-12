@@ -1,14 +1,9 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipVariable } from "../../../runtime/CatnipVariable";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
-import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
-import { CatnipIrCommandOpType, CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrInputOp } from "../../CatnipIrOp";
 import { CatnipTarget } from '../../../runtime/CatnipTarget';
-import { CatnipCompilerValue } from "../../CatnipCompilerValue";
-import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
-import { CatnipCompilerState } from "../../CatnipCompilerState";
 import { CatnipList } from "../../../runtime/CatnipList";
 import { CatnipWasmStructList } from "../../../wasm-interop/CatnipWasmStructList";
 

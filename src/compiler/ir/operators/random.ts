@@ -1,5 +1,5 @@
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrInputOp } from "../../CatnipIrOp";
+import { CatnipIrInputOpType, CatnipIrInputOp } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 
@@ -10,7 +10,7 @@ export const ir_random = new class extends CatnipIrInputOpType {
         return 2;
     }
 
-    public getResult(ir: CatnipReadonlyIrInputOp): CatnipCompilerValue {
+    public getResult(ir: CatnipIrInputOp): CatnipCompilerValue {
         return CatnipCompilerValue.dynamic(CatnipValueFormat.F64_NUMBER_OR_NAN);
     }
 

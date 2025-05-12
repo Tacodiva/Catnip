@@ -2,11 +2,11 @@ import { SpiderFunction, SpiderFunctionDefinition, SpiderLocalReference, SpiderM
 import { CatnipCompiler } from "./CatnipCompiler";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
-import { CatnipIrBasicBlock, CatnipReadonlyIrBasicBlock } from "./CatnipIrBasicBlock";
-import { CatnipIr as CatnipIr, CatnipReadonlyIr } from "./CatnipIr";
+import { CatnipIr } from "./CatnipIr";
 import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "./ir/procedure/procedure_trigger";
 import { CatnipSprite, CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipProject } from "../runtime/CatnipProject";
+import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 
 export interface CatnipIrTransientVariableSourceInfo {
     readonly variable: CatnipIrTransientVariable;
@@ -57,30 +57,7 @@ export interface CatnipIrExternalValueSourceReturnLocation {
 
 export type CatnipIrExternalValueSource = CatnipIrExternalValueSourceReturnLocation | CatnipIrExternalValueSourceProcedureInput | CatnipIrExternalValueSourceTransientVariable;
 
-
-export interface CatnipReadonlyIrFunction {
-    readonly ir: CatnipReadonlyIr;
-    readonly compiler: CatnipCompiler;
-    readonly spiderModule: SpiderModule;
-    readonly spiderFunction: SpiderFunctionDefinition;
-    readonly spiderThreadParam: SpiderLocalReference;
-
-    readonly body: CatnipReadonlyIrBasicBlock;
-    readonly name: string;
-
-    readonly hasFunctionTableIndex: boolean;
-    readonly functionTableIndex: number;
-
-    readonly isEntrypoint: boolean;
-
-    registerCaller(caller: CatnipReadonlyIrFunction): void;
-    assignFunctionTableIndex(): void;
-
-    createTransientVariable(variable: CatnipIrTransientVariable): void;
-    sourceExternalValue(source: CatnipIrExternalValueSource): void;
-}
-
-export class CatnipIrFunction implements CatnipReadonlyIrFunction {
+export class CatnipIrFunction {
 
     public readonly ir: CatnipIr;
     public get compiler(): CatnipCompiler { return this.ir.compiler; }
@@ -127,7 +104,7 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         return this._parameters;
     }
 
-    private _callers: Set<CatnipReadonlyIrFunction>;
+    private _callers: Set<CatnipIrFunction>;
 
     public get isEntrypoint(): boolean { return this.ir.entrypoint === this; }
 
@@ -263,7 +240,7 @@ export class CatnipIrFunction implements CatnipReadonlyIrFunction {
         return this._transientVariables.get(variable)!.ref;
     }
 
-    public registerCaller(caller: CatnipReadonlyIrFunction) {
+    public registerCaller(caller: CatnipIrFunction) {
         if (this._callers.has(caller))
             return;
 

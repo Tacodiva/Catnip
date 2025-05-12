@@ -1,10 +1,9 @@
 import { CatnipVariable } from "../../runtime/CatnipVariable";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { CatnipReadonlyIr } from "../CatnipIr";
-import { CatnipReadonlyIrBasicBlock } from "../CatnipIrBasicBlock";
-import { CatnipReadonlyIrFunction } from "../CatnipIrFunction";
-import { CatnipReadonlyIrOp } from "../CatnipIrOp";
+import { CatnipIrBasicBlock } from "../CatnipIrBasicBlock";
+import { CatnipIrFunction } from "../CatnipIrFunction";
+import { CatnipIrOp } from "../CatnipIrOp";
 import { CatnipIrTransientVariable } from "../CatnipIrTransientVariable";
 import { ir_transient_create } from "../ir/core/transient_create";
 import { ir_transient_load } from "../ir/core/transient_load";
@@ -15,6 +14,7 @@ import { ir_set_var, set_var_ir_inputs } from "../ir/data/set_var";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipCompilerPass } from "./CatnipCompilerPass";
 import { CatnipIrBranchType } from "../CatnipIrBranch";
+import { CatnipIr } from "../CatnipIr";
 
 enum VariableOperationType {
     GET,
@@ -31,7 +31,7 @@ enum VariableOperationInlineStatus {
 interface VariableOperation {
     variable: CatnipVariable;
     type: VariableOperationType.GET | VariableOperationType.SET;
-    op: CatnipReadonlyIrOp;
+    op: CatnipIrOp;
     status?: VariableOperationInlineStatus;
 }
 
@@ -41,12 +41,12 @@ interface VariableSyncOperation {
 }
 
 interface VariableSync {
-    op: CatnipReadonlyIrOp | null;
+    op: CatnipIrOp | null;
 }
 
 class VariableCfgNode {
 
-    public readonly branch: CatnipReadonlyIrBasicBlock;
+    public readonly branch: CatnipIrBasicBlock;
     public prev: VariableCfgNode[];
     public next: VariableCfgNode[];
 
@@ -55,7 +55,7 @@ class VariableCfgNode {
 
     public entryState: FunctionState | null;
 
-    public constructor(branch: CatnipReadonlyIrBasicBlock) {
+    public constructor(branch: CatnipIrBasicBlock) {
         this.branch = branch;
         this.prev = [];
         this.next = [];
@@ -64,7 +64,7 @@ class VariableCfgNode {
         this.entryState = null;
     }
 
-    public pushBranch(branch: CatnipReadonlyIrBasicBlock): VariableCfgNode {
+    public pushBranch(branch: CatnipIrBasicBlock): VariableCfgNode {
         const newNode = new VariableCfgNode(branch);
         this.pushNode(newNode);
         return newNode;
@@ -87,7 +87,7 @@ class VariableCfgNode {
     }
 }
 
-function getVariableOperation(op: CatnipReadonlyIrOp): VariableOperation | null {
+function getVariableOperation(op: CatnipIrOp): VariableOperation | null {
     switch (op.type) {
         case ir_get_var:
             return { op, type: VariableOperationType.GET, variable: (op.inputs as get_var_ir_inputs).variable }
@@ -189,12 +189,12 @@ class FunctionState {
 export const LoopPassVariableInlining: CatnipCompilerPass = {
     stage: CatnipCompilerStage.PASS_POST_ANALYSIS,
 
-    run(ir: CatnipReadonlyIr): void {
-        function optimizeFunction(func: CatnipReadonlyIrFunction) {
+    run(ir: CatnipIr): void {
+        function optimizeFunction(func: CatnipIrFunction) {
 
-            const visitedBranches: Map<CatnipReadonlyIrBasicBlock, VariableCfgNode> = new Map();
+            const visitedBranches: Map<CatnipIrBasicBlock, VariableCfgNode> = new Map();
 
-            function createBranchVariableCfg(branch: CatnipReadonlyIrBasicBlock): { head: VariableCfgNode, tail: VariableCfgNode | null } {
+            function createBranchVariableCfg(branch: CatnipIrBasicBlock): { head: VariableCfgNode, tail: VariableCfgNode | null } {
                 let headNode = visitedBranches.get(branch);
 
                 if (headNode !== undefined)
@@ -483,7 +483,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                             CatnipCompilerLogger.assert(operation.type === VariableOperationType.SYNC);
                             CatnipCompilerLogger.assert(node.sync !== null);
 
-                            let syncGetOp: CatnipReadonlyIrOp;
+                            let syncGetOp: CatnipIrOp;
 
                             if (node.sync.op === null) {
                                 syncGetOp = node.branch.insertOpLast(

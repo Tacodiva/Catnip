@@ -1,6 +1,6 @@
 import { CatnipProcedureID } from "../../../ops/procedure/procedure_definition";
 import { CatnipCompilerIrGenContext } from "../../CatnipCompilerIrGenContext";
-import { CatnipIr, CatnipReadonlyIr } from "../../CatnipIr";
+import { CatnipIr } from "../../CatnipIr";
 import { CatnipIrScriptTrigger, CatnipIrScriptTriggerType } from "../../CatnipIrScriptTrigger";
 import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
@@ -33,11 +33,11 @@ export const ir_procedure_trigger = new class extends CatnipIrScriptTriggerType<
         return false;
     }
 
-    public requiresReturnLocation(ir: CatnipReadonlyIr, inputs: ir_procedure_trigger_inputs): boolean {
+    public requiresReturnLocation(ir: CatnipIr, inputs: ir_procedure_trigger_inputs): boolean {
         return ir.preAnalysis.isYielding;
     }
     
-    public isWarp(ir: CatnipReadonlyIr, inputs: ir_procedure_trigger_inputs): boolean {
+    public isWarp(ir: CatnipIr, inputs: ir_procedure_trigger_inputs): boolean {
         return inputs.warp;
     }
 

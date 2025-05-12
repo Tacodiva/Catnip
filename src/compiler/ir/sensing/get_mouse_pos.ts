@@ -1,7 +1,7 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
@@ -17,7 +17,7 @@ export const ir_get_mouse_pos = new class extends CatnipIrInputOpType<get_mouse_
         return 0;
     }
 
-    public getResult(ir: CatnipReadonlyIrOp): CatnipCompilerValue {
+    public getResult(ir: CatnipIrOp): CatnipCompilerValue {
         return CatnipCompilerValue.dynamic(CatnipValueFormat.F64_NUMBER);
     }
 

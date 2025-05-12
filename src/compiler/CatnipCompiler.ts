@@ -1,7 +1,7 @@
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
 import { CatnipCompilerConfig, catnipCreateDefaultCompilerConfig } from "./CatnipCompilerConfig";
-import { CatnipIr, CatnipIrInfo, CatnipReadonlyIr } from "./CatnipIr";
+import { CatnipIr, CatnipIrInfo } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
 import { LoopPassVariableInlining } from "./passes/PostAnalysisPassVariableInlining";
 import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunctionIndexAllocation";

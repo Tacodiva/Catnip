@@ -1,7 +1,7 @@
 import { SpiderNumberType } from "wasm-spider";
 import { CatnipValueFormat } from "./CatnipValueFormat";
-import { CatnipReadonlyIr } from "./CatnipIr";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
+import { CatnipIr } from "./CatnipIr";
 
 /**
  * Functions will need to store:
@@ -23,11 +23,11 @@ import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
  */
 
 export class CatnipIrTransientVariable {
-    public readonly ir: CatnipReadonlyIr;
+    public readonly ir: CatnipIr;
     public readonly name: string | null;
     public readonly format: CatnipValueFormat;
 
-    public constructor(ir: CatnipReadonlyIr, format: CatnipValueFormat, name?: string) {
+    public constructor(ir: CatnipIr, format: CatnipValueFormat, name?: string) {
         this.ir = ir;
         this.format = format;
         this.name = name ? ir.getUniqueTransientVariableName(name) : null;

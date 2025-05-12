@@ -1,8 +1,6 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
-import { CatnipIrBranch, CatnipIrBranchType } from "../../CatnipIrBranch";
-import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 
 export const ir_return = new class extends CatnipIrCommandOpType<{}, {}> {

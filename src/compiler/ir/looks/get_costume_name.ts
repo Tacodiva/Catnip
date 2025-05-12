@@ -1,7 +1,7 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 import { CatnipWasmStructCostume } from "../../../wasm-interop/CatnipWasmStructCostume";
@@ -13,7 +13,7 @@ export const ir_get_costume_name = new class extends CatnipIrInputOpType {
         return 0;
     }
 
-    public getResult(ir: CatnipReadonlyIrOp): CatnipCompilerValue {
+    public getResult(ir: CatnipIrOp): CatnipCompilerValue {
         return CatnipCompilerValue.dynamic(CatnipValueFormat.I32_HSTRING);
     }
 

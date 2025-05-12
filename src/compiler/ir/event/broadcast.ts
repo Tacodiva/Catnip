@@ -1,7 +1,7 @@
 
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType, CatnipReadonlyIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipCompilerBroadcastSubsystem } from "../../subsystems/CatnipCompilerBroadcastSubsystem";
 import { CatnipWasmPtrThread, CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
@@ -68,7 +68,7 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
         ctx.releaseLocal(broadcastNameVariable);
     }
 
-    public *getTransientVariables(ir: CatnipReadonlyIrOp<ir_broadcast_inputs>): IterableIterator<CatnipIrTransientVariable> {
+    public *getTransientVariables(ir: CatnipIrOp<ir_broadcast_inputs>): IterableIterator<CatnipIrTransientVariable> {
         if (ir.inputs.threadListVariable !== null)
             return ir.inputs.threadListVariable;
     }
