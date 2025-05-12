@@ -4,6 +4,7 @@ import { CatnipVariableID } from "./CatnipVariable";
 import { CatnipWasmStructTarget } from '../wasm-interop/CatnipWasmStructTarget';
 import { CatnipListID } from "./CatnipList";
 import { CatnipWasmStructValue, CatnipWasmUnionValue } from "../wasm-interop/CatnipWasmStructValue";
+import { Cast } from "../compiler/cast";
 
 export interface CatnipTargetDesc {
     variables: CatnipTargetVariableDesc[];
@@ -55,9 +56,16 @@ export class CatnipTarget {
             .getMemberWrapper("variable_table")
             .getInnerWrapper();
 
-        for (const { id, value } of this._variables) {
+        for (let { id, value } of this._variables) {
             const variable = this.sprite.getVariable(id);
             if (variable === undefined) continue; // TODO Warn?
+
+            if (typeof value === "string") {
+                const valueNumber = Cast.toNumber(value);
+
+                if (Cast.toString(valueNumber) === value)
+                    value = valueNumber;
+            }
 
             this.runtime.setValue(
                 variableTable.getElementWrapper(variable.index),
@@ -81,7 +89,14 @@ export class CatnipTarget {
             listWrapper.setMember("data", listDataPtr);
 
             for (let itemIndex = 0; itemIndex < value.length; itemIndex++) {
-                const listItem = value[itemIndex];
+                let listItem = value[itemIndex];
+
+                if (typeof listItem === "string") {
+                    const listItemNumber = Cast.toNumber(listItem);
+
+                    if (Cast.toString(listItemNumber) === listItem)
+                        listItem = listItemNumber;
+                }
 
                 this.runtime.setValue(
                     CatnipWasmUnionValue.getWrapper(listDataPtr + itemIndex * CatnipWasmUnionValue.size, listWrapper.bufferProvider),

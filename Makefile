@@ -11,9 +11,9 @@ catnip_sources = ./module/catnip.c
 debug:
 	clang \
 			-O3 \
+			-Wl,--lto-O3 \
 			--target=wasm32 \
 			-flto \
-			-Wl,--lto-O3 \
 			-fno-delete-null-pointer-checks \
 			-nostdlib \
 			-mbulk-memory \

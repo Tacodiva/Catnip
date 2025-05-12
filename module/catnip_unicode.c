@@ -35,8 +35,8 @@ catnip_codepoint_t catnip_unicode_decode_utf16(const catnip_wchar_t **ptr, const
 }
 
 catnip_codepoint_t catnip_unicode_decode_utf16_backwards(const catnip_wchar_t **ptr, const catnip_wchar_t *ptr_start) {
-  const catnip_wchar_t *p = *ptr;
-  --*ptr;
+  
+  const catnip_wchar_t *p = --*ptr;
 
   CATNIP_ASSERT(p >= ptr_start);
 

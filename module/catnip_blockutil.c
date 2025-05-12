@@ -59,12 +59,18 @@ catnip_i32_t catnip_blockutil_value_cmp(catnip_runtime *runtime, catnip_value a,
     return result;
   }
 
-  if (CATNIP_F64_ISINFINITE(aNumber) && CATNIP_F64_ISINFINITE(bNumber) &&
-    CATNIP_F64_SIGNBIT(aNumber) == CATNIP_F64_SIGNBIT(bNumber)) {
-      return 0;
-  }
+  // if (CATNIP_F64_ISINFINITE(aNumber) && CATNIP_F64_ISINFINITE(bNumber) &&
+  //   CATNIP_F64_SIGNBIT(aNumber) == CATNIP_F64_SIGNBIT(bNumber)) {
+  //     return 0;
 
-  return aNumber - bNumber;
+  // }
+  // return aNumber - bNumber;
+  
+  if (aNumber > bNumber) return 1;
+
+  if (aNumber < bNumber) return -1;
+
+  return 0;
 }
 
 catnip_bool_t catnip_blockutil_value_eq(catnip_runtime *runtime, catnip_value a, catnip_value b) {
@@ -202,7 +208,7 @@ catnip_bool_t catnip_blockutil_hstring_contains(catnip_hstring *str, catnip_hstr
   return CATNIP_FALSE;
 }
 
-inline catnip_i32_t to_hex_value(const catnip_wchar_t c) {
+catnip_i32_t to_hex_value(const catnip_wchar_t c) {
   if (c >= '0' && c <= '9') return c - '0';
   if (c >= 'A' && c <= 'F') return (c - 'A') + 10;
   if (c >= 'a' && c <= 'f') return (c - 'a') + 10;
@@ -418,7 +424,7 @@ void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume
   target->costume = (catnip_ui32_t) cast;
 }
 
-inline catnip_bool_t is_int(catnip_value value, catnip_f64_t valueNumber) {
+catnip_bool_t is_int(catnip_value value, catnip_f64_t valueNumber) {
 
   if (CATNIP_VALUE_IS_STRING(value)) {
     // If the string contains a '.' we consider it not an int
@@ -430,8 +436,11 @@ inline catnip_bool_t is_int(catnip_value value, catnip_f64_t valueNumber) {
 
 catnip_f64_t catnip_blockutil_operator_random(catnip_runtime *runtime, catnip_value a, catnip_value b) {
 
-  const catnip_f64_t aVal = catnip_value_to_number(runtime, a);
-  const catnip_f64_t bVal = catnip_value_to_number(runtime, b);
+  catnip_f64_t aVal = catnip_value_to_number(runtime, a);
+  if (CATNIP_F64_ISNAN(aVal)) aVal = 0;
+  
+  catnip_f64_t bVal = catnip_value_to_number(runtime, b);
+  if (CATNIP_F64_ISNAN(bVal)) bVal = 0;
 
   catnip_f64_t low, high;
 

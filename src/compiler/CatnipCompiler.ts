@@ -206,7 +206,7 @@ export class CatnipCompiler {
 
         for (const scriptIR of this._irs) {
 
-            if (this.config.ir_dump)
+            if (this.config.dump_ir)
                 console.log(""+scriptIR);
 
             scriptIR.createWASM();
@@ -248,16 +248,16 @@ export class CatnipCompiler {
 
         let moduleSource = writeModule(this.spiderModule, { mergeTypes: false });
 
-        if (this.config.enable_binaryen_optimizer || this.config.binaryen_dump) {
+        if (this.config.enable_optimization_binaryen || this.config.dump_binaryen) {
             const binaryenModule = binaryen.readBinary(moduleSource);
 
-            if (this.config.enable_binaryen_optimizer) {
+            if (this.config.enable_optimization_binaryen) {
                 binaryenModule.optimize();
                 moduleSource = binaryenModule.emitBinary();
             }
 
-            if (this.config.binaryen_dump) {
-                switch (this.config.binaryen_dump) {
+            if (this.config.dump_binaryen) {
+                switch (this.config.dump_binaryen) {
                     case "wat":
                         console.log(binaryenModule.emitText());
                         break;
@@ -281,7 +281,7 @@ export class CatnipCompiler {
             a.remove()
         }
 
-        if (globalThis.window && this.config.wasm_dump) {
+        if (globalThis.window && this.config.dump_wasm_blob) {
             const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
 
                 const blob = new Blob([data], {
@@ -314,12 +314,11 @@ export class CatnipCompiler {
 
         const projectModule = new CatnipProjectModule(this.project, instance, events);
 
-        this._deleteFunctionsElement(functionsElement);
-
         // TODO There's definitly more stuff to clean up
-        this._transitionStage(null);
-
+        this._deleteFunctionsElement(functionsElement);
         this._irs.length = 0;
+        
+        this._transitionStage(null);
 
         return projectModule;
     }

@@ -16,9 +16,9 @@ import { CatnipIr } from "../../compiler/CatnipIr";
 import { op_nop } from "../core/nop";
 import { op_log } from "../core/log";
 import { CatnipCompilerProcedureSubsystem } from "../../compiler/subsystems/CatnipCompilerProcedureSubsystem";
-import { CatnipScriptTrigger } from "../CatnipScriptTrigger";
-import { CatnipIrProcedureTriggerArg, CatnipIrScriptProcedureTrigger } from "../../compiler/ir/procedure/procedure_trigger";
+import { CatnipIrScriptProcedureTrigger } from "../../compiler/ir/procedure/procedure_trigger";
 import { CatnipValueFormatUtils } from "../../compiler/CatnipValueFormatUtils";
+import { op_breakpoint } from "../core/breakpoint";
 
 type procedure_call_inputs = {
     sprite: CatnipSpriteID,
@@ -43,7 +43,7 @@ export const op_procedure_call = new class extends CatnipCommandOpType<procedure
             // We need to make sure a warp varient of the procedure exists.
 
             const subsystem = ir.compiler.getSubsystem(CatnipCompilerProcedureSubsystem);
-            
+
             if (subsystem.tryGetProcedureInfo(inputs.sprite, inputs.procedure, true) === undefined) {
                 // The varient doesn't exit, let's create it!
 
@@ -90,6 +90,8 @@ registerSB3CommandBlock("procedures_call", (ctx, block) => {
                 return op_log.create({ msg: ctx.readInput(block.inputs[Object.keys(block.inputs)[0]]), type: "warn" });
             case "\u200B\u200Berror\u200B\u200B %s":
                 return op_log.create({ msg: ctx.readInput(block.inputs[Object.keys(block.inputs)[0]]), type: "error" });
+            case "\u200B\u200Bbreakpoint\u200B\u200B":
+                return op_breakpoint.create({});
         }
 
         CatnipCompilerLogger.warn(`Unknown procedure opcode '${proccode}'.`);

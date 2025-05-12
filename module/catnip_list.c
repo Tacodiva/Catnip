@@ -36,7 +36,7 @@ void catnip_list_free(catnip_list *list, catnip_ui32_t item_size) {
     catnip_mem_free(list->data);
 }
 
-inline void try_grow_list(catnip_list *list, catnip_ui32_t item_size) {
+void try_grow_list(catnip_list *list, catnip_ui32_t item_size) {
   if (list->length >= list->capacity) {
     catnip_ui32_t new_capacity = list->capacity * 2;
     if (new_capacity == 0) new_capacity = 1;

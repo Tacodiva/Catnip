@@ -94,9 +94,6 @@ catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str
 
   const catnip_wchar_t *trim_end = ptr;
 
-  /* This may happen when forward and backward scanning disagree
-	 * (possible for non-extended-UTF-8 strings). */
-
   if (trim_end < trim_start) {
     trim_end = trim_start;
   }
