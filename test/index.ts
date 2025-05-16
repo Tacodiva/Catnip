@@ -70,7 +70,19 @@ async function main() {
                 }
                 ), true);
 
-            await run(catnipModule, projectFile);
+            const project = await run(catnipModule, projectFile);
+            const projectModule = await project.compile({
+                // Binaryen takes a long time, we don't need it for the tests
+                enable_optimization_binaryen: false,
+                // Force variable inlining for tests, to thoughly test it
+                enable_optimization_variable_inlining_force: true,                
+            });
+
+            projectModule.start();
+
+            do {
+                projectModule.step();
+            } while (!didEnd && projectModule.hasRunningThreads());
 
             if (!didEnd) {
                 t.fail("Test did not end.");

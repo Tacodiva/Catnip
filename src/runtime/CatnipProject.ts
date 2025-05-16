@@ -52,7 +52,7 @@ export class CatnipProject {
         }
     }
 
-    public async compile(config?: CatnipCompilerConfig): Promise<CatnipProjectModule> {
+    public async compile(config?: Partial<CatnipCompilerConfig>): Promise<CatnipProjectModule> {
         const compiler = new CatnipCompiler(this, config);
 
         console.time("compile");

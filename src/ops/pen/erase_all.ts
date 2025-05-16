@@ -8,6 +8,7 @@ export const op_erase_all = new class extends CatnipCommandOpType<{}> {
     public *getInputsAndSubstacks(): IterableIterator<CatnipOp> { }
 
     public generateIr(ctx: CatnipCompilerIrGenContext): void {
+        // TODO This also needs to clear the pen line buffer
         ctx.emitCallback("pen erase all", () => {
             ctx.compiler.runtimeModule.renderer.penEraseAll();
         }, [], null);

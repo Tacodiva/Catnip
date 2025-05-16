@@ -5,7 +5,8 @@ import { CatnipRenderer } from "../renderer";
 async function main() {
     const moduleRequest = await fetch('catnip.wasm');
     // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
-    const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
+    const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
@@ -14,13 +15,16 @@ async function main() {
     const renderer = new CatnipRenderer();
 
     const project = await run(module, sb3File, renderer);
+    const projectModule = await project.compile({
+        enable_optimization_binaryen: false
+    });
 
     document.addEventListener("keydown", (event) => {
-        project.triggerEvent("IO_KEY_PRESSED", event.keyCode);
+        projectModule.triggerEvent("IO_KEY_PRESSED", event.keyCode);
     });
 
     document.addEventListener("keyup", (event) => {
-        project.triggerEvent("IO_KEY_RELEASED", event.keyCode);
+        projectModule.triggerEvent("IO_KEY_RELEASED", event.keyCode);
     });
 
     document.addEventListener("mousemove", (event) => {
@@ -33,18 +37,18 @@ async function main() {
         const centeredX = mouseX - 0.5;
         const centeredY = mouseY - 0.5;
 
-        project.triggerEvent("IO_MOUSE_MOVE", centeredX * 480, -centeredY * 360);
+        projectModule.triggerEvent("IO_MOUSE_MOVE", centeredX * 480, -centeredY * 360);
     });
 
     document.addEventListener("mouseup", (event) => {
-        project.triggerEvent("IO_MOUSE_UP");
+        projectModule.triggerEvent("IO_MOUSE_UP");
     });
 
     document.addEventListener("mousedown", (event) => {
-        project.triggerEvent("IO_MOUSE_DOWN");
+        projectModule.triggerEvent("IO_MOUSE_DOWN");
     });
 
-    (window as any).project = project;
+    (window as any).project = projectModule;
 
     let intervalToken: any;
 
@@ -53,14 +57,16 @@ async function main() {
     function frame() {
 
         try {
-            project.step();
-            renderer.drawFrame();
+            projectModule.step();
+            projectModule.frame();
         } catch (e) {
             console.error("Error while stepping project.")
             console.error(e);
             clearInterval(intervalToken);
         }
     }
+
+    projectModule.start();
 
     intervalToken = setInterval(frame, 1000 / stepRate);
 }

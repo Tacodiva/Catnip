@@ -7,6 +7,7 @@ import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipCompilerProcedureSubsystem } from "../../subsystems/CatnipCompilerProcedureSubsystem";
 import { ir_barrier } from "../core/barrier";
 import { ir_return } from "../core/return";
+import { ir_return_yielding } from "../core/return_yielding";
 import { ir_transient_load } from "../core/transient_load";
 
 export interface CatnipIrProcedureTriggerArg {
@@ -45,6 +46,8 @@ export const ir_procedure_trigger = new class extends CatnipIrScriptTriggerType<
         ctx.emitIr(ir_barrier, {}, {});
         if (ctx.ir.preAnalysis.isYielding) {
             ctx.emitIr(ir_transient_load, { transient: ctx.ir.returnLocationVariable }, {});
+            ctx.emitIr(ir_return_yielding, {}, {});
+        } else {
             ctx.emitIr(ir_return, {}, {});
         }
     }

@@ -3,7 +3,8 @@ import { createLogger, Logger } from "../log";
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
-import { WasmStructWrapper } from "../wasm-interop/wasm-types";
+import { WasmStructValue, WasmStructWrapper } from "../wasm-interop/wasm-types";
+import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-interop/CatnipWasmStructRuntimeGcStats';
 
 export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
 
@@ -33,11 +34,11 @@ export class CatnipProjectModule {
         }
     }
 
-    public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>): void {
+    public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>): boolean {
         CatnipProjectModule._logger.assert(CatnipEvents[event].args.length === args.length);
 
         const eventLambda = this._events.get(event);
-        if (eventLambda === undefined) return;
+        if (eventLambda === undefined) return false;
 
         const encodedArgs: any[] = [];
 
@@ -48,6 +49,12 @@ export class CatnipProjectModule {
         }
 
         eventLambda(...(encodedArgs as any));
+
+        return true;
+    }
+
+    public hasEvent(event: CatnipEventID): boolean {
+        return this._events.has(event);
     }
 
     public start(): void {
@@ -56,11 +63,21 @@ export class CatnipProjectModule {
 
     public step(): void {
         this.runtimeModule.functions.catnip_runtime_tick(this.runtimeInstance.ptr);
-        this._penFlush();
     }
 
-    private _penFlush(): void {
+    public frame(): void {
+        // Flush pen lines
         this.runtimeModule.functions.catnip_runtime_render_pen_flush(this.runtimeInstance.ptr);
+        // Call the renderer
+        this.runtimeModule.renderer.frame();
+    }
+
+    public hasRunningThreads() : boolean {
+        return this.runtimeInstance.getMember("num_active_threads") !== 0;
+    }
+
+    public getGcStats(): CatnipRuntimeGcStats {
+        return this.runtimeInstance.getMemberWrapper("gc_stats").getInner();
     }
 
 }

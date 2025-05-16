@@ -17,16 +17,22 @@ async function main() {
     // const projectFile = await fs.readFile("public/fib.sb3");
 
     const project = await run(catnipModule, projectFile);
-            
+    const projectModule = await project.compile({
+        enable_optimization_binaryen: false,
+        // dump_binaryen: "stack",
+        enable_optimization_variable_inlining_force: true,
+        dump_ir: true
+
+    });
+
+    projectModule.start();
+
     do {
-        project.step();
-    } while (project.runtimeInstance.getMember("num_active_threads") !== 0);
+        projectModule.step();
+    } while (projectModule.hasRunningThreads());
     
     // console.log("Garbage collection stats: ")
-    // console.log(project.runtimeInstance.getMemberWrapper("gc_stats").getInnerWrapper().get());
-
-    // console.log(project.getSprite("1").defaultTarget.structWrapper.get());
-
+    // console.log(projectModule.getGcStats());
 }
 
 main();

@@ -25,9 +25,6 @@ export const ir_set_var = new class extends CatnipIrCommandOpType<set_var_ir_inp
 
         ctx.emitWasm(SpiderOpcodes.local_set, valueLocal.ref);
 
-        // TODO 1 check to see if the old value of the variable has a string that needs releasing.
-        // TODO 2 Also this can eventually only happen if we know from type analysis the variable could be a string.
-
         const target = ir.inputs.target;
         const variable = ir.inputs.variable;
         const variableOffset = variable.index * CatnipWasmUnionValue.size;

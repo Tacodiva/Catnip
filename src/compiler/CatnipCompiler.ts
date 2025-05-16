@@ -1,6 +1,6 @@
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
-import { CatnipCompilerConfig, catnipCreateDefaultCompilerConfig } from "./CatnipCompilerConfig";
+import { CatnipCompilerConfig, catnipCompilerConfigCreateDefault, catnipCompilerConfigPoppulate } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipIrInfo } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
 import { LoopPassVariableInlining } from "./passes/PostAnalysisPassVariableInlining";
@@ -73,9 +73,9 @@ export class CatnipCompiler {
 
     private _exportCount: number;
 
-    constructor(project: CatnipProject, config?: CatnipCompilerConfig) {
+    constructor(project: CatnipProject, config?: Partial<CatnipCompilerConfig>) {
         this.project = project;
-        this.config = config ? { ...config } : catnipCreateDefaultCompilerConfig();
+        this.config = catnipCompilerConfigPoppulate(config);
         this._passes = new Map();
         this._stage = null;
 
@@ -252,6 +252,10 @@ export class CatnipCompiler {
             const binaryenModule = binaryen.readBinary(moduleSource);
 
             if (this.config.enable_optimization_binaryen) {
+                const optLevel = typeof(this.config.enable_optimization_binaryen) === "number" ?
+                 this.config.enable_optimization_binaryen : 4;
+                
+                binaryen.setOptimizeLevel(optLevel);
                 binaryenModule.optimize();
                 moduleSource = binaryenModule.emitBinary();
             }

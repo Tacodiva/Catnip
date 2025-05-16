@@ -130,7 +130,7 @@ export class CatnipRenderer implements ICatnipRenderer {
         throw new Error(`Error compiling shader program.\n${programError}`)
     }
 
-    public drawFrame() {
+    public frame() {
         const gl = this.gl;
 
         gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);

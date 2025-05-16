@@ -37,7 +37,8 @@ interface VariableOperation {
 
 interface VariableSyncOperation {
     variable: CatnipVariable;
-    type: VariableOperationType.SYNC,
+    type: VariableOperationType.SYNC;
+    set: boolean;
 }
 
 interface VariableSync {
@@ -45,7 +46,7 @@ interface VariableSync {
 }
 
 class VariableCfgNode {
-
+    public readonly index: number;
     public readonly branch: CatnipIrBasicBlock;
     public prev: VariableCfgNode[];
     public next: VariableCfgNode[];
@@ -55,19 +56,14 @@ class VariableCfgNode {
 
     public entryState: FunctionState | null;
 
-    public constructor(branch: CatnipIrBasicBlock) {
+    public constructor(index: number, branch: CatnipIrBasicBlock) {
+        this.index = index;
         this.branch = branch;
         this.prev = [];
         this.next = [];
         this.variables = new Map();
         this.sync = null;
         this.entryState = null;
-    }
-
-    public pushBranch(branch: CatnipIrBasicBlock): VariableCfgNode {
-        const newNode = new VariableCfgNode(branch);
-        this.pushNode(newNode);
-        return newNode;
     }
 
     public pushNode(node: VariableCfgNode) {
@@ -135,7 +131,7 @@ class FunctionState {
             if (ourVariableState === undefined) {
                 this.variables.set(variable, {
                     variable,
-                    isDefinitlySynced: otherVariableState.isDefinitlyInitizlied,
+                    isDefinitlySynced: false,
                     isDefinitlyInitizlied: false,
                     prevOperations: new Set(),
                 });
@@ -150,13 +146,6 @@ class FunctionState {
                     ourVariableState.isDefinitlyInitizlied = false;
                     modified = true;
                 }
-
-                for (const otherPrevOp of otherVariableState.prevOperations) {
-                    if (!ourVariableState.prevOperations.has(otherPrevOp)) {
-                        ourVariableState.prevOperations.add(otherPrevOp);
-                        modified = true;
-                    }
-                }
             }
         }
 
@@ -165,6 +154,11 @@ class FunctionState {
 
             if (variableState.isDefinitlyInitizlied) {
                 variableState.isDefinitlyInitizlied = false;
+                modified = true;
+            }
+
+            if (variableState.isDefinitlySynced) {
+                variableState.isDefinitlySynced = false;
                 modified = true;
             }
         }
@@ -190,6 +184,9 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
     stage: CatnipCompilerStage.PASS_POST_ANALYSIS,
 
     run(ir: CatnipIr): void {
+
+        let currentBanchIndex = 0;
+
         function optimizeFunction(func: CatnipIrFunction) {
 
             const visitedBranches: Map<CatnipIrBasicBlock, VariableCfgNode> = new Map();
@@ -197,17 +194,21 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
             function createBranchVariableCfg(branch: CatnipIrBasicBlock): { head: VariableCfgNode, tail: VariableCfgNode | null } {
                 let headNode = visitedBranches.get(branch);
 
+
                 if (headNode !== undefined)
                     return { head: headNode, tail: null };
 
-                let node: VariableCfgNode | null = headNode = new VariableCfgNode(branch);
+                let node: VariableCfgNode | null = headNode = new VariableCfgNode(currentBanchIndex++, branch);
                 visitedBranches.set(branch, node);
                 let op = branch.head;
+
+                // console.debug(`Starting node ${headNode.index}`);
 
                 while (op !== null) {
                     const variableOperation = getVariableOperation(op);
 
                     if (variableOperation !== null) {
+                        // console.debug(`Adding variable operation to ${node.index}.`);
                         node.pushOperation(variableOperation);
                     }
 
@@ -228,7 +229,11 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
 
                     if (doesSync) {
                         node.sync = { op };
-                        node = node.pushBranch(branch);
+
+                        const newNode = new VariableCfgNode(currentBanchIndex++, branch);
+                        node.pushNode(newNode);
+                        // console.debug(`Adding sync node ${newNode.index} after ${node.index}.`);
+                        node = newNode;
                     }
 
                     const doesContinue = op.type.doesContinue(op);
@@ -242,6 +247,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                             const subbranch = op.branches[branchName];
 
                             if (subbranch.branchType === CatnipIrBranchType.INTERNAL && subbranch.body.func === func) {
+                                // console.debug("Descending into branch.");
                                 const branchNode = createBranchVariableCfg(subbranch.body);
                                 node.pushNode(branchNode.head);
 
@@ -251,20 +257,24 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                             }
                         }
 
-                        if (doesContinue) {
-                            node = new VariableCfgNode(branch);
-
-                            for (const branchNode of branchNodes)
+                        if (doesContinue && branchNodes.length !== 0) {
+                            node = new VariableCfgNode(currentBanchIndex++, branch);
+                            for (const branchNode of branchNodes) {
                                 branchNode.pushNode(node);
+                                // console.debug(`Adding after node ${node.index} to node ${branchNode.index}.`);
+                            }
                         }
                     }
 
                     if (!doesContinue) {
+                        // console.debug("End B " + headNode.index);
                         return { head: headNode, tail: null };
                     }
 
                     op = op.next;
                 }
+
+                // console.debug(`End A ${headNode.index} (tail ${node.index})`);
 
                 return { head: headNode, tail: node };
             }
@@ -313,7 +323,6 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
             }
 
             function findOptimizations(node: VariableCfgNode, state: FunctionState) {
-
                 let modified = false;
 
                 if (node.entryState !== null) {
@@ -331,7 +340,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                         if (operation.type === VariableOperationType.SYNC) {
 
                             variableState.isDefinitlySynced = true;
-                            variableState.isDefinitlyInitizlied = false;
+                            variableState.isDefinitlyInitizlied = operation.set;
 
                         } else {
 
@@ -363,6 +372,9 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                                 if (prevOperation.type === VariableOperationType.SET && prevOperation.status === VariableOperationInlineStatus.INLINE) {
                                                     setOperationStatus(prevOperation, VariableOperationInlineStatus.BOTH);
                                                     modified = true;
+                                                } else if (prevOperation.type === VariableOperationType.SYNC) {
+                                                    modified ||= !prevOperation.set;
+                                                    prevOperation.set = true;
                                                 }
                                             }
                                         }
@@ -398,16 +410,17 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                 if (node.sync !== null) {
 
                     for (const [variable, variableState] of state.variables) {
-                        if (!variableState.isDefinitlySynced) { // why did we have `|| !variableState.isDefinitlyInitizlied` here?
+                        if (variableState.prevOperations.size !== 1 || variableState.prevOperations.values().next().value!.type !== VariableOperationType.SYNC) {
                             modified = true;
-
-                            variableState.isDefinitlySynced = true;
-                            variableState.isDefinitlyInitizlied = false;
 
                             const syncOp: VariableSyncOperation = {
                                 variable,
                                 type: VariableOperationType.SYNC,
+                                set: false,
                             };
+                            
+                            variableState.isDefinitlySynced = true;
+                            variableState.isDefinitlyInitizlied = syncOp.set;
 
                             variableState.prevOperations.clear();
                             variableState.prevOperations.add(syncOp);
@@ -506,6 +519,22 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
                                 { target: variable.sprite.defaultTarget, variable: variable, format: CatnipValueFormat.F64 },
                                 {}
                             );
+
+                            if (operation.set) {
+                                CatnipCompilerLogger.assert(node.sync.op !== null);
+
+                                const syncSetOp = node.branch.insertOpAfter(
+                                    node.sync.op,
+                                    ir_get_var,
+                                    { target: variable.sprite.defaultTarget, variable: variable }, {}
+                                );
+
+                                syncSetOp.block.insertOpAfter(
+                                    syncSetOp,
+                                    ir_transient_store,
+                                    { transient: getTransient(variable) }, {}
+                                );
+                            }
                         }
                     }
                 }

@@ -1,6 +1,6 @@
-import { WasmPtr, WasmStruct, WasmUInt32 } from "./wasm-types";
+import { WasmPtr, WasmStruct, WasmStructValue, WasmUInt32 } from "./wasm-types";
 
-export const CatnipWasmStructRuntimeGcStats = new WasmStruct("catnip_runtime_gc_stats", {
+const CatnipWasmStructRuntimeGcStatsMembers = {
     total_memory: WasmUInt32,
     total_page_memory: WasmUInt32,
     total_used_page_memory: WasmUInt32,
@@ -16,6 +16,10 @@ export const CatnipWasmStructRuntimeGcStats = new WasmStruct("catnip_runtime_gc_
     latest_moved_sml_obj_count: WasmUInt32,
     latest_moved_pointer_count: WasmUInt32,
     latest_freed_pages: WasmUInt32,
-});
+};
+
+export const CatnipWasmStructRuntimeGcStats = new WasmStruct("catnip_runtime_gc_stats", CatnipWasmStructRuntimeGcStatsMembers);
 
 export const CatnipWasmPtrRuntimeGcStats = new WasmPtr(CatnipWasmStructRuntimeGcStats);
+
+export type CatnipRuntimeGcStats = WasmStructValue<typeof CatnipWasmStructRuntimeGcStatsMembers>;

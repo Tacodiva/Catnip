@@ -1,7 +1,7 @@
 import { SpiderMemoryDefinition, SpiderNumberType, SpiderOpcodes, SpiderValueType } from "wasm-spider";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrInputOp, CatnipIrInputOpType } from "../../CatnipIrOp";
+import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
@@ -24,6 +24,12 @@ export const ir_cast = new class extends CatnipIrInputOpType<cast_ir_inputs> {
             return CatnipCompilerValue.constant(ir.operands[0].constantValue, ir.inputs.format);
 
         return CatnipCompilerValue.dynamic(this.cast(null, ir.operands[0].format, ir.inputs.format));
+    }
+
+    public tryCast(ir: CatnipIrOp<cast_ir_inputs, {}, this>, format: CatnipValueFormat): boolean {
+        ir.inputs.format = format;
+
+        return true;
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<cast_ir_inputs>): void {
