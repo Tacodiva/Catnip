@@ -1,10 +1,6 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { ir_cast } from "../../compiler/ir/core/cast";
-import { ir_log } from "../../compiler/ir/core/log";
-import { ir_pen_down_up } from "../../compiler/ir/pen/pen_down_up";
-import { ir_pen_set_color } from "../../compiler/ir/pen/pen_set_color";
 import { ir_pen_set_size } from "../../compiler/ir/pen/pen_set_size";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";

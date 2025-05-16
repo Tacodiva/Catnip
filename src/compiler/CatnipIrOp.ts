@@ -101,7 +101,7 @@ export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {},
 
     public abstract getResult(ir: CatnipIrInputOp<TInputs, CatnipIrOpBranches<TBranches>, this>, state?: CatnipCompilerState): CatnipCompilerValue;
 
-    public tryCast(ir: CatnipIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
+    public tryConvert(ir: CatnipIrOp<TInputs, TBranches, this>, format: CatnipValueFormat): boolean {
         return false;
     }
 }

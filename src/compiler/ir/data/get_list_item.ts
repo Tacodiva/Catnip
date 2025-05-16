@@ -10,7 +10,7 @@ import { CatnipCompilerState } from "../../CatnipCompilerState";
 import { CatnipList } from "../../../runtime/CatnipList";
 import { CatnipWasmStructList } from "../../../wasm-interop/CatnipWasmStructList";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
-import { ir_cast } from "../core/cast";
+import { ir_convert } from "../core/convert";
 import { CatnipWasmUnionValue, VALUE_STRING_MASK } from "../../../wasm-interop/CatnipWasmStructValue";
 
 export type get_list_item_ir_inputs = { target: CatnipTarget, list: CatnipList };
@@ -93,10 +93,10 @@ export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_i
 
             ctx.emitWasm(SpiderOpcodes.local_get, rawIndexVariable.ref);
 
-            ir_cast.emitStringCheck(ctx, index.format,
+            ir_convert.emitStringCheck(ctx, index.format,
                 (ctx) => {
                     ctx.emitWasm(SpiderOpcodes.local_get, rawIndexVariable.ref);
-                    ir_cast.cast(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, CatnipValueFormat.I32_HSTRING);
+                    ir_convert.emitConversion(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, CatnipValueFormat.I32_HSTRING);
 
                     const stringLocal = ctx.createLocal(SpiderNumberType.i32);
                     ctx.emitWasm(SpiderOpcodes.local_set, stringLocal.ref);
@@ -149,14 +149,14 @@ export const ir_get_list_item = new class extends CatnipIrInputOpType<get_list_i
 
                     // Cast our string into a int and set it
                     ctx.emitWasm(SpiderOpcodes.local_get, stringLocal.ref);
-                    ir_cast.cast(ctx, CatnipValueFormat.I32_HSTRING, CatnipValueFormat.I32_NUMBER);
+                    ir_convert.emitConversion(ctx, CatnipValueFormat.I32_HSTRING, CatnipValueFormat.I32_NUMBER);
                     ctx.emitWasm(SpiderOpcodes.local_set, castIndexVariable.ref);
 
                     ctx.releaseLocal(stringLocal);
                 },
                 (ctx) => {
                     ctx.emitWasm(SpiderOpcodes.local_get, rawIndexVariable.ref);
-                    ir_cast.cast(ctx, index.format & CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_NUMBER);
+                    ir_convert.emitConversion(ctx, index.format & CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_NUMBER);
                     ctx.emitWasm(SpiderOpcodes.local_set, castIndexVariable.ref);
                 }
             );

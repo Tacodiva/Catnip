@@ -8,7 +8,7 @@ import { CatnipCompilerReadonlyStack } from "./CatnipCompilerStack";
 import { CatnipIrBranch, CatnipIrBranchType, CatnipIrExternalBranch, CatnipIrInternalBranch } from "./CatnipIrBranch";
 import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipIrOp } from "./CatnipIrOp";
 import { ir_yield } from "./ir/core/yield";
-import { ir_cast } from "./ir/core/cast";
+import { ir_convert } from "./ir/core/convert";
 import { ir_loop_jmp } from "./ir/core/loop_jmp";
 import { ir_if_else } from "./ir/control/if_else";
 import { ir_transient_create } from "./ir/core/transient_create";
@@ -270,7 +270,7 @@ export class CatnipCompilerIrGenContext {
     public emitInput<TInputs extends CatnipOpInputs>(op: CatnipInputOp<TInputs>, format?: CatnipValueFormat) {
         op.type.generateIr(this, op.inputs);
         if (format !== undefined)
-            this.emitCast(format);
+            this.emitConvert(format);
     }
 
     public emitCommand<TInputs extends CatnipOpInputs>(op: CatnipCommandOp<TInputs>) {
@@ -283,13 +283,13 @@ export class CatnipCompilerIrGenContext {
         }
     }
 
-    public emitCast(format: CatnipValueFormat) {
+    public emitConvert(format: CatnipValueFormat) {
         if (!this._body.doesContinue()) return;
         const operand = this.stack.peekDetailed();
 
         if (operand.source !== null && !CatnipValueFormatUtils.isAlways(operand.value.format, format)) {
-            if (!operand.source.type.tryCast(operand.source, format)) {
-                this.emitIr(ir_cast, { format }, {});
+            if (!operand.source.type.tryConvert(operand.source, format)) {
+                this.emitIr(ir_convert, { format }, {});
             }
         }
     }

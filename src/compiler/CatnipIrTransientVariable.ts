@@ -3,28 +3,11 @@ import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 import { CatnipIr } from "./CatnipIr";
 
-/**
- * Functions will need to store:
- *  -> The inputs which are stored as a set of "sources" and "storage types"
- *      - Sources are where callers need to get the values from. Could be a "CatnipIrValue" or a
- *          procedure parameter.
- *      - Storage types are how the callers needs to pass the values to the function. Could be as
- *          a parameter or via the thread stack.
- *  -> Stack state
- *      - The expected minimum size of the stack when the function is called.
- * 
- * A value is created in only one function then passed along to any other functions who need it.
- * 
- * Each value is translated to WASM as a local variable.
- * 
- * The caller is responsible for ensuring the stack has the correct values and is of the corrcet size
- *     before calling a function.
- * 
- */
-
 export class CatnipIrTransientVariable {
     public readonly ir: CatnipIr;
     public readonly name: string | null;
+
+    /// This is the broadest format of what will be stored in this transient
     public readonly format: CatnipValueFormat;
 
     public constructor(ir: CatnipIr, format: CatnipValueFormat, name?: string) {

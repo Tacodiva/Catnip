@@ -4,7 +4,6 @@ import { CatnipCompilerPassContext } from "../../CatnipCompilerPassContext";
 import { CatnipCompilerStack } from "../../CatnipCompilerStack";
 import { CatnipCompilerStage } from "../../CatnipCompilerStage";
 import { CatnipCompilerState } from "../../CatnipCompilerState";
-import { CatnipIr } from "../../CatnipIr";
 import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
 import { CatnipIrBranchType } from "../../CatnipIrBranch";
 import { CatnipIrFunction } from "../../CatnipIrFunction";

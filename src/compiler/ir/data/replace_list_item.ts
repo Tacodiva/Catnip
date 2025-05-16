@@ -7,8 +7,6 @@ import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
 import { CatnipList } from "../../../runtime/CatnipList";
 import { CatnipWasmStructList } from "../../../wasm-interop/CatnipWasmStructList";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
-import { CatnipValueFormat } from "../../CatnipValueFormat";
-import { ir_cast } from "../core/cast";
 import { ir_get_list_item } from "./get_list_item";
 import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
 

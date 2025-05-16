@@ -9,7 +9,7 @@ import { CatnipValueFormatUtils } from '../../CatnipValueFormatUtils';
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipCostume } from "../../../runtime/CatnipCostume";
 import { Cast } from "../../cast";
-import { ir_cast } from "../core/cast";
+import { ir_convert } from "../core/convert";
 
 export type set_costume_ir_inputs = {};
 
@@ -55,7 +55,7 @@ export const ir_set_costume = new class extends CatnipIrCommandOpType<set_costum
         ctx.emitWasm(SpiderOpcodes.f64_sub);
 
         // Make it an int
-        ir_cast.cast(ctx, costumeValueFormat, CatnipValueFormat.F64_INT);
+        ir_convert.emitConversion(ctx, costumeValueFormat, CatnipValueFormat.F64_INT);
 
         // Take the mod
         ctx.emitWasmConst(SpiderNumberType.f64, ctx.sprite.costumes.length);
@@ -127,7 +127,7 @@ export const ir_set_costume = new class extends CatnipIrCommandOpType<set_costum
         // The value isn't a constant, if it's always a string we can just call the C function to deal with it
         if (CatnipValueFormatUtils.isAlways(costumeValue.format, CatnipValueFormat.F64_BOXED_I32_HSTRING | CatnipValueFormat.I32_HSTRING)) {
             // Unbox the string if we need to
-            ir_cast.cast(ctx, costumeValue.format, CatnipValueFormat.I32_HSTRING);
+            ir_convert.emitConversion(ctx, costumeValue.format, CatnipValueFormat.I32_HSTRING);
             ctx.emitWasmGetCurrentTarget();
             ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_costume_set");
             return;
@@ -159,10 +159,10 @@ export const ir_set_costume = new class extends CatnipIrCommandOpType<set_costum
             const value = ctx.createLocal(SpiderNumberType.f64);
             ctx.emitWasm(SpiderOpcodes.local_tee, value.ref);
 
-            ir_cast.emitStringCheck(ctx, costumeValue.format,
+            ir_convert.emitStringCheck(ctx, costumeValue.format,
                 (ctx, format) => {
                     ctx.emitWasm(SpiderOpcodes.local_get, value.ref);
-                    ir_cast.cast(ctx, format, CatnipValueFormat.I32_HSTRING)
+                    ir_convert.emitConversion(ctx, format, CatnipValueFormat.I32_HSTRING)
                     ctx.emitWasmGetCurrentTarget();
                     ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_costume_set");
                 },

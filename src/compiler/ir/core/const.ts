@@ -6,7 +6,7 @@ import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { VALUE_STRING_MASK } from "../../../wasm-interop/CatnipWasmStructValue";
 import { Cast, catnip_compiler_constant } from "../../cast";
-import { cast_ir_inputs } from "./cast";
+import { convert_ir_inputs } from "./convert";
 
 type const_ir_inputs = { value: catnip_compiler_constant, format?: CatnipValueFormat };
 
@@ -39,7 +39,7 @@ export const ir_const = new class extends CatnipIrInputOpType<const_ir_inputs> {
         }
     }
 
-    public tryCast(ir: CatnipIrOp<const_ir_inputs, {}, this>, format: CatnipValueFormat): boolean {
+    public tryConvert(ir: CatnipIrOp<const_ir_inputs, {}, this>, format: CatnipValueFormat): boolean {
 
         if (ir.inputs.format !== undefined &&
             CatnipValueFormatUtils.isSometimes(ir.inputs.format, format)

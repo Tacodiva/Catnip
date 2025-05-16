@@ -26,7 +26,7 @@ export const op_change_var_by = new class extends CatnipCommandOpType<change_var
         const variable = sprite.getVariable(inputs.variable)!;
 
         ctx.emitIr(ir_get_var, { target, variable }, {});
-        ctx.emitCast(CatnipValueFormat.F64_NUMBER);
+        ctx.emitConvert(CatnipValueFormat.F64_NUMBER);
         ctx.emitIr(ir_add, {}, {});
 
         ctx.emitIr(ir_set_var, { target, variable }, {});
