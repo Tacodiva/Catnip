@@ -1,30 +1,28 @@
 import { CatnipProject } from "../runtime/CatnipProject";
-import { CatnipScript, CatnipScriptID } from "../runtime/CatnipScript";
-import { CatnipCompilerConfig, catnipCompilerConfigCreateDefault, catnipCompilerConfigPoppulate } from "./CatnipCompilerConfig";
+import { CatnipCompilerConfig, catnipCompilerConfigPoppulate } from "./CatnipCompilerConfig";
 import { CatnipIr, CatnipIrInfo } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
-import { LoopPassVariableInlining } from "./passes/PostAnalysisPassVariableInlining";
-import { PreWasmPassFunctionIndexAllocation } from "./passes/PreWasmPassFunctionIndexAllocation";
+import { PassVariableInlining } from "./passes/post-analysis/PassVariableInlining";
+import { PassFunctionIndexAllocation } from "./passes/pre-wasm/PassFunctionIndexAllocation";
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
-import { PreLoopPassAnalyzeFunctionCallers } from "./passes/PreAnalysisPassAnalyzeFunctionCallers";
-import { PreWasmPassTransientVariablePropagation } from "./passes/PreWasmPassTransientVariablePropagation";
-import { createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
+import { PassAnalyzeFunctionCallers } from "./passes/pre-analysis/PassAnalyzeFunctionCallers";
+import { PassTransientVariablePropagation } from "./passes/pre-wasm/PassTransientVariablePropagation";
+import { createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipSpriteID } from "../runtime/CatnipSprite";
 import { CatnipCompilerSubsystem, CatnipCompilerSubsystemClass } from "./CatnipCompilerSubsystem";
 import { CatnipIrExternalBranch } from "./CatnipIrBranch";
 import { CatnipOp } from "../ops";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
-import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
-import { LoopPassTypeAnalysis } from "./passes/AnalysisPassTypeAnalysis";
+import { LoopPassTypeAnalysis } from "./passes/analysis/AnalysisPassTypeAnalysis";
 import { CatnipEventID, CatnipEvents } from "../CatnipEvents";
 import { CatnipCompilerEvent } from "./CatnipCompilerEvent";
 import binaryen from "binaryen";
 import UTF16 from "../utf16";
 import { CatnipProjectModule, CatnipProjectModuleEvent } from "../runtime/CatnipProjectModule";
+import { CatnipCompilerPassContext } from "./CatnipCompilerPassContext";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -79,16 +77,16 @@ export class CatnipCompiler {
         this._passes = new Map();
         this._stage = null;
 
-        this.addPass(PreLoopPassAnalyzeFunctionCallers);
+        this.addPass(PassAnalyzeFunctionCallers);
 
         if (this.config.enable_optimization_variable_inlining)
-            this.addPass(LoopPassVariableInlining);
+            this.addPass(PassVariableInlining);
 
         if (this.config.enable_optimization_type_analysis)
             this.addPass(LoopPassTypeAnalysis)
 
-        this.addPass(PreWasmPassTransientVariablePropagation);
-        this.addPass(PreWasmPassFunctionIndexAllocation);
+        this.addPass(PassTransientVariablePropagation);
+        this.addPass(PassFunctionIndexAllocation);
 
         this.spiderModule = createModule();
         this.spiderMemory = this.spiderModule.importMemory("env", "memory");
@@ -185,20 +183,22 @@ export class CatnipCompiler {
 
         //////
 
-        const runPass = (stage: CatnipCompilerPassStage) => {
-            this._transitionStage(stage);
+        {
+            const analysisContext = new CatnipCompilerPassContext(this, this._irs);
 
-            for (const ir of this._irs) {
+            const runPass = (stage: CatnipCompilerPassStage) => {
+                this._transitionStage(stage);
+
                 for (const pass of this._passes.get(stage) ?? []) {
-                    pass.run(ir);
+                    pass.run(analysisContext);
                 }
             }
+
+            runPass(CatnipCompilerStage.PASS_PRE_ANALYSIS);
+            runPass(CatnipCompilerStage.PASS_ANALYSIS);
+            runPass(CatnipCompilerStage.PASS_POST_ANALYSIS);
+            runPass(CatnipCompilerStage.PASS_PRE_WASM_GEN);
         }
-        
-        runPass(CatnipCompilerStage.PASS_PRE_ANALYSIS);
-        runPass(CatnipCompilerStage.PASS_ANALYSIS);
-        runPass(CatnipCompilerStage.PASS_POST_ANALYSIS);
-        runPass(CatnipCompilerStage.PASS_PRE_WASM_GEN);
 
         //////
 
@@ -207,7 +207,7 @@ export class CatnipCompiler {
         for (const scriptIR of this._irs) {
 
             if (this.config.dump_ir)
-                console.log(""+scriptIR);
+                console.log("" + scriptIR);
 
             scriptIR.createWASM();
         }
@@ -252,9 +252,9 @@ export class CatnipCompiler {
             const binaryenModule = binaryen.readBinary(moduleSource);
 
             if (this.config.enable_optimization_binaryen) {
-                const optLevel = typeof(this.config.enable_optimization_binaryen) === "number" ?
-                 this.config.enable_optimization_binaryen : 4;
-                
+                const optLevel = typeof (this.config.enable_optimization_binaryen) === "number" ?
+                    this.config.enable_optimization_binaryen : 4;
+
                 binaryen.setOptimizeLevel(optLevel);
                 binaryenModule.optimize();
                 moduleSource = binaryenModule.emitBinary();
@@ -321,7 +321,7 @@ export class CatnipCompiler {
         // TODO There's definitly more stuff to clean up
         this._deleteFunctionsElement(functionsElement);
         this._irs.length = 0;
-        
+
         this._transitionStage(null);
 
         return projectModule;

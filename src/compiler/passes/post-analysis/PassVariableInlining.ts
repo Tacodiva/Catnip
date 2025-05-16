@@ -1,20 +1,21 @@
-import { CatnipVariable } from "../../runtime/CatnipVariable";
-import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
-import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { CatnipIrBasicBlock } from "../CatnipIrBasicBlock";
-import { CatnipIrFunction } from "../CatnipIrFunction";
-import { CatnipIrOp } from "../CatnipIrOp";
-import { CatnipIrTransientVariable } from "../CatnipIrTransientVariable";
-import { ir_transient_create } from "../ir/core/transient_create";
-import { ir_transient_load } from "../ir/core/transient_load";
-import { ir_transient_store } from "../ir/core/transient_store";
-import { ir_transient_tee } from "../ir/core/transient_tee";
-import { get_var_ir_inputs, ir_get_var } from "../ir/data/get_var";
-import { ir_set_var, set_var_ir_inputs } from "../ir/data/set_var";
-import { CatnipValueFormat } from "../CatnipValueFormat";
-import { CatnipCompilerPass } from "./CatnipCompilerPass";
-import { CatnipIrBranchType } from "../CatnipIrBranch";
-import { CatnipIr } from "../CatnipIr";
+import { CatnipVariable } from "../../../runtime/CatnipVariable";
+import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
+import { CatnipCompilerStage } from "../../CatnipCompilerStage";
+import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
+import { CatnipIrFunction } from "../../CatnipIrFunction";
+import { CatnipIrOp } from "../../CatnipIrOp";
+import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
+import { ir_transient_create } from "../../ir/core/transient_create";
+import { ir_transient_load } from "../../ir/core/transient_load";
+import { ir_transient_store } from "../../ir/core/transient_store";
+import { ir_transient_tee } from "../../ir/core/transient_tee";
+import { get_var_ir_inputs, ir_get_var } from "../../ir/data/get_var";
+import { ir_set_var, set_var_ir_inputs } from "../../ir/data/set_var";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
+import { CatnipCompilerPass } from "../CatnipCompilerPass";
+import { CatnipIrBranchType } from "../../CatnipIrBranch";
+import { CatnipIr } from "../../CatnipIr";
+import { CatnipCompilerPassContext } from "../../CatnipCompilerPassContext";
 
 enum VariableOperationType {
     GET,
@@ -180,15 +181,14 @@ class FunctionState {
     }
 }
 
-export const LoopPassVariableInlining: CatnipCompilerPass = {
+export const PassVariableInlining: CatnipCompilerPass = {
     stage: CatnipCompilerStage.PASS_POST_ANALYSIS,
 
-    run(ir: CatnipIr): void {
-
-        let currentBanchIndex = 0;
+    run(ctx: CatnipCompilerPassContext): void {
 
         function optimizeFunction(func: CatnipIrFunction) {
-
+            let currentBanchIndex = 0;
+            
             const visitedBranches: Map<CatnipIrBasicBlock, VariableCfgNode> = new Map();
 
             function createBranchVariableCfg(branch: CatnipIrBasicBlock): { head: VariableCfgNode, tail: VariableCfgNode | null } {
@@ -294,7 +294,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
             function getTransient(variable: CatnipVariable): CatnipIrTransientVariable {
                 let transient = variableTransients.get(variable);
                 if (transient === undefined) {
-                    transient = new CatnipIrTransientVariable(ir, CatnipValueFormat.F64, variable.name + "_inline");
+                    transient = new CatnipIrTransientVariable(func.ir, CatnipValueFormat.F64, variable.name + "_inline");
                     func.body.insertOpFirst(
                         ir_transient_create, { transient }, {}
                     );
@@ -449,7 +449,7 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
 
                 for (const [variable, operations] of node.variables) {
 
-                    if (!ir.compiler.config.enable_optimization_variable_inlining_force &&
+                    if (!ctx.compiler.config.enable_optimization_variable_inlining_force &&
                         (variableOptimizationCount.get(variable) ?? 0) <= 1)
                         continue;
 
@@ -548,6 +548,6 @@ export const LoopPassVariableInlining: CatnipCompilerPass = {
             optimizeNode(bodyNodes.head);
         }
 
-        ir.functions.forEach(optimizeFunction);
+        ctx.forEachFunction(optimizeFunction);
     }
 }

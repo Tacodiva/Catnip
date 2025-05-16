@@ -1,15 +1,16 @@
-import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
-import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { CatnipIr } from "../CatnipIr";
-import { CatnipIrBranchType } from "../CatnipIrBranch";
-import { CatnipCompilerPass } from "./CatnipCompilerPass";
+import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
+import { CatnipCompilerPassContext } from "../../CatnipCompilerPassContext";
+import { CatnipCompilerStage } from "../../CatnipCompilerStage";
+import { CatnipIr } from "../../CatnipIr";
+import { CatnipIrBranchType } from "../../CatnipIrBranch";
+import { CatnipCompilerPass } from "../CatnipCompilerPass";
 
-export const PreLoopPassAnalyzeFunctionCallers: CatnipCompilerPass = {
+export const PassAnalyzeFunctionCallers: CatnipCompilerPass = {
 
     stage: CatnipCompilerStage.PASS_PRE_ANALYSIS,
 
-    run(ir: CatnipIr): void {
-        ir.forEachOp(op => {
+    run(ctx: CatnipCompilerPassContext): void {
+        ctx.forEachOp(op => {
             for (const subbranchName in op.branches) {
                 const subbranch = op.branches[subbranchName];
 

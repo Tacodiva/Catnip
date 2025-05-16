@@ -1,14 +1,15 @@
 
-import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
-import { CatnipCompilerStack } from "../CatnipCompilerStack";
-import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { CatnipCompilerState } from "../CatnipCompilerState";
-import { CatnipIr } from "../CatnipIr";
-import { CatnipIrBasicBlock } from "../CatnipIrBasicBlock";
-import { CatnipIrBranchType } from "../CatnipIrBranch";
-import { CatnipIrFunction } from "../CatnipIrFunction";
-import { CatnipIrInputOp } from "../CatnipIrOp";
-import { CatnipCompilerPass } from "./CatnipCompilerPass";
+import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
+import { CatnipCompilerPassContext } from "../../CatnipCompilerPassContext";
+import { CatnipCompilerStack } from "../../CatnipCompilerStack";
+import { CatnipCompilerStage } from "../../CatnipCompilerStage";
+import { CatnipCompilerState } from "../../CatnipCompilerState";
+import { CatnipIr } from "../../CatnipIr";
+import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
+import { CatnipIrBranchType } from "../../CatnipIrBranch";
+import { CatnipIrFunction } from "../../CatnipIrFunction";
+import { CatnipIrInputOp } from "../../CatnipIrOp";
+import { CatnipCompilerPass } from "../CatnipCompilerPass";
 
 interface StateInfo {
     stack: CatnipCompilerStack;
@@ -193,9 +194,7 @@ export const LoopPassTypeAnalysis: CatnipCompilerPass = {
 
     stage: CatnipCompilerStage.PASS_ANALYSIS,
 
-    run(ir: CatnipIr): void {
-        for (const func of ir.functions) {
-            doTypeAnalysis(func as CatnipIrFunction);
-        }
+    run(ctx: CatnipCompilerPassContext): void {
+        ctx.forEachFunction(doTypeAnalysis);
     }
 }
