@@ -350,9 +350,19 @@ type SB3BlockTypeDefinition = {
             "X": ProjectSB3Input,
         }
     },
+    "motion_changexby": {
+        inputs: {
+            "DX": ProjectSB3Input,
+        }
+    },
     "motion_sety": {
         inputs: {
             "Y": ProjectSB3Input,
+        }
+    },
+    "motion_changeyby": {
+        inputs: {
+            "DY": ProjectSB3Input,
         }
     },
     "motion_xposition": {},
