@@ -3,6 +3,7 @@ import { createLogger, Logger } from "./log";
 import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./ops";
 import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
 import { op_const } from "./ops/core/const";
+import { op_nop } from "./ops/core/nop";
 import { CatnipProcedureID } from "./ops/procedure/procedure_definition";
 import { CatnipCostumeDesc } from "./runtime/CatnipCostume";
 import { CatnipListDesc, CatnipListID } from "./runtime/CatnipList";
@@ -15,6 +16,9 @@ import { ProjectSB3, ProjectSB3Block, ProjectSB3BlockOpcode, ProjectSB3Field, Pr
 import { SB3ReadLogger } from "./sb3_logger";
 import { sb3_ops, SB3CommandBlockDeserializer, SB3HatBlockDeserializer, SB3InputBlockDeserializer } from "./sb3_ops";
 
+export interface SB3ReadConfig {
+    allow_unknown_opcodes: boolean
+}
 
 export interface SB3VariableInfo {
     readonly spriteID: CatnipSpriteID;
@@ -39,6 +43,8 @@ export interface SB3ProcedureInfo {
 }
 
 export class SB3ReadMetadata {
+    public readonly config: SB3ReadConfig;
+
     private _spriteCount: number;
     private _scriptCount: number;
 
@@ -51,7 +57,8 @@ export class SB3ReadMetadata {
     private _listMap: Map<string, SB3ListInfo>;
     private _listCount: number;
 
-    public constructor() {
+    public constructor(config: SB3ReadConfig) {
+        this.config = config;
         this._spriteCount = 0;
         this._scriptCount = 0;
         this._variableCount = 0;
@@ -171,7 +178,7 @@ export class SB3ScriptReader {
         return this.meta.getList(listID);
     }
 
-    private _getBlockInfo<TOpcode extends ProjectSB3BlockOpcode>(opcode: TOpcode): { type: BlockType.HAT, deserializer: SB3HatBlockDeserializer<TOpcode> } |
+    private _getBlockInfo<TOpcode extends ProjectSB3BlockOpcode>(opcode: TOpcode, expected: BlockType): { type: BlockType.HAT, deserializer: SB3HatBlockDeserializer<TOpcode> } |
     { type: BlockType.COMMAND, deserializer: SB3CommandBlockDeserializer<TOpcode> } |
     { type: BlockType.INPUT, deserializer: SB3InputBlockDeserializer<TOpcode> } {
         const hatBlockDeserializer = sb3_ops.hatBlocks.get(opcode);
@@ -201,7 +208,28 @@ export class SB3ScriptReader {
             }
         }
 
-        throw new Error(`Unknown SB3 block opcode '${opcode}'.`);
+        if (this.meta.config.allow_unknown_opcodes) {
+            SB3ReadLogger.warn(`Unknown SB3 block opcode '${opcode}'.`);
+
+            switch (expected) {
+                case BlockType.COMMAND:
+                    return {
+                        type: BlockType.COMMAND,
+                        deserializer: (ctx, block) => op_nop.create({})
+                    }
+                case BlockType.INPUT:
+                    return {
+                        type: BlockType.INPUT,
+                        deserializer: (ctx, block) => op_const.create({ value: 0 })
+                    }
+                case BlockType.HAT:
+                    throw new Error(`Unknown SB3 hat not supported ('${opcode}').`);
+
+            }
+        } else {
+            throw new Error(`Unknown SB3 block opcode '${opcode}'.`);
+        }
+
     }
 
     public getBlock(id: string): ProjectSB3Block {
@@ -217,7 +245,7 @@ export class SB3ScriptReader {
         for (const hatBlock of this.blocks.values()) {
             if (!hatBlock.topLevel) continue;
 
-            const hatBlockInfo = this._getBlockInfo(hatBlock.opcode);
+            const hatBlockInfo = this._getBlockInfo(hatBlock.opcode, BlockType.HAT);
 
             if (hatBlockInfo.type !== BlockType.HAT) continue;
 
@@ -299,7 +327,7 @@ export class SB3ScriptReader {
         while (stackID !== null) {
             const block = this.getBlock(stackID);
 
-            const blockInfo = this._getBlockInfo(block.opcode);
+            const blockInfo = this._getBlockInfo(block.opcode, BlockType.COMMAND);
 
             if (blockInfo.type !== BlockType.COMMAND)
                 throw new Error(`Unexpected input ${(blockInfo.type === BlockType.HAT ? "hat" : "input")} type '${block.opcode}' in block stack (block '${stackID}').`);
@@ -325,7 +353,7 @@ export class SB3ScriptReader {
         }
 
         const block = this.getBlock(inputOrBlockID);
-        const blockInfo = this._getBlockInfo(block.opcode);
+        const blockInfo = this._getBlockInfo(block.opcode, BlockType.INPUT);
 
         if (blockInfo.type !== BlockType.INPUT)
             throw new Error(`Unexpected input ${(blockInfo.type === BlockType.HAT ? "hat" : "command")} type '${block.opcode}' in input (block '${inputOrBlockID}').`);
@@ -419,11 +447,20 @@ function readTargetMeta(meta: SB3ReadMetadata, target: ProjectSB3Target): Catnip
     };
 }
 
-export function readSB3(sb3: ProjectSB3): CatnipProjectDesc {
+function createDefaultSB3ReadConfig(): SB3ReadConfig {
+    return {
+        allow_unknown_opcodes: false
+    }
+}
+
+export function readSB3(sb3: ProjectSB3, partialConfig?: Partial<SB3ReadConfig>): CatnipProjectDesc {
+
+    let config: SB3ReadConfig = partialConfig ? Object.assign(createDefaultSB3ReadConfig(), partialConfig) : createDefaultSB3ReadConfig();
+
     // const sb3Start = 
     console.time("SB3 Parse");
 
-    const meta = new SB3ReadMetadata();
+    const meta = new SB3ReadMetadata(config);
 
     const spritesDesc: CatnipSpriteDesc[] = [];
 

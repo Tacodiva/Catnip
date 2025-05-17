@@ -47,7 +47,7 @@ export class CatnipCompilerValue {
     }
 
     public or(other: CatnipCompilerValue): CatnipCompilerValue {
-        if (this.isConstant && other.isConstant) {
+        if (this.isConstant && other.isConstant) { // TODO Check format and value?
             if (this._constantValue === other._constantValue)
                 return this;
         }

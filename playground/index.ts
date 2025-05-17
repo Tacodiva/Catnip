@@ -5,8 +5,8 @@ import { CatnipRenderer } from "../renderer";
 async function main() {
     const moduleRequest = await fetch('catnip.wasm');
     // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
-    const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
+    const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
@@ -16,7 +16,8 @@ async function main() {
 
     const project = await run(module, sb3File, renderer);
     const projectModule = await project.compile({
-        enable_optimization_binaryen: false
+        // enable_optimization_binaryen: false,
+        enable_optimization_variable_inlining: false,
     });
 
     document.addEventListener("keydown", (event) => {

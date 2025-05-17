@@ -3,7 +3,7 @@ import { CatnipCompilerConfig, catnipCompilerConfigPoppulate } from "./CatnipCom
 import { CatnipIr, CatnipIrInfo } from "./CatnipIr";
 import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
 import { PassVariableInlining } from "./passes/post-analysis/PassVariableInlining";
-import { PassFunctionIndexAllocation } from "./passes/pre-wasm/PassFunctionIndexAllocation";
+import { PassFunctionIndexAllocation } from "./passes/pre-analysis/PassFunctionIndexAllocation";
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PassAnalyzeFunctionCallers } from "./passes/pre-analysis/PassAnalyzeFunctionCallers";
 import { PassTransientVariablePropagation } from "./passes/pre-wasm/PassTransientVariablePropagation";

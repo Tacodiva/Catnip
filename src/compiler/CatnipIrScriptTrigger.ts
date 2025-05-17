@@ -1,5 +1,5 @@
 import { CatnipCompilerIrGenContext } from "./CatnipCompilerIrGenContext";
-import { CatnipIr } from "./CatnipIr";
+import { CatnipIr, CatnipIrParameterInfo } from "./CatnipIr";
 import { ir_barrier } from "./ir/core/barrier";
 
 
@@ -20,6 +20,10 @@ export abstract class CatnipIrScriptTriggerType<TInputs extends CatnipIrScriptTr
     }
 
     public abstract requiresFunctionIndex(ir: CatnipIr, inputs: TInputs): boolean;
+
+    public getParameters(ir: CatnipIr, inputs: TInputs): CatnipIrParameterInfo[] {
+        return [];
+    }
 
     public requiresReturnLocation(ir: CatnipIr, inputs: TInputs) {
         return false;

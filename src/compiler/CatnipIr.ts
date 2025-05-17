@@ -25,12 +25,24 @@ export interface CatnipIrInfo {
     trigger: CatnipScriptTrigger;
 }
 
+export interface CatnipIrParameterInfo {
+    name: string;
+    format: CatnipValueFormat;
+}
+
+export interface CatnipIrParameter {
+    readonly name: string;
+    readonly variable: CatnipIrTransientVariable;
+}
+
 export class CatnipIr {
 
     public readonly compiler: CatnipCompiler;
     public readonly spriteID: CatnipSpriteID;
     public readonly scriptID: CatnipScriptID;
     public readonly commands: CatnipCommandList;
+
+    public readonly parameters: CatnipIrParameter[];
 
     private _entrypoint: CatnipIrFunction | null;
 
@@ -89,6 +101,15 @@ export class CatnipIr {
 
         this._returnLocationVariable = null;
         this.isWarp = this.trigger.type.isWarp(this, this.trigger.inputs);
+
+        let parameters: CatnipIrParameter[] = [];
+        for (const parameter of this.trigger.type.getParameters(this, this.trigger.inputs)) {
+            parameters.push({
+                name: parameter.name,
+                variable: new CatnipIrTransientVariable(this, parameter.format, )
+            });
+        }
+        this.parameters = parameters;
 
         this._preAnalysis = null;
     }
@@ -295,7 +316,7 @@ export class CatnipIr {
                                 string += "'";
                             }
                             break;
-                        case CatnipIrExternalValueSourceType.PROCEDURE_INPUT:
+                        case CatnipIrExternalValueSourceType.IR_PARAMETER:
                             string += "PROCEDURE_INPUT";
                             break;
                         case CatnipIrExternalValueSourceType.RETURN_LOCATION:

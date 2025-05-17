@@ -227,6 +227,7 @@ export class CatnipCompilerIrGenContext {
             inputs,
             branches,
             operands,
+            ir: this.ir,
             next: null,
             prev: null,
             block: block ?? this._body,
@@ -339,7 +340,7 @@ export class CatnipCompilerIrGenContext {
         if (arg instanceof CatnipIrBasicBlock) {
             body = arg;
         } else {
-            body = new CatnipIrBasicBlock();
+            body = new CatnipIrBasicBlock(this.ir);
             if (arg !== undefined && arg !== null) {
                 const oldBranch = this._branch;
                 this._switchToBlock(body);

@@ -33,8 +33,7 @@ export class CatnipTarget {
 
     public readonly structWrapper: WasmStructWrapper<typeof CatnipWasmStructTarget>;
 
-    private _variables: CatnipTargetVariableDesc[] | null;
-    private _lists: CatnipTargetListDesc[] | null;
+    private _variables: Map<CatnipVariableID, number | string>;
 
     private _currentCostume: number;
 
@@ -48,15 +47,14 @@ export class CatnipTarget {
                 this.sprite.structWrapper.ptr
             ), () => this.runtime.memory);
 
-        this._variables = desc.variables;
-        this._lists = desc.lists;
+        this._variables = new Map();
         this._currentCostume = desc.currentCostume;
 
         const variableTable = this.structWrapper
             .getMemberWrapper("variable_table")
             .getInnerWrapper();
 
-        for (let { id, value } of this._variables) {
+        for (let { id, value } of desc.variables) {
             const variable = this.sprite.getVariable(id);
             if (variable === undefined) continue; // TODO Warn?
 
@@ -71,13 +69,15 @@ export class CatnipTarget {
                 variableTable.getElementWrapper(variable.index),
                 value
             );
+
+            this._variables.set(id, value);
         }
 
         const listTable = this.structWrapper
             .getMemberWrapper("list_table")
             .getInnerWrapper();
 
-        for (const { id, value } of this._lists) {
+        for (const { id, value } of desc.lists) {
             const list = this.sprite.getList(id);
             if (list === undefined) continue; // TODO Warn?
 
@@ -106,5 +106,11 @@ export class CatnipTarget {
         }
 
         this.structWrapper.setMember("costume", this._currentCostume);
+    }
+
+    public getVariableValue(variableID: CatnipVariableID): string | number {
+        if (!this._variables.has(variableID))
+            throw new Error(`Target does not have variable with id '${variableID}'.`);
+        return this._variables.get(variableID)!;
     }
 }

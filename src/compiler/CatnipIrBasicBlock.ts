@@ -3,10 +3,12 @@ import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipIrFunction } from "./CatnipIrFunction";
 import { CatnipIrOpBranches, CatnipIrOpBranchesDefinition, CatnipIrOpInputs, CatnipIrOpType, CatnipIrOp } from "./CatnipIrOp";
 import { CatnipIrBranchType } from "./CatnipIrBranch";
+import { CatnipIr } from "./CatnipIr";
 
 export class CatnipIrBasicBlock {
 
     private _func: CatnipIrFunction | null;
+    public readonly ir: CatnipIr;
 
     public get func(): CatnipIrFunction {
         CatnipCompilerLogger.assert(
@@ -25,7 +27,8 @@ export class CatnipIrBasicBlock {
 
     public stack: CatnipCompilerStack;
 
-    public constructor(fn?: CatnipIrFunction) {
+    public constructor(ir: CatnipIr, fn?: CatnipIrFunction) {
+        this.ir = ir;
         this._func = fn ?? null;
         this.head = null;
         this.tail = null;
@@ -111,6 +114,7 @@ export class CatnipIrBasicBlock {
     >(type: TOpType, inputs: TInputs, branches: CatnipIrOpBranches<TBranches>): CatnipIrOp<TInputs, TBranches, TOpType> {
         const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
             type, inputs, branches,
+            ir: this.ir,
 
             block: this,
             next: this.head,
@@ -140,6 +144,7 @@ export class CatnipIrBasicBlock {
 
         const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
             type, inputs, branches,
+            ir: this.ir,
 
             block: this,
             next: null,
@@ -184,6 +189,7 @@ export class CatnipIrBasicBlock {
 
         const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
             type, inputs, branches,
+            ir: this.ir,
 
             block: this,
             next: after,
@@ -219,6 +225,7 @@ export class CatnipIrBasicBlock {
 
         const op: CatnipIrOp<TInputs, TBranches, TOpType> = {
             type, inputs, branches,
+            ir: this.ir,
 
             block: this,
             next: before.next,

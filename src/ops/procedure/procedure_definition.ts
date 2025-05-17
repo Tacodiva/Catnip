@@ -1,8 +1,7 @@
-import { CatnipIr } from "../../compiler/CatnipIr";
+import { CatnipIr, CatnipIrParameterInfo } from "../../compiler/CatnipIr";
 import { CatnipIrScriptTrigger } from "../../compiler/CatnipIrScriptTrigger";
-import { CatnipIrTransientVariable } from "../../compiler/CatnipIrTransientVariable";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { CatnipIrProcedureTriggerArg, ir_procedure_trigger } from "../../compiler/ir/procedure/procedure_trigger";
+import { ir_procedure_trigger } from "../../compiler/ir/procedure/procedure_trigger";
 import { ProjectSB3Block } from "../../sb3";
 import { registerSB3HatBlock } from "../../sb3_ops";
 import { SB3ProcedureArgumentInfo } from "../../sb3_reader";
@@ -24,13 +23,12 @@ export type procedure_trigger_inputs = {
 export const procedure_trigger = new class extends CatnipScriptTriggerType<procedure_trigger_inputs> {
 
     public createTriggerIR(ir: CatnipIr, inputs: procedure_trigger_inputs): CatnipIrScriptTrigger {
-        const args: CatnipIrProcedureTriggerArg[] = [];
+        const args: CatnipIrParameterInfo[] = [];
 
         for (const arg of inputs.args) {
             args.push({
                 format: arg.format,
-                name: arg.name,
-                variable: new CatnipIrTransientVariable(ir, arg.format, arg.name)
+                name: arg.name
             });
         }
 

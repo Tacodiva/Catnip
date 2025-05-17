@@ -8,6 +8,7 @@ import { CatnipIrTransientVariable } from "./CatnipIrTransientVariable";
 import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipList } from "../runtime/CatnipList";
+import { CatnipIr } from "./CatnipIr";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
@@ -24,6 +25,7 @@ export interface CatnipIrOp<
     readonly type: TOpType;
     readonly inputs: TInputs;
     readonly branches: CatnipIrOpBranches<TBranches>;
+    readonly ir: CatnipIr;
     block: CatnipIrBasicBlock;
 
     operands: CatnipCompilerValue[];

@@ -14,7 +14,9 @@ export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, 
 
     const projectJSON = await myzip.file("project.json")!.async("string");
 
-    const projectDesc = readSB3(JSON.parse(projectJSON));
+    const projectDesc = readSB3(JSON.parse(projectJSON), {
+        allow_unknown_opcodes: true
+    });
 
     const runtime = await CatnipRuntimeModule.create(runtimeModule, renderer ?? new DummyRenderer());
 

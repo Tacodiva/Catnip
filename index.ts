@@ -11,10 +11,11 @@ async function main() {
     // const projectFile = await fs.readFile("public/Memory Corruption.sb3");
     // const projectFile = await fs.readFile("public/lines.sb3");
     // const projectFile = await fs.readFile("public/Mandlebrot Set Benchmark.sb3");
-    const projectFile = await fs.readFile("public/Project.sb3");
+    // const projectFile = await fs.readFile("public/Project.sb3");
     // const projectFile = await fs.readFile("public/Variable inlining bug.sb3");
     // const projectFile = await fs.readFile("public/Conway.sb3");    
     // const projectFile = await fs.readFile("public/fib.sb3");
+    const projectFile = await fs.readFile("public/LOS.sb3");
 
     const project = await run(catnipModule, projectFile);
     const projectModule = await project.compile({

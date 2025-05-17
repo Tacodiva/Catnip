@@ -2,9 +2,9 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCompilerLogger } from "../../compiler/CatnipCompilerLogger";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { ir_const } from "../../compiler/ir/core/const";
 import { ir_transient_load } from "../../compiler/ir/core/transient_load";
-import { CatnipIrProcedureTriggerArg, ir_procedure_trigger, ir_procedure_trigger_inputs } from "../../compiler/ir/procedure/procedure_trigger";
+import { ir_procedure_arg_get } from "../../compiler/ir/procedure/procedure_arg_get";
+import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "../../compiler/ir/procedure/procedure_trigger";
 import { SB3ReadLogger } from "../../sb3_logger";
 import { registerSB3InputBlock } from "../../sb3_ops";
 import { CatnipInputOpType, CatnipOp } from "../CatnipOp";
@@ -16,24 +16,14 @@ export const op_procedure_arg_get = new class extends CatnipInputOpType<procedur
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: procedure_arg_get_inputs) {
 
-        const trigger = ctx.ir.trigger;
+        let paramIdx;
 
-        let procedureArguments: CatnipIrProcedureTriggerArg[];
-
-        if (trigger.type !== ir_procedure_trigger) {
-            procedureArguments = [];
-        } else {
-            procedureArguments = (ctx.ir.trigger.inputs as ir_procedure_trigger_inputs).args;
+        for (paramIdx = ctx.ir.parameters.length - 1; paramIdx >= 0; paramIdx--) {
+            if (ctx.ir.parameters[paramIdx].name === inputs.argName) break;
         }
 
-        let argIdx;
-
-        for (argIdx = procedureArguments.length - 1; argIdx >= 0; argIdx--) {
-            if (procedureArguments[argIdx].name === inputs.argName) break;
-        }
-
-        if (argIdx === -1) {
-            CatnipCompilerLogger.warn(`Can't find procedure argument with name '${inputs.argName}' in script ${ctx.ir.entrypoint.name}`);
+        if (paramIdx === -1) {
+            CatnipCompilerLogger.warn(`Can't find parameter with name '${inputs.argName}' in script ${ctx.ir.entrypoint.name}`);
 
             if (inputs.format === CatnipValueFormat.I32_BOOLEAN) {
                 ctx.emitIrConst(false, CatnipValueFormat.I32_BOOLEAN);
@@ -42,8 +32,7 @@ export const op_procedure_arg_get = new class extends CatnipInputOpType<procedur
                 ctx.emitIrConst("", CatnipValueFormat.F64);
             }
         } else {
-            const argVariable = procedureArguments[argIdx].variable;
-            ctx.emitIr(ir_transient_load, { transient: argVariable }, {});
+            ctx.emitIr(ir_procedure_arg_get, { paramIndex: paramIdx }, {});
         }
     }
 }

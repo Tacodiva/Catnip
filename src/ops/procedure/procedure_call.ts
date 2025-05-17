@@ -19,6 +19,7 @@ import { CatnipCompilerProcedureSubsystem } from "../../compiler/subsystems/Catn
 import { CatnipIrScriptProcedureTrigger } from "../../compiler/ir/procedure/procedure_trigger";
 import { CatnipValueFormatUtils } from "../../compiler/CatnipValueFormatUtils";
 import { op_breakpoint } from "../core/breakpoint";
+import { CatnipCompiler } from "../../compiler/CatnipCompiler";
 
 type procedure_call_inputs = {
     sprite: CatnipSpriteID,
@@ -39,17 +40,22 @@ export const op_procedure_call = new class extends CatnipCommandOpType<procedure
     }
 
     public preAnalyze(ir: CatnipIr, inputs: procedure_call_inputs): void {
+        // In the pre-analysis phase, we make sure the right varient of the procedure exists
+        this._getTarget(ir, inputs);
+    }
+
+    private _getTarget(ir: CatnipIr, inputs: procedure_call_inputs): CatnipIr {
+        const subsystem = ir.compiler.getSubsystem(CatnipCompilerProcedureSubsystem);
+
         if (ir.isWarp && !inputs.procedureIsWarp) {
             // We need to make sure a warp varient of the procedure exists.
+            let varient = subsystem.tryGetProcedureInfo(inputs.sprite, inputs.procedure, true);
 
-            const subsystem = ir.compiler.getSubsystem(CatnipCompilerProcedureSubsystem);
-
-            if (subsystem.tryGetProcedureInfo(inputs.sprite, inputs.procedure, true) === undefined) {
+            if (varient === undefined) {
                 // The varient doesn't exit, let's create it!
-
                 const noWarpVarient = subsystem.getProcedureInfo(inputs.sprite, inputs.procedure, false);
 
-                ir.compiler.createIR({
+                return ir.compiler.createIR({
                     commands: noWarpVarient.ir.commands,
                     scriptID: noWarpVarient.ir.scriptID,
                     spriteID: noWarpVarient.ir.spriteID,
@@ -59,21 +65,26 @@ export const op_procedure_call = new class extends CatnipCommandOpType<procedure
                         warp: true
                     })
                 });
+            } else {
+                return varient.ir;
             }
         }
+
+        return subsystem.getProcedureInfo(inputs.sprite, inputs.procedure, inputs.procedureIsWarp).ir;
     }
 
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: procedure_call_inputs): void {
-        const warpTarget = ctx.isWarp || inputs.procedureIsWarp;
+
+        const target = this._getTarget(ctx.ir, inputs);
 
         for (let i = 0; i < inputs.args.length; i++) {
             const argInput = inputs.args[i];
 
             ctx.emitInput(argInput.input, argInput.format);
-            ctx.emitIr(ir_procedure_arg_set, { argIdx: i, sprite: inputs.sprite, isWarp: warpTarget, procedure: inputs.procedure }, {});
+            ctx.emitIr(ir_procedure_arg_set, { target, argIdx: i }, {});
         }
 
-        ctx.emitIr(ir_branch, {}, { branch: new CatnipIrProcedureBranch(ctx.compiler, inputs.sprite, inputs.procedure, warpTarget) });
+        ctx.emitIr(ir_branch, {}, { branch: new CatnipIrProcedureBranch(ctx.compiler, target.spriteID, inputs.procedure, target.isWarp) });
     }
 }
 

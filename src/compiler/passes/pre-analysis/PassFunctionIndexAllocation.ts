@@ -8,7 +8,7 @@ import { CatnipCompilerPass } from "../CatnipCompilerPass";
 
 export const PassFunctionIndexAllocation: CatnipCompilerPass = {
 
-    stage: CatnipCompilerStage.PASS_PRE_WASM_GEN,
+    stage: CatnipCompilerStage.PASS_PRE_ANALYSIS,
 
     run(ctx: CatnipCompilerPassContext): void {
 
