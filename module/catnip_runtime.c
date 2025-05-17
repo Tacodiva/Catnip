@@ -4,6 +4,10 @@
 #include "./catnip_runtime_gc.c"
 #include "./catnip_runtime_render.c"
 
+void update_time(catnip_runtime *rt) {
+  rt->time = catnip_import_time();
+}
+
 catnip_runtime *catnip_runtime_new() {
 
   catnip_runtime *rt = catnip_mem_alloc(sizeof(catnip_runtime));
@@ -33,12 +37,17 @@ catnip_runtime *catnip_runtime_new() {
   catnip_mem_zero(rt->io, sizeof(catnip_io));
 
   rt->random_state = catnip_mem_alloc(sizeof(catnip_math_random_state));
+  
+  update_time(rt);
+  rt->timer_start = rt->time;
 
   return rt;
 }
 
 void catnip_runtime_tick(catnip_runtime *runtime) {
   CATNIP_ASSERT(runtime != CATNIP_NULL);
+
+  update_time(runtime);
 
   runtime->num_active_threads = 0;
 

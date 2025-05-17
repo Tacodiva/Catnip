@@ -445,6 +445,11 @@ type SB3BlockTypeDefinition = {
         fields: {
             "STOP_OPTION": ProjectSB3Field<null, SB3BlockControlStopOption>
         }
+    },
+    "control_wait": {
+        inputs: {
+            "DURATION": ProjectSB3Input
+        }
     }
 
     "operator_add": {
@@ -569,6 +574,8 @@ type SB3BlockTypeDefinition = {
     "sensing_mousex": {},
     "sensing_mousey": {},
     "sensing_mousedown": {},
+    "sensing_timer": {},
+    "sensing_resettimer": {}
 
     "data_variable": {
         fields: {

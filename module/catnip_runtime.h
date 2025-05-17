@@ -79,6 +79,9 @@ struct catnip_runtime {
 
     catnip_io *io;
     catnip_math_random_state* random_state;
+    
+    catnip_ui64_t time;
+    catnip_ui64_t timer_start;
 };
 
 catnip_runtime *catnip_runtime_new();

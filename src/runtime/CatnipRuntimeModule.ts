@@ -35,7 +35,8 @@ export class CatnipRuntimeModule {
                     if (strLength === 0) str = ""; 
                     else str = UTF16.decode(runtimeModule.memory.buffer.slice(strPtr, strPtr + (strLength * 2)));
                     return runtimeModule.createCanonHString(str);
-                }
+                },
+                catnip_import_time: () => BigInt(Date.now()),
             },
 
             env: {
