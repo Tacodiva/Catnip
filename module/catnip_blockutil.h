@@ -23,9 +23,10 @@ void catnip_blockutil_pen_update_thsv(catnip_target *target);
 void catnip_blockutil_pen_update_argb(catnip_target *target);
 void catnip_blockutil_pen_down(catnip_target *target);
 
-void catnip_blockutil_list_push(catnip_list *list, catnip_f64_t value);
+void catnip_blockutil_list_push(catnip_list *list, catnip_value value);
 void catnip_blockutil_list_delete_at(catnip_list *list, catnip_i32_t value);
-void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catnip_f64_t value);
+void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catnip_value value);
+catnip_ui32_t catnip_blockutil_list_index_of(catnip_runtime *runtime, catnip_list *list, catnip_value value);
 
 void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume);
 

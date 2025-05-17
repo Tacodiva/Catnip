@@ -83,6 +83,8 @@ export const CatnipRuntimeModuleFunctions = {
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_blockutil_list_insert_at: fn<[index: SpiderNumberType.i32, value: SpiderNumberType.f64, list: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.f64, SpiderNumberType.i32], undefined),
+    catnip_blockutil_list_index_of: fn<[value: SpiderNumberType.f64, list: SpiderNumberType.i32, runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.f64, SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_blockutil_costume_set: fn<[costumeString: SpiderNumberType.i32, target: SpiderNumberType.i32]>
         ([SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_blockutil_operator_random: fn<[a: SpiderNumberType.f64, b: SpiderNumberType.f64, runtime: SpiderNumberType.i32], SpiderNumberType.f64>

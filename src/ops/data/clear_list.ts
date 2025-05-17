@@ -6,7 +6,7 @@ import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { CatnipListID } from "../../runtime/CatnipList";
-import { ir_clear_list } from "../../compiler/ir/data/ir_clear_list";
+import { ir_clear_list } from "../../compiler/ir/data/clear_list";
 
 type clear_list_inputs = { sprite: CatnipSpriteID, list: CatnipListID };
 

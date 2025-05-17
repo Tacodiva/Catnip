@@ -134,7 +134,7 @@ void CATNIP_EXPORT(catnip_blockutil_pen_down)(catnip_target *thread) {
 }
 
 void CATNIP_EXPORT(catnip_blockutil_list_push)(catnip_f64_t value, catnip_list *list) {
-  catnip_blockutil_list_push(list, value);
+  catnip_blockutil_list_push(list, (catnip_value) value);
 }
 
 void CATNIP_EXPORT(catnip_blockutil_list_delete_at)(catnip_i32_t index, catnip_list *list) {
@@ -142,7 +142,11 @@ void CATNIP_EXPORT(catnip_blockutil_list_delete_at)(catnip_i32_t index, catnip_l
 }
 
 void CATNIP_EXPORT(catnip_blockutil_list_insert_at)(catnip_i32_t index, catnip_f64_t value, catnip_list *list) {
-  catnip_blockutil_list_insert_at(list, index, value);
+  catnip_blockutil_list_insert_at(list, index, (catnip_value) value);
+}
+
+catnip_ui32_t CATNIP_EXPORT(catnip_blockutil_list_index_of)(catnip_f64_t value, catnip_list *list, catnip_runtime *runtime) {
+  return catnip_blockutil_list_index_of(runtime, list, (catnip_value) value);
 }
 
 void CATNIP_EXPORT(catnip_blockutil_costume_set)(catnip_hstring *costume, catnip_target *target) {

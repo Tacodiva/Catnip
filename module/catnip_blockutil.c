@@ -73,6 +73,7 @@ catnip_i32_t catnip_blockutil_value_cmp(catnip_runtime *runtime, catnip_value a,
   return 0;
 }
 
+// Any changes to this should be reflected in catnip_blockutil_list_index_of
 catnip_bool_t catnip_blockutil_value_eq(catnip_runtime *runtime, catnip_value a, catnip_value b) {
   catnip_f64_t aNumber = catnip_value_to_number(runtime, a);
   catnip_f64_t bNumber = catnip_value_to_number(runtime, b);
@@ -377,16 +378,55 @@ void catnip_blockutil_pen_down(catnip_target *target) {
   );
 }
 
-void catnip_blockutil_list_push(catnip_list *list, catnip_f64_t value) {
-  CATNIP_LIST_ADD(list, catnip_f64_t, value);
+void catnip_blockutil_list_push(catnip_list *list, catnip_value value) {
+  CATNIP_LIST_ADD(list, catnip_value, value);
 }
 
 void catnip_blockutil_list_delete_at(catnip_list *list, catnip_i32_t index) {
-  CATNIP_LIST_REMOVE(list, catnip_f64_t, index);
+  CATNIP_LIST_REMOVE(list, catnip_value, index);
 }
 
-void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catnip_f64_t value) {
-  CATNIP_LIST_INSERT(list, catnip_f64_t, index, value);
+void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catnip_value value) {
+  CATNIP_LIST_INSERT(list, catnip_value, index, value);
+}
+
+catnip_ui32_t catnip_blockutil_list_index_of(catnip_runtime *runtime, catnip_list *list, catnip_value value) {
+
+  catnip_f64_t valueNumber = catnip_value_to_number(runtime, value);
+  catnip_bool_t valueIsNumber = !CATNIP_F64_ISNAN(valueNumber);
+
+  catnip_hstring *valueString = CATNIP_NULL;
+
+  for (catnip_ui32_t i = 0; i < CATNIP_LIST_LENGTH(list, catnip_value); i++) {
+    
+    catnip_value compare = CATNIP_LIST_GET(list, catnip_value, i);
+
+    if (valueIsNumber) {
+      catnip_f64_t compareNumber = catnip_value_to_number(runtime, compare);
+
+      if (!CATNIP_F64_ISNAN(compareNumber)) {
+
+        if (valueNumber == compareNumber) {
+          return i + 1;
+        }
+
+        continue;
+      }
+    }
+
+    if (valueString == CATNIP_NULL) {
+      valueString = catnip_value_to_string(runtime, value);
+    }
+
+    catnip_hstring *compareString = catnip_value_to_string(runtime, compare);
+
+    if (catnip_blockutil_hstring_cmp(valueString, compareString) == 0) {
+      return i + 1;
+    }
+  }
+
+  // No match
+  return 0;
 }
 
 void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume) {

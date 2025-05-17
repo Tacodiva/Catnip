@@ -632,7 +632,23 @@ type SB3BlockTypeDefinition = {
         fields: {
             "LIST": ProjectSB3Field<string>
         }
-    }
+    },
+    "data_itemnumoflist": {
+        inputs: {
+            "ITEM": ProjectSB3Input,
+        },
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
+    },
+    "data_listcontainsitem": {
+        inputs: {
+            "ITEM": ProjectSB3Input,
+        },
+        fields: {
+            "LIST": ProjectSB3Field<string>
+        }
+    },
 
     "procedures_definition": {
         inputs: {
