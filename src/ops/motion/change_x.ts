@@ -7,6 +7,7 @@ import { CatnipIr } from "../../compiler/CatnipIr";
 import { ir_set_xy } from "../../compiler/ir/motion/set_xy";
 import { ir_get_xy } from "../../compiler/ir/motion/get_xy";
 import { ir_add } from "../../compiler/ir/operators/add";
+import { ir_request_redraw } from "../../compiler/ir/core/request_redraw";
 
 type change_x_inputs = { x: CatnipInputOp };
 
@@ -21,6 +22,7 @@ export const op_change_x = new class extends CatnipCommandOpType<change_x_inputs
         ctx.emitIr(ir_add, {}, {});
         ctx.emitIr(ir_get_xy, { axis: "y" }, {});
         ctx.emitIr(ir_set_xy, { }, {});
+        ctx.emitIr(ir_request_redraw, {}, {});
     }
 }
 

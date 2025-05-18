@@ -169,6 +169,9 @@ export class CatnipRuntimeModule {
         runtimeState.setMember("state0", rngState[0]);
         runtimeState.setMember("state0", rngState[1]);
 
+        runtime.setMember("cfg_tick_time", 250);
+        runtime.setMember("cfg_turbomode", false);
+
         return runtime;
     }
 

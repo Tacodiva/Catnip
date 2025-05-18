@@ -6,6 +6,7 @@ import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { ir_set_xy } from "../../compiler/ir/motion/set_xy";
 import { ir_get_xy } from "../../compiler/ir/motion/get_xy";
+import { ir_request_redraw } from "../../compiler/ir/core/request_redraw";
 
 type set_x_inputs = { x: CatnipInputOp };
 
@@ -18,6 +19,7 @@ export const op_set_x = new class extends CatnipCommandOpType<set_x_inputs> {
         ctx.emitInput(inputs.x, CatnipValueFormat.F64_NUMBER);
         ctx.emitIr(ir_get_xy, { axis: "y" }, {});
         ctx.emitIr(ir_set_xy, { }, {});
+        ctx.emitIr(ir_request_redraw, {}, {});
     }
 }
 

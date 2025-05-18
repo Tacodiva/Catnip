@@ -13,6 +13,7 @@ import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThr
 import { ir_branch } from "../../compiler/ir/core/branch";
 import { ir_transient_load } from "../../compiler/ir/core/transient_load";
 import { ir_cmp_lt } from "../../compiler/ir/operators/cmp_lt";
+import { ir_request_redraw } from "../../compiler/ir/core/request_redraw";
 
 type wait_inputs = { time: CatnipInputOp };
 
@@ -51,7 +52,7 @@ export const op_wait = new class extends CatnipCommandOpType<wait_inputs> {
             ctx.emitConditionalJump(block, CatnipWasmEnumThreadStatus.YIELD);
         });
 
-        // TODO request redraw here
+        ctx.emitIr(ir_request_redraw, {}, {});
         ctx.emitIr(ir_yield, { status: CatnipWasmEnumThreadStatus.YIELD }, { branch: loopBranch });
     }
 }

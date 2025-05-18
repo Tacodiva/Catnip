@@ -58,7 +58,12 @@ typedef struct catnip_runtime_gc_stats catnip_runtime_gc_stats;
 #define CATNIP_HEAP_PAGE_SIZE_BYTES 10485760
 #define CATNIP_HEAP_LARGE_OBJ_SIZE 262144
 
+#define CATNIP_STEP_TIME_MS 10000
+
 struct catnip_runtime {
+
+    catnip_ui32_t cfg_tick_time;
+    catnip_bool_t cfg_turbomode;
 
     catnip_ui32_t sprite_count;
     catnip_sprite **sprites;
@@ -67,6 +72,7 @@ struct catnip_runtime {
     
     catnip_list threads; // list of catnip_thread*
     catnip_ui32_t num_active_threads;
+    catnip_bool_t redraw_requested;
 
     catnip_runtime_gc_stats *gc_stats; // Only if CATNIP_GC_STATS is defined, updated after a GC
     catnip_i32_t gc_page_index;
