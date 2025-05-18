@@ -1,9 +1,6 @@
 import { CatnipValueFormat } from "./compiler/CatnipValueFormat";
-import { createLogger, Logger } from "./log";
 import { CatnipCommandList, CatnipCommandOp, CatnipInputOp, CatnipOps } from "./ops";
 import { CatnipScriptTrigger } from "./ops/CatnipScriptTrigger";
-import { op_const } from "./ops/core/const";
-import { op_nop } from "./ops/core/nop";
 import { CatnipProcedureID } from "./ops/procedure/procedure_definition";
 import { CatnipCostumeDesc } from "./runtime/CatnipCostume";
 import { CatnipListDesc, CatnipListID } from "./runtime/CatnipList";
@@ -215,12 +212,12 @@ export class SB3ScriptReader {
                 case BlockType.COMMAND:
                     return {
                         type: BlockType.COMMAND,
-                        deserializer: (ctx, block) => op_nop.create({})
+                        deserializer: (ctx, block) => CatnipOps.core_nop.create({})
                     }
                 case BlockType.INPUT:
                     return {
                         type: BlockType.INPUT,
-                        deserializer: (ctx, block) => op_const.create({ value: 0 })
+                        deserializer: (ctx, block) => CatnipOps.core_const.create({ value: 0 })
                     }
                 case BlockType.HAT:
                     throw new Error(`Unknown SB3 hat not supported ('${opcode}').`);
@@ -289,6 +286,10 @@ export class SB3ScriptReader {
                 });
             }
             case ProjectSB3InputValueType.LIST:
+                if (this.meta.config.allow_unknown_opcodes) {
+                    SB3ReadLogger.warn("Unsupported list reporter.");
+                    return CatnipOps.core_const.create({ value: "" });
+                }
                 throw new Error("Not supported.");
         }
     }
@@ -349,7 +350,7 @@ export class SB3ScriptReader {
         }
 
         if (inputOrBlockID === null) {
-            return op_const.create({ value: undefined })
+            return CatnipOps.core_const.create({ value: undefined })
         }
 
         const block = this.getBlock(inputOrBlockID);

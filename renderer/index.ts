@@ -159,7 +159,8 @@ export class CatnipRenderer implements ICatnipRenderer {
         const gl = this.gl;
 
         this._penSetFramebuffer();
-        gl.clearColor(1, 1, 1, 1);
+        // gl.clearColor(1, 1, 1, 1);
+        gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
     }
 

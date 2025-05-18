@@ -1,3 +1,4 @@
+import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 
 export type catnip_compiler_constant = string | number | boolean | undefined;
 
@@ -213,7 +214,8 @@ export class Cast {
         if (code >= 48 && code <= 90) return code;
         if (key === " ") return code;
 
-        throw new Error(`Unknown key code '${key}'`);
+        CatnipCompilerLogger.warn(`Unknown key code '${key}'`);
+        return 0;
     }
 
 }

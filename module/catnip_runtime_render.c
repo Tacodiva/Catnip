@@ -19,6 +19,13 @@ void catnip_runtime_render_pen_draw_line(
         catnip_blockutil_pen_update_argb(target);
     }
 
+    if (target->pen_thickness == 1 || target->pen_thickness == 3) {
+        x0 += 0.5;
+        y0 += 0.5;
+        x1 += 0.5;
+        y1 += 0.5;
+    }
+
     catnip_pen_line *line = &runtime->pen_line_buffer[runtime->pen_line_buffer_length++];
 
     // const catnip_ui32_t a = ((target->pen_argb >> 24) & 0xFF) / 255.0;

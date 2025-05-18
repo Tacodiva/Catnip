@@ -436,10 +436,25 @@ type SB3BlockTypeDefinition = {
             "SUBSTACK": ProjectSB3Input,
         }
     },
+    "control_while": {
+        inputs: {
+            "CONDITION": ProjectSB3Input,
+            "SUBSTACK": ProjectSB3Input,
+        }
+    },
     "control_forever": {
         inputs: {
             "SUBSTACK": ProjectSB3Input,
         },
+    },
+    "control_for_each": {
+        fields: {
+            "VARIABLE": ProjectSB3Field<string>
+        },
+        inputs: {
+            "VALUE": ProjectSB3Input,
+            "SUBSTACK": ProjectSB3Input,
+        }
     },
     "control_stop": {
         fields: {

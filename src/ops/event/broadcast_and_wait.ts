@@ -25,7 +25,7 @@ export const op_event_broadcast_and_wait = new class extends CatnipCommandOpType
     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: broadcast_and_wait_inputs) {
         ctx.emitInput(inputs.broadcastName, CatnipValueFormat.I32_HSTRING);
 
-        const threadListVariable = ctx.emitTransientCreate(CatnipValueFormat.I32, "Thread List");
+        const threadListVariable = ctx.emitTransientCreate(CatnipValueFormat.I32_NUMBER, "Thread List");
 
         ctx.emitIr(ir_broadcast, { threadListVariable: threadListVariable }, {});
         ctx.emitIr(
@@ -33,7 +33,7 @@ export const op_event_broadcast_and_wait = new class extends CatnipCommandOpType
             {
                 branch: ctx.emitBranch((loopHead) => {
 
-                    const threadStatusVariable = ctx.emitTransientCreate(CatnipValueFormat.I32, "Thread Status");
+                    const threadStatusVariable = ctx.emitTransientCreate(CatnipValueFormat.I32_NUMBER, "Thread Status");
 
                     ctx.emitIr(ir_transient_load, { transient: threadListVariable }, {});
                     ctx.emitIr(ir_wait_for_threads, {}, {});
