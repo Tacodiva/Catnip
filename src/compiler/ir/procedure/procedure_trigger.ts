@@ -2,8 +2,6 @@ import { CatnipProcedureID } from "../../../ops/procedure/procedure_definition";
 import { CatnipCompilerIrGenContext } from "../../CatnipCompilerIrGenContext";
 import { CatnipIr, CatnipIrParameterInfo } from "../../CatnipIr";
 import { CatnipIrScriptTrigger, CatnipIrScriptTriggerType } from "../../CatnipIrScriptTrigger";
-import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
-import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipCompilerProcedureSubsystem } from "../../subsystems/CatnipCompilerProcedureSubsystem";
 import { ir_barrier } from "../core/barrier";
 import { ir_return } from "../core/return";

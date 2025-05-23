@@ -1,4 +1,4 @@
-import { CatnipIr } from "./CatnipIr";
+import { CatnipIr, CatnipIrParameter } from "./CatnipIr";
 import { CatnipIrBasicBlock } from "./CatnipIrBasicBlock";
 
 export enum CatnipIrBranchType {
@@ -14,6 +14,7 @@ abstract class CatnipIrBranchBase {
     abstract readonly body: CatnipIrBasicBlock;
     abstract readonly ir: CatnipIr;
     abstract readonly irResolved: boolean;
+    abstract readonly parameters: readonly CatnipIrParameter[];
 
     public getTails(): CatnipIrBranch[] {
         const tails: CatnipIrBranch[] = [];
@@ -63,6 +64,10 @@ export abstract class CatnipIrExternalBranch extends CatnipIrBranchBase {
         return this._ir!;
     }
 
+    public get parameters(): readonly CatnipIrParameter[] {
+        return this.ir.parameters;
+    }
+
     public constructor() {
         super();
         this._body = null;
@@ -89,9 +94,10 @@ export class CatnipIrInternalBranch extends CatnipIrBranchBase {
     public readonly bodyResolved = true;
     public readonly isYieldingResolved = true;
     public readonly irResolved = true;
+    public readonly parameters: readonly CatnipIrParameter[] = [];
     public body: CatnipIrBasicBlock;
     public isLoop: boolean;
-
+    
     public get ir(): CatnipIr {
         return this.body.func.ir;
     }

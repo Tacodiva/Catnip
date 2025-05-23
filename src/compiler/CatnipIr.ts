@@ -42,7 +42,7 @@ export class CatnipIr {
     public readonly scriptID: CatnipScriptID;
     public readonly commands: CatnipCommandList;
 
-    public readonly parameters: CatnipIrParameter[];
+    public readonly parameters: readonly CatnipIrParameter[];
 
     private _entrypoint: CatnipIrFunction | null;
 
@@ -106,7 +106,7 @@ export class CatnipIr {
         for (const parameter of this.trigger.type.getParameters(this, this.trigger.inputs)) {
             parameters.push({
                 name: parameter.name,
-                variable: new CatnipIrTransientVariable(this, parameter.format, )
+                variable: new CatnipIrTransientVariable(this, parameter.format, parameter.name),
             });
         }
         this.parameters = parameters;

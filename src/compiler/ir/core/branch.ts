@@ -1,5 +1,5 @@
 import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWasmGenContext";
-import { CatnipIrBranch, CatnipIrBranchType } from "../../CatnipIrBranch";
+import { CatnipIrBranch } from "../../CatnipIrBranch";
 import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType } from "../../CatnipIrOp";
 
 export type ir_branch_branches = { branch: CatnipIrBranch };
@@ -7,7 +7,9 @@ export type ir_branch_branches = { branch: CatnipIrBranch };
 export const ir_branch = new class extends CatnipIrCommandOpType<{}, ir_branch_branches> {
     public constructor() { super("core_branch"); }
 
-    public getOperandCount(): number { return 0; }
+    public getOperandCount(inputs: {}, branches: ir_branch_branches): number {
+        return branches.branch.parameters.length;
+    }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<{}, ir_branch_branches>): void {
         ctx.emitBranchInline(ir.branches.branch);

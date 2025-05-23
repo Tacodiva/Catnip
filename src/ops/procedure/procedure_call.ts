@@ -2,7 +2,6 @@
 import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
 import { CatnipCommandOpType, CatnipInputOp, CatnipOp, CatnipOpInputs } from "../CatnipOp";
 import { CatnipCompilerLogger } from "../../compiler/CatnipCompilerLogger";
-import { ir_procedure_arg_set } from "../../compiler/ir/procedure/procedure_arg_set";
 import { ir_branch } from "../../compiler/ir/core/branch";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { op_const } from "../core/const";
@@ -19,7 +18,6 @@ import { CatnipCompilerProcedureSubsystem } from "../../compiler/subsystems/Catn
 import { CatnipIrScriptProcedureTrigger } from "../../compiler/ir/procedure/procedure_trigger";
 import { CatnipValueFormatUtils } from "../../compiler/CatnipValueFormatUtils";
 import { op_breakpoint } from "../core/breakpoint";
-import { CatnipCompiler } from "../../compiler/CatnipCompiler";
 
 type procedure_call_inputs = {
     sprite: CatnipSpriteID,
@@ -81,7 +79,6 @@ export const op_procedure_call = new class extends CatnipCommandOpType<procedure
             const argInput = inputs.args[i];
 
             ctx.emitInput(argInput.input, argInput.format);
-            ctx.emitIr(ir_procedure_arg_set, { target, argIdx: i }, {});
         }
 
         ctx.emitIr(ir_branch, {}, { branch: new CatnipIrProcedureBranch(ctx.compiler, target.spriteID, inputs.procedure, target.isWarp) });

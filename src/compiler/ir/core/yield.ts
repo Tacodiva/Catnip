@@ -3,8 +3,6 @@ import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWa
 import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType } from "../../CatnipIrOp";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
-import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
-import { CatnipIrExternalLocationType } from "../../CatnipIrFunction";
 import { CatnipIrBranch } from "../../CatnipIrBranch";
 
 export type yield_ir_inptus = { status: CatnipWasmEnumThreadStatus };
@@ -13,7 +11,9 @@ export type yield_ir_branches = { branch: CatnipIrBranch };
 export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus, yield_ir_branches> {
     public constructor() { super("core_yield"); }
 
-    public getOperandCount(): number { return 0; }
+    public getOperandCount(inputs: {}, branches: yield_ir_branches): number {
+        return branches.branch.parameters.length;
+    }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<yield_ir_inptus, yield_ir_branches>): void {
         CatnipCompilerWasmGenContext.logger.assert(
@@ -27,7 +27,7 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
             ctx.emitBranchInline(ir.branches.branch, true);
             return;
         }
-        
+
         CatnipCompilerWasmGenContext.logger.assert(
             targetFunc.parameters.length === 0,
             false, "Cannot yield to a function with parameters."
@@ -38,7 +38,9 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
             true, "Non-tail-call yield branch function must have a function table index."
         );
 
-        ctx.prepareStackForCall(ir.branches.branch, true);
+        const branchParameters = ctx.captureParameters(ir.branches.branch);
+        ctx.prepareStackForCall(ir.branches.branch, branchParameters, true);
+        ctx.releaseParameters(branchParameters);
 
         if (ir.inputs.status !== CatnipWasmEnumThreadStatus.RUNNING) {
             ctx.emitWasmGetThread();
@@ -54,8 +56,8 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
     }
 
     public isYielding() { return true; }
-    
-    public doesContinue() {return false; }
+
+    public doesContinue() { return false; }
 
     public isBarrier() { return true; }
 }
