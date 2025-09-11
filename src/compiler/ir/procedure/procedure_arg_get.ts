@@ -4,6 +4,7 @@ import { CatnipCompilerWasmGenContext } from "../../../compiler/CatnipCompilerWa
 import { CatnipIrTransientVariable } from "../../../compiler/CatnipIrTransientVariable";
 import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOpType, CatnipIrOp } from "../../CatnipIrOp";
 import { CatnipCompilerValue } from "../../CatnipCompilerValue";
+import { ValueGraphAccessInfo, ValueGraphAccessType, ValueGraphVariableType } from "../../passes/ValueGraph";
 
 export type ir_procedure_arg_get_inputs = { paramIndex: number };
 
@@ -22,5 +23,15 @@ export const ir_procedure_arg_get = new class extends CatnipIrInputOpType<ir_pro
 
     public *getTransientVariables(ir: CatnipIrOp<ir_procedure_arg_get_inputs, {}, CatnipIrOpType<ir_procedure_arg_get_inputs, {}>>): IterableIterator<CatnipIrTransientVariable> {
         yield ir.ir.parameters[ir.inputs.paramIndex].variable;
+    }
+
+    public getValueGraphAccess(ir: CatnipIrInputOp<ir_procedure_arg_get_inputs>): ValueGraphAccessInfo {
+        return {
+            type: ValueGraphAccessType.READ,
+            variable: {
+                type: ValueGraphVariableType.PARAMETER,
+                index: ir.inputs.paramIndex
+            }
+        }
     }
 }

@@ -9,6 +9,8 @@ import { CatnipVariable } from "../runtime/CatnipVariable";
 import { CatnipTarget } from "../runtime/CatnipTarget";
 import { CatnipList } from "../runtime/CatnipList";
 import { CatnipIr } from "./CatnipIr";
+import { OperatorStackAnalysis } from "./passes/StackAnalysis";
+import { ValueGraphAccessInfo, ValueGraphStateInfo } from "./passes/ValueGraph";
 
 export type CatnipIrOpInputs = Record<string, any>;
 export type CatnipIrOpBranchesDefinition = Record<string, CatnipIrBranch | null>;
@@ -62,7 +64,11 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         return false;
     }
 
-    public doesContinue(ir: CatnipIrOp<TInputs, TBranches>) {
+    /**
+     * @returns True if this operator *may* continue to instructions after it.
+     */
+    public doesContinue(ir: CatnipIrOp<TInputs, TBranches>): boolean {
+        if (this.doesReturn(ir)) return false;
         const branchNames = Object.keys(ir.branches);
         if (branchNames.length === 0) return true;
         for (const branchName of branchNames) {
@@ -73,8 +79,33 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         return false;
     }
 
+    /**
+     * @returns True if this operator is guaranteed to return and stop the current function.
+     * Note that operators must either always return or never return.
+     */
+    public doesReturn(ir: CatnipIrOp<TInputs, TBranches>): boolean {
+        return false;
+    }
+
+    /** 
+     * @returns True if all variables must be synchronized before this operator is executed.
+     */
+    public isBarrier(ir: CatnipIrOp<TInputs, TBranches>): boolean {
+        return false;
+    }
+
+    public getValueGraphAccess(ir: CatnipIrOp<TInputs, TBranches>, stackAnalysis: OperatorStackAnalysis, state: ValueGraphStateInfo): ValueGraphAccessInfo | null {
+        return null;
+    }
+
+    /**
+     * Gets a list of the transient variables the compiler must be able to provide for this
+     *   operator. 
+     * @returns A list of all the transient variables this operator needs.
+     */
     public *getTransientVariables(ir: CatnipIrOp<TInputs, TBranches>): IterableIterator<CatnipIrTransientVariable> {}
 
+    // TODO Remove?
     public applyState(ir: CatnipIrOp<TInputs, TBranches>, state: CatnipCompilerState) { }
 
     public stringifyInputs(inputs: TInputs): string {
@@ -92,9 +123,6 @@ export abstract class CatnipIrOpTypeBase<TInputs extends CatnipIrOpInputs, TBran
         })
     }
 
-    public isBarrier(ir: CatnipIrOp<TInputs, TBranches>): boolean {
-        return false;
-    }
 }
 
 export abstract class CatnipIrInputOpType<TInputs extends CatnipIrOpInputs = {}, TBranches extends CatnipIrOpBranchesDefinition = {}> extends CatnipIrOpTypeBase<TInputs, TBranches> {

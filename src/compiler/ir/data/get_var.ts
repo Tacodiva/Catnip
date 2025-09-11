@@ -9,6 +9,7 @@ import { CatnipCompilerValue } from "../../CatnipCompilerValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipIrBasicBlock } from "../../CatnipIrBasicBlock";
 import { CatnipCompilerState } from "../../CatnipCompilerState";
+import { ValueGraphAccessInfo, ValueGraphAccessType, ValueGraphVariableType } from "../../passes/ValueGraph";
 
 export type get_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable };
 
@@ -20,12 +21,22 @@ export const ir_get_var = new class extends CatnipIrInputOpType<get_var_ir_input
     public getResult(ir: CatnipIrInputOp<get_var_ir_inputs>, state?: CatnipCompilerState): CatnipCompilerValue {
         if (state === undefined) return CatnipCompilerValue.dynamic(CatnipValueFormat.F64);
         return state.getVariableValue(ir.inputs.variable);
-    }    
+    }
+
+    public getValueGraphAccess(ir: CatnipIrInputOp<get_var_ir_inputs>): ValueGraphAccessInfo {
+        return {
+            type: ValueGraphAccessType.READ,
+            variable: {
+                type: ValueGraphVariableType.VARIABLE,
+                variable: ir.inputs.variable
+            }
+        }
+    }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<get_var_ir_inputs>, branch: CatnipIrBasicBlock): void {
         const variable = ir.inputs.variable;
         const target = ir.inputs.target;
-        
+
         const variableOffset = variable.index * CatnipWasmUnionValue.size;
 
         ctx.emitWasmConst(SpiderNumberType.i32, target.structWrapper.ptr);

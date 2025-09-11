@@ -6,7 +6,7 @@ import { DummyRenderer } from "./runtime/DummyRenderer";
 import { CatnipProject } from "./runtime/CatnipProject";
 
 
-export async function run(runtimeModule: WebAssembly.Module, file: ArrayBuffer, renderer?: ICatnipRenderer): Promise<CatnipProject> {
+export async function run(runtimeModule: WebAssembly.Module, file: Uint8Array, renderer?: ICatnipRenderer): Promise<CatnipProject> {
 
     const jszip = new JSZip();
 

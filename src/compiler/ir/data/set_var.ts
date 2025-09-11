@@ -7,6 +7,8 @@ import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTa
 import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
 import { CatnipTarget } from "../../../runtime/CatnipTarget";
 import { CatnipCompilerState } from "../../CatnipCompilerState";
+import { OperatorStackAnalysis } from "../../passes/StackAnalysis";
+import { ValueGraphAccessInfo, ValueGraphAccessType, ValueGraphVariableType } from "../../passes/ValueGraph";
 
 export type set_var_ir_inputs = { target: CatnipTarget, variable: CatnipVariable };
 
@@ -17,6 +19,17 @@ export const ir_set_var = new class extends CatnipIrCommandOpType<set_var_ir_inp
 
     public applyState(ir: CatnipIrOp<set_var_ir_inputs>, state: CatnipCompilerState): void {
         state.setVariableValue(ir.inputs.variable, ir.operands[0]);
+    }
+
+    public getValueGraphAccess(ir: CatnipIrOp<set_var_ir_inputs>, stackAnalysis: OperatorStackAnalysis): ValueGraphAccessInfo {
+        return {
+            type: ValueGraphAccessType.WRITE,
+            variable: {
+                type: ValueGraphVariableType.VARIABLE,
+                variable: ir.inputs.variable
+            },
+            value: stackAnalysis.operands[0].value
+        }
     }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<set_var_ir_inputs>): void {

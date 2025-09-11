@@ -57,7 +57,7 @@ export const ir_yield = new class extends CatnipIrCommandOpType<yield_ir_inptus,
 
     public isYielding() { return true; }
 
-    public doesContinue() { return false; }
+    public doesReturn(): boolean { return true; }
 
     public isBarrier() { return true; }
 }

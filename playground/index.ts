@@ -6,18 +6,18 @@ async function main() {
     const moduleRequest = await fetch('catnip.wasm');
     // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
+    const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
-    const sb3File = await (await fetch('LOS.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('LOS.sb3')).arrayBuffer();
     const module = await WebAssembly.compileStreaming(moduleRequest);
 
     const renderer = new CatnipRenderer();
 
-    const project = await run(module, sb3File, renderer);
+    const project = await run(module, new Uint8Array(sb3File), renderer);
     const projectModule = await project.compile({
-        // enable_optimization_binaryen: false,
+        enable_optimization_binaryen: false,
         enable_optimization_variable_inlining: false,
     });
 

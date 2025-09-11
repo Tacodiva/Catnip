@@ -85,6 +85,8 @@ export class CatnipIr {
         return this._preAnalysis;
     }
 
+    public get isYielding(): boolean { return this.preAnalysis.isYielding; }
+
     public readonly isWarp: boolean;
 
     public constructor(compiler: CatnipCompiler, info: CatnipIrInfo) {

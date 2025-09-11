@@ -83,6 +83,9 @@ export class CatnipIrBasicBlock {
         return false;
     }
 
+    /**
+     * @returns True if this branch's execution *may* continue to instuctions after it.
+     */
     public doesContinue(): boolean {
         if (this.head === null) return true;
 

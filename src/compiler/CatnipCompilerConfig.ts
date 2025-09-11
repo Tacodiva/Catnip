@@ -43,9 +43,7 @@ export function catnipCompilerConfigPoppulate(partialConfig?: Partial<CatnipComp
 
     if (partialConfig === undefined) return config;
 
-    for (const key of Object.keys(partialConfig)) {
-        (config as any)[key] = (partialConfig as any)[key];
-    }
+    Object.assign(config, partialConfig);
 
     return config;
 }

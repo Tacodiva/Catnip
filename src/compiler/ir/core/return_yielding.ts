@@ -1,7 +1,8 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
-import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
+import { CatnipIrCommandOpType, CatnipIrOp, CatnipIrOpType } from "../../CatnipIrOp";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
+import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
 
 export const ir_return_yielding = new class extends CatnipIrCommandOpType<{}, {}> {
     public constructor() { super("core_return_yielding"); }
@@ -9,6 +10,8 @@ export const ir_return_yielding = new class extends CatnipIrCommandOpType<{}, {}
     public getOperandCount(): number { return 1; }
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrOp<{}, {}>): void {
+        // CatnipCompilerLogger.asserts(ctx.func.ir.)
+        
         const returnLocation = ctx.createLocal(SpiderNumberType.i32);
         ctx.emitWasm(SpiderOpcodes.local_set, returnLocation.ref);
 
@@ -37,7 +40,7 @@ export const ir_return_yielding = new class extends CatnipIrCommandOpType<{}, {}
 
     public isYielding() { return true; }
 
-    public doesContinue() { return false; }
+    public doesReturn(): boolean { return true; }
 
     public isBarrier() { return true; }
 }

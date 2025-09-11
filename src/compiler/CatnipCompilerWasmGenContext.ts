@@ -54,8 +54,6 @@ export class CatnipCompilerWasmGenContext {
     private _locals: Map<SpiderNumberType, CatnipCompilerWasmLocal[]>;
     private _unreleasedLocalCount: number;
 
-    private _parameterLocals: CatnipCompilerWasmLocal[][];
-
     private _blockDepth: number;
     public get blockDepth() { return this._blockDepth; }
 
@@ -71,8 +69,6 @@ export class CatnipCompilerWasmGenContext {
 
         this._locals = new Map();
         this._unreleasedLocalCount = 0;
-
-        this._parameterLocals = [];
 
         this._blockDepth = 0;
 
@@ -154,7 +150,9 @@ export class CatnipCompilerWasmGenContext {
 
             const isYielding = branch.body.isYielding() || forceReturn;
 
-            this.prepareStackForCall(branch, isYielding);
+            const parameters = this.captureParameters(branch);
+
+            this.prepareStackForCall(branch, parameters, isYielding);
 
             this.emitWasmGetThread();
 
@@ -166,8 +164,8 @@ export class CatnipCompilerWasmGenContext {
                 } else if (parameter.type === CatnipIrExternalValueSourceType.IR_PARAMETER) {
 
                     const argIdx = parameter.index;
-
-                    const localVar = this._getParameterLocal(argIdx);
+                    if (argIdx >= parameters.length) throw new Error("Expected parameter for call.");
+                    const localVar = parameters[argIdx];
                     this.emitWasm(SpiderOpcodes.local_get, localVar.ref);
 
                 } else if (parameter.type === CatnipIrExternalValueSourceType.RETURN_LOCATION) {
@@ -181,13 +179,7 @@ export class CatnipCompilerWasmGenContext {
                 } else throw new Error("Not reachable.");
             }
 
-            if (targetFunc.isEntrypoint) {
-                for (let i = 0; i < targetFunc.ir.parameters.length; i++) {
-                    const arg = this._parameterLocals[i].pop();
-                    CatnipCompilerLogger.assert(arg !== undefined, false, `No parameter argument at ${i}`)
-                    if (arg !== undefined) this.releaseLocal(arg);
-                }
-            }
+            this.releaseParameters(parameters);
 
             if (isYielding && this.compiler.config.enable_tail_call) {
                 this.emitWasm(SpiderOpcodes.return_call, targetFunc.spiderFunction);
@@ -310,10 +302,10 @@ export class CatnipCompilerWasmGenContext {
         }
     }
 
-    public prepareStackForCall(branch: CatnipIrBranch, tailCall: boolean) {
+    public prepareStackForCall(branch: CatnipIrBranch, parameters: CatnipCompilerWasmLocal[], tailCall: boolean) {
 
         if (branch.branchType === CatnipIrBranchType.EXTERNAL && branch.returnLocation !== null) {
-            this.prepareStackForCall(branch.returnLocation, tailCall);
+            this.prepareStackForCall(branch.returnLocation, [], tailCall);
             tailCall = false;
         }
 
@@ -399,7 +391,8 @@ export class CatnipCompilerWasmGenContext {
                 } else if (transientVariable.value.type === CatnipIrExternalValueSourceType.IR_PARAMETER) {
 
                     const argIdx = transientVariable.value.index;
-                    const localVar = this._getParameterLocal(argIdx);
+                    if (argIdx >= parameters.length) throw new Error("Expected parameter for call.");
+                    const localVar = parameters[argIdx];
                     this.emitWasm(SpiderOpcodes.local_get, localVar.ref);
                     valueType = localVar.type;
                     valueFormat = CatnipValueFormat.F64;
@@ -488,25 +481,27 @@ export class CatnipCompilerWasmGenContext {
         }
     }
 
-    private _getParameterLocal(paramIdx: number): CatnipCompilerWasmLocal {
-        const locals = this._parameterLocals[paramIdx];
-        if (locals.length === 0) throw new Error(`No argument assigned to index ${paramIdx}.`);
-        return locals[locals.length - 1];
+    public captureParameters(branch: CatnipIrBranch): CatnipCompilerWasmLocal[] {
+        if (branch.branchType !== CatnipIrBranchType.EXTERNAL) return [];
+
+        const paramLocals: CatnipCompilerWasmLocal[] = [];
+        const params = branch.ir.parameters;
+
+        for (let irParamIdx = params.length - 1; irParamIdx >= 0; irParamIdx--) {
+            const paramLocal = this.createLocal(params[irParamIdx].variable.type);
+            this.emitWasm(SpiderOpcodes.local_set, paramLocal.ref);
+            paramLocals.push(paramLocal);
+        }
+
+        // We get the parameters in the opposite order to when they are pushed onto the stack
+        //  push 1 push 2 [opposite order ->] pop 2 pop 1
+        paramLocals.reverse();
+
+        return paramLocals;
     }
 
-    public createParameterLocal(target: CatnipIr, paramIdx: number): CatnipCompilerWasmLocal {
-        const param = target.parameters[paramIdx];
-
-        let currentParameterLocals = this._parameterLocals[paramIdx];
-
-        if (currentParameterLocals === undefined)
-            currentParameterLocals = this._parameterLocals[paramIdx] = [];
-
-        const local = this.createLocal(CatnipValueFormatUtils.getFormatSpiderType(param.variable.format));
-
-        currentParameterLocals.push(local);
-
-        return local;
+    public releaseParameters(parameters: CatnipCompilerWasmLocal[]) {
+        for (const param of parameters) this.releaseLocal(param);
     }
 
     public releaseLocal(local: CatnipCompilerWasmLocal) {
@@ -529,13 +524,6 @@ export class CatnipCompilerWasmGenContext {
     public finish() {
         if (this._unreleasedLocalCount !== 0)
             CatnipCompilerLogger.warn(`WASM generation of function '${this.func.name}' has unreleased locals.`);
-
-        for (const parameterLocal of this._parameterLocals) {
-            if (parameterLocal !== undefined && parameterLocal.length !== 0) {
-                CatnipCompilerLogger.warn(`WASM generation of function '${this.func.name}' has unreleased parameter locals.`);
-                break;
-            }
-        }
     }
 
 }

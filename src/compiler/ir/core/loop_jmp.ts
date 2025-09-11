@@ -18,7 +18,5 @@ export const ir_loop_jmp = new class extends CatnipIrCommandOpType<{}, loop_jmp_
         ctx.emitWasm(SpiderOpcodes.br, ctx.blockDepth - ir.branches.branch.body.blockDepth - 1);
     }
 
-    public doesContinue(): boolean {
-        return false;
-    }
+    public doesContinue(): boolean { return false; }
 }

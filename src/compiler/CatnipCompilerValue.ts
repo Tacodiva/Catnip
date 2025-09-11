@@ -21,6 +21,10 @@ export class CatnipCompilerValue {
         return this._constantValue;
     }
 
+    public get isNone() {
+        return this.format === CatnipValueFormat.NONE;
+    }
+
     public get isConstant() {
         return this._constantValue !== null;
     }
@@ -52,6 +56,9 @@ export class CatnipCompilerValue {
                 return this;
         }
 
+        if (other.isNone) return this;
+        if (this.isNone) return other;
+
         return new CatnipCompilerValue(this.format | other.format, null);
     }
 
@@ -66,15 +73,17 @@ export class CatnipCompilerValue {
     }
 
     public isSubsetOf(other: CatnipCompilerValue): boolean {
-        if (!CatnipValueFormatUtils.isAlways(this.format, other.format))
-            return false;
-
+        // None is a subset of everything
+        if (this.isNone) return true;
+        
+        // If the other is a constant, to be a subset we must be the same constant
         if (other.isConstant) {
             if (!this.isConstant) return false;
-            if (this._constantValue !== other._constantValue) return false;
+            return this._constantValue === other._constantValue;
         }
 
-        return true;
+        // Otherwise, out format must be a subset of other's format
+        return CatnipValueFormatUtils.isAlways(this.format, other.format);
     }
 
     public toString(): string {

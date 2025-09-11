@@ -112,7 +112,6 @@ export class CatnipIrFunction {
         this.ir = ir;
         this.spiderFunction = this.spiderModule.createFunction();
 
-        // console.log(`${name} => ${this.spiderModule.functions.indexOf(this.spiderFunction)}`)
         this.spiderThreadParam = this.spiderFunction.addParameter(SpiderNumberType.i32);
 
         this.name = name;

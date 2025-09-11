@@ -288,7 +288,7 @@ export class CatnipCompiler {
         if (globalThis.window && this.config.dump_wasm_blob) {
             const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
 
-                const blob = new Blob([data], {
+                const blob = new Blob([data as BlobPart], {
                     type: mimeType
                 })
 
@@ -301,7 +301,7 @@ export class CatnipCompiler {
             downloadBlob(moduleSource, "catnip_output.wasm", "application/wasm");
         }
 
-        const module = await WebAssembly.compile(moduleSource);
+        const module = await WebAssembly.compile(moduleSource as BufferSource);
 
         const instance = await WebAssembly.instantiate(module, {
             env: {

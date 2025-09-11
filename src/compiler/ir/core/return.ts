@@ -11,7 +11,7 @@ export const ir_return = new class extends CatnipIrCommandOpType<{}, {}> {
         ctx.emitWasm(SpiderOpcodes.return);
     }
 
-    public doesContinue() { return false; }
+    public doesReturn(): boolean { return true; }
 
     public isBarrier() { return true; }
 }
