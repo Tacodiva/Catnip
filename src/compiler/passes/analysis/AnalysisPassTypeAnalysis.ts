@@ -9,6 +9,7 @@ import { CatnipIrBranchType } from "../../CatnipIrBranch";
 import { CatnipIrFunction } from "../../CatnipIrFunction";
 import { CatnipIrInputOp } from "../../CatnipIrOp";
 import { CatnipCompilerPass } from "../CatnipCompilerPass";
+import { createValueGraph } from "../ValueGraph";
 
 interface StateInfo {
     stack: CatnipCompilerStack;
@@ -194,6 +195,9 @@ export const LoopPassTypeAnalysis: CatnipCompilerPass = {
     stage: CatnipCompilerStage.PASS_ANALYSIS,
 
     run(ctx: CatnipCompilerPassContext): void {
+
+        console.log(""+createValueGraph(ctx));
+        
         ctx.forEachFunction(doTypeAnalysis);
     }
 }

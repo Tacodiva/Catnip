@@ -150,7 +150,7 @@ void gc_iterate_roots(catnip_runtime *runtime, void(*func)(catnip_value*, catnip
       func(&target->variable_table[varIdx], runtime);
     }
 
-    // TODO Check all the lists
+    // Check all the lists
     for (catnip_ui32_t listIdx = 0; listIdx < target->sprite->list_count; listIdx++) {
       
       catnip_list *list = &target->list_table[listIdx];

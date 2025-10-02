@@ -9,6 +9,7 @@ import { CatnipIrBasicBlock } from "../CatnipIrBasicBlock";
 import { CatnipIrOp } from "../CatnipIrOp";
 import { analyzeBlockStack, OperatorStackAnalysis } from "./StackAnalysis";
 import { CatnipIrBranch, CatnipIrBranchType } from "../CatnipIrBranch";
+import { CatnipIrTransientVariable } from '../CatnipIrTransientVariable';
 
 export enum ValueGraphAccessType {
     READ,
@@ -17,16 +18,20 @@ export enum ValueGraphAccessType {
 
 export enum ValueGraphVariableType {
     VARIABLE,
-    PARAMETER
+    PARAMETER,
+    TRANSIENT
 }
 
 export type ValueGraphVariable = {
-    type: ValueGraphVariableType.VARIABLE,
-    variable: CatnipVariable,
+    readonly type: ValueGraphVariableType.VARIABLE,
+    readonly variable: CatnipVariable,
 } | {
     readonly type: ValueGraphVariableType.PARAMETER,
     readonly index: number,
-}
+} | {
+    readonly type: ValueGraphVariableType.TRANSIENT,
+    readonly transient: CatnipIrTransientVariable
+};
 
 export type ValueGraphAccessInfo = ({
     readonly type: ValueGraphAccessType.WRITE;
@@ -50,23 +55,35 @@ export interface ValueGraphValueInfo {
     readonly prev: ReadonlySet<ValueGraphAccessNode>;
 }
 
+interface WritableValueGraphValueInfo extends ValueGraphValueInfo {
+    value: CatnipCompilerValue;
+    prev: Set<ValueGraphAccessNode>;
+}
+
 export class ValueGraph {
 
     public readonly nodes: ReadonlyMap<CatnipIrOp, ValueGraphAccessNode>;
     public readonly variables: ReadonlyMap<CatnipVariable, ValueGraphValueInfo>;
+    public readonly transients: ReadonlyMap<CatnipIrTransientVariable, ValueGraphValueInfo>;
     public readonly stackAnalysis: ReadonlyMap<CatnipIrOp, OperatorStackAnalysis>;
 
-    public constructor(nodes: ReadonlyMap<CatnipIrOp, ValueGraphAccessNode>, variables: ReadonlyMap<CatnipVariable, ValueGraphValueInfo>, stackAnalysis: ReadonlyMap<CatnipIrOp, OperatorStackAnalysis>) {
+    public constructor(
+        nodes: ReadonlyMap<CatnipIrOp, ValueGraphAccessNode>,
+        variables: ReadonlyMap<CatnipVariable, ValueGraphValueInfo>,
+        transients: ReadonlyMap<CatnipIrTransientVariable, ValueGraphValueInfo>,
+        stackAnalysis: ReadonlyMap<CatnipIrOp, OperatorStackAnalysis>
+    ) {
         this.nodes = nodes;
         this.variables = variables;
+        this.transients = transients;
         this.stackAnalysis = stackAnalysis;
     }
 
     public toString(): string {
         let stringified = "";
 
-        for (const [variable, info] of this.variables) {
-            stringified += `\n\n===== '${variable.name}' ${info.value} =====\n`;
+        function stringifyInfo(info: ValueGraphValueInfo) {
+            let stringified = "";
 
             const nodes: ValueGraphAccessNode[] = [];
 
@@ -105,6 +122,13 @@ export class ValueGraph {
                     }
                 }
             }
+
+            return stringified;
+        }
+
+        for (const [variable, info] of this.variables) {
+            stringified += `\n\n===== VARIABLE '${variable.name}' ${info.value} =====\n`;
+            stringified += stringifyInfo(info);
         }
 
         return stringified;
@@ -117,23 +141,6 @@ interface WriteableValueGraphAccessNode extends ValueGraphAccessNode {
     value: CatnipCompilerValue;
     prev: Set<WriteableValueGraphAccessNode>;
     next: Set<WriteableValueGraphAccessNode>;
-}
-
-class ValueGraphAnalysisContext {
-    public didModify: boolean;
-
-    public constructor() {
-        this.didModify = false;
-    }
-
-    public modified(didModify?: boolean): void {
-        if (didModify === undefined) this.didModify = true;
-        else this.didModify ||= didModify;
-    }
-
-    public reset() {
-        this.didModify = false;
-    }
 }
 
 class ValueGraphVariableInfo {
@@ -194,8 +201,8 @@ class ValueGraphVariableInfo {
 
 export class ValueGraphStateInfo {
 
-    private static cloneVariables(obj: Map<CatnipVariable, ValueGraphVariableInfo>): Map<CatnipVariable, ValueGraphVariableInfo> {
-        const variables: Map<CatnipVariable, ValueGraphVariableInfo> = new Map();
+    private static cloneMap<T>(obj: Map<T, ValueGraphVariableInfo>): Map<T, ValueGraphVariableInfo> {
+        const variables: Map<T, ValueGraphVariableInfo> = new Map();
         for (const [variable, info] of obj)
             variables.set(variable, info.clone());
         return variables;
@@ -209,10 +216,12 @@ export class ValueGraphStateInfo {
     }
 
     public readonly variables: Map<CatnipVariable, ValueGraphVariableInfo>;
+    public readonly transients: Map<CatnipIrTransientVariable, ValueGraphVariableInfo>;
     public readonly parameters: ValueGraphVariableInfo[];
 
-    public constructor(variables: Map<CatnipVariable, ValueGraphVariableInfo>, parameters: ValueGraphVariableInfo[], clone: boolean = false) {
-        this.variables = clone ? ValueGraphStateInfo.cloneVariables(variables) : variables;
+    public constructor(variables: Map<CatnipVariable, ValueGraphVariableInfo>, transients: Map<CatnipIrTransientVariable, ValueGraphVariableInfo>, parameters: ValueGraphVariableInfo[], clone: boolean = false) {
+        this.variables = clone ? ValueGraphStateInfo.cloneMap(variables) : variables;
+        this.transients = clone ? ValueGraphStateInfo.cloneMap(transients) : transients;
         this.parameters = clone ? ValueGraphStateInfo.cloneParameters(parameters) : parameters;
     }
 
@@ -254,7 +263,7 @@ export class ValueGraphStateInfo {
         return true;
     }
 
-    public or(ctx: ValueGraphAnalysisContext | null, other: ValueGraphStateInfo): boolean {
+    public or(other: ValueGraphStateInfo): boolean {
         let modified = false;
 
         // All the states should have every variable
@@ -274,18 +283,29 @@ export class ValueGraphStateInfo {
             modified = this.parameters[i].or(other.parameters[i]) || modified;
         }
 
-        ctx?.modified(modified);
         return modified;
     }
 
     public clone(): ValueGraphStateInfo {
-        return new ValueGraphStateInfo(this.variables, this.parameters, true);
+        return new ValueGraphStateInfo(this.variables, this.transients, this.parameters, true);
     }
 
     public getVariableInfo(variable: ValueGraphVariable): ValueGraphVariableInfo {
         if (variable.type === ValueGraphVariableType.VARIABLE) {
             const info = this.variables.get(variable.variable);
+
             CatnipCompilerLogger.assert(info !== undefined);
+            return info;
+        }
+
+        if (variable.type === ValueGraphVariableType.TRANSIENT) {
+            let info = this.transients.get(variable.transient);
+
+            if (info === undefined) {
+                info = new ValueGraphVariableInfo(CatnipCompilerValue.none(), new Set());
+                this.transients.set(variable.transient, info);
+            }
+
             return info;
         }
 
@@ -293,12 +313,11 @@ export class ValueGraphStateInfo {
     }
 }
 
-function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
+export function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
 
     interface FunctionInfo {
-        entryVariables: Map<CatnipVariable, ValueGraphVariableInfo>;
-        exitVariables: Map<CatnipVariable, ValueGraphVariableInfo>;
-        entryArguments: ValueGraphVariableInfo[];
+        entry: ValueGraphStateInfo;
+        exit: ValueGraphStateInfo;
     }
 
     const functions: Map<CatnipIrFunction, FunctionInfo> = new Map();
@@ -339,22 +358,24 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
         const entryVariables: Map<CatnipVariable, ValueGraphVariableInfo> = new Map();
         for (const variable of variables.keys()) {
             entryVariables.set(variable, new ValueGraphVariableInfo(
-                CatnipCompilerValue.dynamic(CatnipValueFormat.NONE), new Set()
+                CatnipCompilerValue.none(), new Set()
             ));
         }
+
+        const entryTransients: Map<CatnipIrTransientVariable, ValueGraphVariableInfo> = new Map();
 
         const entryArguments: ValueGraphVariableInfo[] = [];
-
         for (const parameter of func.ir.parameters) {
             entryArguments.push(new ValueGraphVariableInfo(
-                CatnipCompilerValue.dynamic(CatnipValueFormat.NONE), new Set()
+                CatnipCompilerValue.none(), new Set()
             ));
         }
 
+        const entryState = new ValueGraphStateInfo(entryVariables, entryTransients, entryArguments);
+
         functions.set(func, {
-            entryArguments,
-            entryVariables,
-            exitVariables: new Map()
+            entry: entryState,
+            exit: entryState.clone()
         });
     });
 
@@ -388,12 +409,12 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
         if (dest.continue === null)
             dest.continue = or.continue;
         else if (or.continue !== null)
-            dest.continue.or(null, or.continue);
+            dest.continue.or(or.continue);
 
         if (dest.return === null)
             dest.return = or.return;
         else if (or.return !== null)
-            dest.return.or(null, or.return);
+            dest.return.or(or.return);
     }
 
 
@@ -430,7 +451,7 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
         return analysis;
     }
 
-    function analyzeOp(ctx: ValueGraphAnalysisContext, stackAnalysis: OperatorStackAnalysis, state: ValueGraphStateInfo): ExitState {
+    function analyzeOp(stackAnalysis: OperatorStackAnalysis, state: ValueGraphStateInfo): ExitState {
 
         const op = stackAnalysis.operator;
 
@@ -465,8 +486,6 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
                     prev: new Set(),
                     next: new Set()
                 };
-                ctx.modified();
-
             } else {
                 accessNode = opAnalysis.node;
                 // Make sure the the existing node matches what we just got
@@ -474,17 +493,10 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
                 CatnipCompilerLogger.assert(accessNode.type === opInfo.type);
             }
 
-            // Add the node to the graph, keeping track of if we've modified anything
+            // Add the node to the graph
             for (const prevAccess of variableInfo.previousAccesses) {
-                if (!accessNode.prev.has(prevAccess)) {
-                    ctx.modified();
-                    accessNode.prev.add(prevAccess);
-                }
-
-                if (!prevAccess.next.has(accessNode)) {
-                    ctx.modified();
-                    prevAccess.next.add(accessNode);
-                }
+                accessNode.prev.add(prevAccess);
+                prevAccess.next.add(accessNode);
             }
 
             // Update the variable's state
@@ -521,7 +533,7 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
                 if (branch.branchType !== CatnipIrBranchType.EXTERNAL || branch.body.func !== op.block.func) {
                     // This is a branch to inside of this function, we don't need to worry about arguments
                     CatnipCompilerLogger.assert(branch.parameters.length === 0);
-                    exitStateOr(exitState, analyzeBasicBlock(ctx, branch.body, state.clone()));
+                    exitStateOr(exitState, analyzeBasicBlock(branch.body, state.clone()));
                 } else {
                     CatnipCompilerLogger.assert(branch.body.func.isEntrypoint);
                     CatnipCompilerLogger.assert(branch.body === branch.body.func.body);
@@ -597,11 +609,11 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
                     }
 
                     // Get the exit state of the function we're calling
-                    const funcExitVariables = analyzeFunction(branch.body.func, callState, false);
+                    const funcExit = analyzeFunction(branch.body.func, callState, false);
 
                     // This function's exit state is what we continue with
                     exitStateOr(exitState, {
-                        continue: new ValueGraphStateInfo(funcExitVariables, state.parameters), return: null
+                        continue: new ValueGraphStateInfo(funcExit.variables, funcExit.transients, state.parameters), return: null
                     });
                 }
             }
@@ -623,7 +635,7 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
     }
 
     // Takes in a basic block and a state for the project and analyses it and returns the exit state
-    function analyzeBasicBlock(ctx: ValueGraphAnalysisContext, block: CatnipIrBasicBlock, entryState: ValueGraphStateInfo): ExitState {
+    function analyzeBasicBlock(block: CatnipIrBasicBlock, entryState: ValueGraphStateInfo): ExitState {
 
         let blockAnalysis = blockAnalyses.get(block);
         let oldExit: ExitState | null;
@@ -637,10 +649,9 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
             };
             blockAnalyses.set(block, blockAnalysis);
             oldExit = null;
-            ctx.modified();
         } else {
 
-            if (!blockAnalysis.entry.or(ctx, entryState)) {
+            if (!blockAnalysis.entry.or(entryState)) {
                 // The entry state is already matching what we've been called to analyze
 
                 if (blockAnalysis.exit !== null) {
@@ -678,13 +689,13 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
             let op = block.head;
 
             while (op !== null && exitState.continue !== null) {
-                const newState = analyzeOp(ctx, blockAnalysis.stack_analysis.get(op)!, exitState.continue);
+                const newState = analyzeOp(blockAnalysis.stack_analysis.get(op)!, exitState.continue);
 
                 exitState.continue = newState.continue;
 
                 if (newState.return !== null) {
                     if (exitState.return === null) exitState.return = newState.return;
-                    else exitState.return.or(null, newState.return);
+                    else exitState.return.or(newState.return);
                 }
 
                 op = op.next;
@@ -710,46 +721,41 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
                 return blockAnalysis.exit;
             }
 
-            if (oldExit === null || !exitStatesEqual(exitState, oldExit))
-                ctx.modified();
-
             blockAnalysis.exit = exitState;
 
             return exitState;
         }
     }
 
-    function analyzeFunction(func: CatnipIrFunction, state: ValueGraphStateInfo, force: boolean): Map<CatnipVariable, ValueGraphVariableInfo> {
+    function analyzeFunction(func: CatnipIrFunction, state: ValueGraphStateInfo, force: boolean): ValueGraphStateInfo {
 
         const funcInfo = functions.get(func);
         CatnipCompilerLogger.assert(funcInfo !== undefined);
 
-        const combinedState = new ValueGraphStateInfo(funcInfo.entryVariables, funcInfo.entryArguments);
+        const entryState = funcInfo.entry;
 
-        const isUnique = combinedState.or(null, state);
+        const isUnique = entryState.or(state);
 
         if (!isUnique && !force) {
             // We've already analyzed this function with the combined state
-            return funcInfo.exitVariables;
+            return funcInfo.exit;
         }
 
-        const ctx = new ValueGraphAnalysisContext();
-
-        const funcExitState = analyzeBasicBlock(ctx, func.body, combinedState.clone());
+        const funcExitState = analyzeBasicBlock(func.body, entryState.clone());
 
         if (funcExitState.continue === null) {
             CatnipCompilerLogger.assert(funcExitState.return !== null, true, "Function must continue or return");
-            funcInfo.exitVariables = funcExitState.return.variables;
+            funcInfo.exit = funcExitState.return;
         } else {
             if (funcExitState.return !== null)
-                funcExitState.continue.or(null, funcExitState.return);
+                funcExitState.continue.or(funcExitState.return);
 
-            funcInfo.exitVariables = funcExitState.continue.variables;
+            funcInfo.exit = funcExitState.continue;
         }
 
         // If this function is yielding, we need to see if we've just modified the global state
         if (func.hasFunctionTableIndex) {
-            for (const [variable, info] of funcInfo.exitVariables) {
+            for (const [variable, info] of funcInfo.exit.variables) {
                 const globalVariable = variables.get(variable);
                 CatnipCompilerLogger.assert(globalVariable !== undefined);
 
@@ -764,7 +770,7 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
             }
         }
 
-        return funcInfo.exitVariables;
+        return funcInfo.exit;
     }
 
     // We want to analyze every yielding function
@@ -785,11 +791,11 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
 
         for (const parameter of func.ir.parameters) {
             entryArguments.push(new ValueGraphVariableInfo(
-                CatnipCompilerValue.dynamic(CatnipValueFormat.NONE), new Set()
+                CatnipCompilerValue.none(), new Set()
             ));
         }
 
-        analyzeFunction(func, new ValueGraphStateInfo(variables, entryArguments), true);
+        analyzeFunction(func, new ValueGraphStateInfo(variables, new Map(), entryArguments), true);
     }
 
     const graphVariables: Map<CatnipVariable, ValueGraphValueInfo> = new Map();
@@ -799,6 +805,29 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
             value: info.value,
             prev: info.previousAccesses
         });
+    }
+
+    const graphTransients: Map<CatnipIrTransientVariable, WritableValueGraphValueInfo> = new Map();
+
+    for (const [func, funcInfo] of functions) {
+        for (const [transient, transInfo] of funcInfo.exit.transients) {
+
+            let graphInfo = graphTransients.get(transient);
+
+            if (graphInfo === undefined) {
+                graphInfo = {
+                    value: CatnipCompilerValue.none(),
+                    prev: new Set()
+                };
+
+                graphTransients.set(transient, graphInfo);
+            }
+
+            graphInfo.value = graphInfo.value.or(transInfo.value);
+            
+            for (const access of transInfo.previousAccesses)
+                graphInfo.prev.add(access);
+        }
     }
 
     const graphNodes: Map<CatnipIrOp, WriteableValueGraphAccessNode> = new Map();
@@ -816,5 +845,5 @@ function createValueGraph(ctx: CatnipCompilerPassContext): ValueGraph {
         }
     }
 
-    return new ValueGraph(graphNodes, graphVariables, graphStackAnalysis);
+    return new ValueGraph(graphNodes, graphVariables, graphTransients, graphStackAnalysis);
 }

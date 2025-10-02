@@ -3,11 +3,15 @@ import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
 export class CatnipCompilerValue {
-    public static constant(value: catnip_compiler_constant, format: CatnipValueFormat) {
+    public static none(): CatnipCompilerValue {
+        return CatnipCompilerValue.dynamic(CatnipValueFormat.NONE);
+    }
+
+    public static constant(value: catnip_compiler_constant, format: CatnipValueFormat): CatnipCompilerValue {
         return new CatnipCompilerValue(format, value);
     }
 
-    public static dynamic(format: CatnipValueFormat) {
+    public static dynamic(format: CatnipValueFormat): CatnipCompilerValue {
         return new CatnipCompilerValue(format, null);
     }
 
@@ -55,7 +59,7 @@ export class CatnipCompilerValue {
             if (this._constantValue === other._constantValue)
                 return this;
         }
-
+        
         if (other.isNone) return this;
         if (this.isNone) return other;
 
