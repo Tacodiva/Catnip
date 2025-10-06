@@ -1,5 +1,5 @@
-import { CatnipIr } from "../compiler/CatnipIr";
-import { CatnipIrScriptTrigger } from "../compiler/CatnipIrScriptTrigger";
+import { IR0Script } from "../compiler/ir0/IR0";
+import { IR0Trigger } from "../compiler/ir0/IR0Trigger";
 
 export type CatnipScriptTriggerInputs = Record<string, any>;
 
@@ -13,5 +13,5 @@ export abstract class CatnipScriptTriggerType<TInputs extends CatnipScriptTrigge
         return { type: this, inputs }
     }
 
-    public abstract createTriggerIR(ir: CatnipIr, inputs: TInputs): CatnipIrScriptTrigger;
+    public abstract createIR(script: IR0Script, inputs: TInputs): IR0Trigger;
 }

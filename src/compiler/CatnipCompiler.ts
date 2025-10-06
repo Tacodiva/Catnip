@@ -23,6 +23,9 @@ import binaryen from "binaryen";
 import UTF16 from "../utf16";
 import { CatnipProjectModule, CatnipProjectModuleEvent } from "../runtime/CatnipProjectModule";
 import { CatnipCompilerPassContext } from "./CatnipCompilerPassContext";
+import { IR0, IR0GraphVisDotGenerator, IR0Script } from "./ir0/IR0";
+import { IR1 } from "./ir1/IR1";
+import { IR1Emitter } from "./ir1/IR1Emitter";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -146,6 +149,17 @@ export class CatnipCompiler {
         passes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     }
 
+    public assertStage(arg: CatnipCompilerStage | CatnipCompilerStage[]) {
+        if (Array.isArray(arg)) {
+            for (const stage of arg) {
+                if (this.stage === stage) return;
+            }
+            CatnipCompilerLogger.assert(false, true, `Invalid compiler stage.`);
+        } else {
+            CatnipCompilerLogger.assert(this.stage === arg, true, `Invalid compiler stage.`);
+        }
+    }
+
     private _transitionStage(stage: CatnipCompilerStage | null) {
         // TODO timing
         this._stage = stage;
@@ -153,11 +167,13 @@ export class CatnipCompiler {
 
     public async createModule(): Promise<CatnipProjectModule> {
 
-        this._transitionStage(CatnipCompilerStage.IR_CREATION);
+        this._transitionStage(CatnipCompilerStage.IR0_INIT);
+
+        const ir0 = new IR0(this);
 
         for (const sprite of this.project.sprites) {
             for (const script of sprite.scripts) {
-                this.createIR({
+                new IR0Script(ir0, {
                     commands: script.commands,
                     scriptID: script.id,
                     spriteID: sprite.id,
@@ -166,165 +182,202 @@ export class CatnipCompiler {
             }
         }
 
-        //////
+        this._transitionStage(CatnipCompilerStage.IR0_GEN);
 
-        this._transitionStage(CatnipCompilerStage.IR_PRE_ANLYSIS);
-
-        this._preAnalyzeIRs();
-
-        //////
-
-        this._transitionStage(CatnipCompilerStage.IR_GEN);
-
-        for (const scriptIR of this._irs) {
-            if (!scriptIR.hasCommandIR)
-                scriptIR.createCommandIR();
+        for (const script of ir0.scripts) {
+            script.generateInstructions();
         }
 
-        //////
+        // console.log(ir0.createGraphVis());
 
-        {
-            const analysisContext = new CatnipCompilerPassContext(this, this._irs);
+        const graphVis = new IR0GraphVisDotGenerator();
+        ir0.createGraphVis(graphVis);
 
-            const runPass = (stage: CatnipCompilerPassStage) => {
-                this._transitionStage(stage);
+        const ir1 = new IR1(this);
 
-                for (const pass of this._passes.get(stage) ?? []) {
-                    pass.run(analysisContext);
-                }
-            }
 
-            runPass(CatnipCompilerStage.PASS_PRE_ANALYSIS);
-            runPass(CatnipCompilerStage.PASS_ANALYSIS);
-            runPass(CatnipCompilerStage.PASS_POST_ANALYSIS);
-            runPass(CatnipCompilerStage.PASS_PRE_WASM_GEN);
+        for (const script of ir0.scripts) {
+            const emitter = new IR1Emitter(script, ir1);
+            emitter.addGraphVisDominanceEdges(graphVis);
         }
 
-        //////
+        console.log(graphVis.toDotFile());
 
-        this._transitionStage(CatnipCompilerStage.IR_WASM_GEN);
+        throw new Error("Done :3");
+        return null!;
 
-        for (const scriptIR of this._irs) {
+        // this._transitionStage(CatnipCompilerStage.IR_CREATION);
 
-            if (this.config.dump_ir)
-                console.log("" + scriptIR);
+        // for (const sprite of this.project.sprites) {
+        //     for (const script of sprite.scripts) {
+        //         this.createIR({
+        //             commands: script.commands,
+        //             scriptID: script.id,
+        //             spriteID: sprite.id,
+        //             trigger: script.trigger
+        //         });
+        //     }
+        // }
 
-            scriptIR.createWASM();
-        }
+        // //////
 
-        //////
+        // this._transitionStage(CatnipCompilerStage.IR_PRE_ANLYSIS);
 
-        this._transitionStage(CatnipCompilerStage.EVENT_WASM_GEN);
+        // // throw new Error();
 
-        for (const subsystem of this._subsystems.values()) {
-            if (subsystem.addEvents)
-                subsystem.addEvents();
-        }
+        // //////
 
-        let eventID: CatnipEventID;
-        for (eventID in CatnipEvents) {
-            if (this._events.has(eventID) || this.project.hasEventListeners(eventID)) {
-                this._getEvent(eventID).generateFunction();
-            }
-        }
+        // this._transitionStage(CatnipCompilerStage.IR_GEN);
 
-        //////
+        // for (const scriptIR of this._irs) {
+        //     if (!scriptIR.hasCommandIR)
+        //         scriptIR.createCommandIR();
+        // }
 
-        this._transitionStage(CatnipCompilerStage.MODULE_CREATION);
+        // //////
 
-        const functionsElement = this._createFunctionsElement();
+        // {
+        //     const analysisContext = new CatnipCompilerPassContext(this, this._irs);
 
-        const largetFunctionElement = functionsElement.init.length + functionsElement.offset.getAsConstNumber();
+        //     const runPass = (stage: CatnipCompilerPassStage) => {
+        //         this._transitionStage(stage);
 
-        if (largetFunctionElement > this.runtimeModule.indirectFunctionTable.length) {
-            this.runtimeModule.indirectFunctionTable.grow(largetFunctionElement - this.runtimeModule.indirectFunctionTable.length);
-        }
+        //         for (const pass of this._passes.get(stage) ?? []) {
+        //             pass.run(analysisContext);
+        //         }
+        //     }
 
-        const callbacks: Record<string, catnip_compiler_raw_callback> = {};
+        //     runPass(CatnipCompilerStage.PASS_PRE_ANALYSIS);
+        //     runPass(CatnipCompilerStage.PASS_ANALYSIS);
+        //     runPass(CatnipCompilerStage.PASS_POST_ANALYSIS);
+        //     runPass(CatnipCompilerStage.PASS_PRE_WASM_GEN);
+        // }
 
-        for (const callback of this._callbacks.values()) {
-            callbacks[callback.name] = callback.callback;
-        }
+        // //////
 
-        let moduleSource = writeModule(this.spiderModule, { mergeTypes: false });
+        // this._transitionStage(CatnipCompilerStage.IR_WASM_GEN);
 
-        if (this.config.enable_optimization_binaryen || this.config.dump_binaryen) {
-            const binaryenModule = binaryen.readBinary(moduleSource);
+        // for (const scriptIR of this._irs) {
 
-            if (this.config.enable_optimization_binaryen) {
-                const optLevel = typeof (this.config.enable_optimization_binaryen) === "number" ?
-                    this.config.enable_optimization_binaryen : 4;
+        //     if (this.config.dump_ir)
+        //         console.log("" + scriptIR);
 
-                binaryen.setOptimizeLevel(optLevel);
-                binaryenModule.optimize();
-                moduleSource = binaryenModule.emitBinary();
-            }
+        //     scriptIR.createWASM();
+        // }
 
-            if (this.config.dump_binaryen) {
-                switch (this.config.dump_binaryen) {
-                    case "wat":
-                        console.log(binaryenModule.emitText());
-                        break;
-                    case "as":
-                        console.log(binaryenModule.emitAsmjs());
-                        break;
-                    case "stack":
-                        console.log(binaryenModule.emitStackIR());
-                        break;
-                }
-            }
-        }
+        // //////
 
-        const downloadURL = (data: string, fileName: string) => {
-            const a = document.createElement('a')
-            a.href = data
-            a.download = fileName
-            document.body.appendChild(a)
-            a.style.display = 'none'
-            a.click()
-            a.remove()
-        }
+        // this._transitionStage(CatnipCompilerStage.EVENT_WASM_GEN);
 
-        if (globalThis.window && this.config.dump_wasm_blob) {
-            const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
+        // for (const subsystem of this._subsystems.values()) {
+        //     if (subsystem.addEvents)
+        //         subsystem.addEvents();
+        // }
 
-                const blob = new Blob([data as BlobPart], {
-                    type: mimeType
-                })
+        // let eventID: CatnipEventID;
+        // for (eventID in CatnipEvents) {
+        //     if (this._events.has(eventID) || this.project.hasEventListeners(eventID)) {
+        //         this._getEvent(eventID).generateFunction();
+        //     }
+        // }
 
-                const url = window.URL.createObjectURL(blob)
+        // //////
 
-                downloadURL(url, fileName)
+        // this._transitionStage(CatnipCompilerStage.MODULE_CREATION);
 
-                setTimeout(() => window.URL.revokeObjectURL(url), 1000)
-            }
-            downloadBlob(moduleSource, "catnip_output.wasm", "application/wasm");
-        }
+        // const functionsElement = this._createFunctionsElement();
 
-        const module = await WebAssembly.compile(moduleSource as BufferSource);
+        // const largetFunctionElement = functionsElement.init.length + functionsElement.offset.getAsConstNumber();
 
-        const instance = await WebAssembly.instantiate(module, {
-            env: {
-                memory: this.runtimeModule.imports.env.memory,
-                indirect_function_table: this.runtimeModule.indirectFunctionTable
-            },
-            catnip: this.runtimeModule.functions,
-            catnip_callbacks: callbacks
-        });
+        // if (largetFunctionElement > this.runtimeModule.indirectFunctionTable.length) {
+        //     this.runtimeModule.indirectFunctionTable.grow(largetFunctionElement - this.runtimeModule.indirectFunctionTable.length);
+        // }
 
-        const events: CatnipProjectModuleEvent[] = [];
-        for (const eventInfo of this._events.values())
-            events.push({ id: eventInfo.id, exportName: eventInfo.export.name });
+        // const callbacks: Record<string, catnip_compiler_raw_callback> = {};
 
-        const projectModule = new CatnipProjectModule(this.project, instance, events);
+        // for (const callback of this._callbacks.values()) {
+        //     callbacks[callback.name] = callback.callback;
+        // }
 
-        // TODO There's definitly more stuff to clean up
-        this._deleteFunctionsElement(functionsElement);
-        this._irs.length = 0;
+        // let moduleSource = writeModule(this.spiderModule, { mergeTypes: false });
 
-        this._transitionStage(null);
+        // if (this.config.enable_optimization_binaryen || this.config.dump_binaryen) {
+        //     const binaryenModule = binaryen.readBinary(moduleSource);
 
-        return projectModule;
+        //     if (this.config.enable_optimization_binaryen) {
+        //         const optLevel = typeof (this.config.enable_optimization_binaryen) === "number" ?
+        //             this.config.enable_optimization_binaryen : 4;
+
+        //         binaryen.setOptimizeLevel(optLevel);
+        //         binaryenModule.optimize();
+        //         moduleSource = binaryenModule.emitBinary();
+        //     }
+
+        //     if (this.config.dump_binaryen) {
+        //         switch (this.config.dump_binaryen) {
+        //             case "wat":
+        //                 console.log(binaryenModule.emitText());
+        //                 break;
+        //             case "as":
+        //                 console.log(binaryenModule.emitAsmjs());
+        //                 break;
+        //             case "stack":
+        //                 console.log(binaryenModule.emitStackIR());
+        //                 break;
+        //         }
+        //     }
+        // }
+
+        // const downloadURL = (data: string, fileName: string) => {
+        //     const a = document.createElement('a')
+        //     a.href = data
+        //     a.download = fileName
+        //     document.body.appendChild(a)
+        //     a.style.display = 'none'
+        //     a.click()
+        //     a.remove()
+        // }
+
+        // if (globalThis.window && this.config.dump_wasm_blob) {
+        //     const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
+
+        //         const blob = new Blob([data as BlobPart], {
+        //             type: mimeType
+        //         })
+
+        //         const url = window.URL.createObjectURL(blob)
+
+        //         downloadURL(url, fileName)
+
+        //         setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+        //     }
+        //     downloadBlob(moduleSource, "catnip_output.wasm", "application/wasm");
+        // }
+
+        // const module = await WebAssembly.compile(moduleSource as BufferSource);
+
+        // const instance = await WebAssembly.instantiate(module, {
+        //     env: {
+        //         memory: this.runtimeModule.imports.env.memory,
+        //         indirect_function_table: this.runtimeModule.indirectFunctionTable
+        //     },
+        //     catnip: this.runtimeModule.functions,
+        //     catnip_callbacks: callbacks
+        // });
+
+        // const events: CatnipProjectModuleEvent[] = [];
+        // for (const eventInfo of this._events.values())
+        //     events.push({ id: eventInfo.id, exportName: eventInfo.export.name });
+
+        // const projectModule = new CatnipProjectModule(this.project, instance, events);
+
+        // // TODO There's definitly more stuff to clean up
+        // this._deleteFunctionsElement(functionsElement);
+        // this._irs.length = 0;
+
+        // this._transitionStage(null);
+
+        // return projectModule;
     }
 
     public createIR(info: CatnipIrInfo): CatnipIr {
@@ -420,58 +473,6 @@ export class CatnipCompiler {
         this._subsystems.set(subsystemClass, newSubsystem);
 
         return newSubsystem;
-    }
-
-    private _preAnalyzeIRs() {
-        function analyzeOp(ir: CatnipIr, analysis: CatnipIrPreAnalysis, op: CatnipOp) {
-            for (const inputOrSubstack of op.type.getInputsAndSubstacks(ir, op.inputs)) {
-                if (Array.isArray(inputOrSubstack)) {
-                    for (const command of inputOrSubstack)
-                        analyzeOp(ir, analysis, command);
-                } else {
-                    analyzeOp(ir, analysis, inputOrSubstack);
-                }
-            }
-
-            op.type.preAnalyze(ir, op.inputs);
-
-            analysis.externalBranches.push(...op.type.getExternalBranches(ir, op.inputs));
-            analysis.isYielding ||= op.type.isYielding(ir, op.inputs);
-        }
-
-        const analyses: Map<CatnipIr, CatnipIrPreAnalysis> = new Map();
-
-        for (const ir of this._irs) {
-            const analysis: CatnipIrPreAnalysis = {
-                isYielding: false,
-                externalBranches: []
-            }
-
-            analyses.set(ir, analysis);
-            ir.setPreAnalysis(analysis);
-
-            for (const command of ir.commands) {
-                analyzeOp(ir, analysis, command);
-            }
-        }
-
-        let modified = true;
-
-        while (modified) {
-            modified = false;
-
-            for (const [ir, analysis] of analyses) {
-                if (analysis.isYielding) continue;
-
-                for (const externalBranch of analysis.externalBranches) {
-                    if (externalBranch.isYielding()) {
-                        analysis.isYielding = true;
-                        modified = true;
-                        break;
-                    }
-                }
-            }
-        }
     }
 
     public createRawCallback(

@@ -1,25 +1,19 @@
-import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-import { CatnipIr } from "../../compiler/CatnipIr";
-import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
+import { IR0Input } from "../../compiler/ir0/IR0";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { CatnipInputOp, CatnipInputOpType } from "../CatnipOp";
 
 export type binary_op_inputs = { left: CatnipInputOp, right: CatnipInputOp };
-export type binary_op_ir_generator = (ctx: CatnipCompilerIrGenContext, inputs: binary_op_inputs) => void;
+export type binary_op_ir_generator = (ctx: IR0Emitter, inputs: binary_op_inputs) => IR0Input;
 
 export class CatnipInputBinaryOpType extends CatnipInputOpType<binary_op_inputs> {
     public readonly generator: binary_op_ir_generator;
-
+    
     public constructor(generator: binary_op_ir_generator) {
         super();
         this.generator = generator;
     }
 
-    public *getInputsAndSubstacks(ir: CatnipIr, inputs: binary_op_inputs): IterableIterator<CatnipOp> {
-        yield inputs.left;
-        yield inputs.right;
-    }
-
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: binary_op_inputs) {
-        this.generator(ctx, inputs);
+    public generateIr(ctx: IR0Emitter, inputs: binary_op_inputs): IR0Input {
+        return this.generator(ctx, inputs);
     }
 }

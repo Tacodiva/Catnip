@@ -175,7 +175,7 @@ export class SB3ScriptReader {
         return this.meta.getList(listID);
     }
 
-    private _getBlockInfo<TOpcode extends ProjectSB3BlockOpcode>(opcode: TOpcode, expected: BlockType): { type: BlockType.HAT, deserializer: SB3HatBlockDeserializer<TOpcode> } |
+    private _getBlockInfo<TOpcode extends ProjectSB3BlockOpcode>(opcode: TOpcode, expected: BlockType): { type: BlockType.HAT, deserializer: SB3HatBlockDeserializer<TOpcode> | null } |
     { type: BlockType.COMMAND, deserializer: SB3CommandBlockDeserializer<TOpcode> } |
     { type: BlockType.INPUT, deserializer: SB3InputBlockDeserializer<TOpcode> } {
         const hatBlockDeserializer = sb3_ops.hatBlocks.get(opcode);
@@ -213,15 +213,17 @@ export class SB3ScriptReader {
                     return {
                         type: BlockType.COMMAND,
                         deserializer: (ctx, block) => CatnipOps.core_nop.create({})
-                    }
+                    };
                 case BlockType.INPUT:
                     return {
                         type: BlockType.INPUT,
                         deserializer: (ctx, block) => CatnipOps.core_const.create({ value: 0 })
-                    }
+                    };
                 case BlockType.HAT:
-                    throw new Error(`Unknown SB3 hat not supported ('${opcode}').`);
-
+                    return {
+                        type: BlockType.HAT,
+                        deserializer: null
+                    };
             }
         } else {
             throw new Error(`Unknown SB3 block opcode '${opcode}'.`);
@@ -245,6 +247,9 @@ export class SB3ScriptReader {
             const hatBlockInfo = this._getBlockInfo(hatBlock.opcode, BlockType.HAT);
 
             if (hatBlockInfo.type !== BlockType.HAT) continue;
+
+            // Unknown hat block.
+            if (hatBlockInfo.deserializer === null) continue;
 
             const trigger = hatBlockInfo.deserializer(this, hatBlock);
 
@@ -279,11 +284,16 @@ export class SB3ScriptReader {
             case ProjectSB3InputValueType.BROADCAST:
                 return CatnipOps.core_const.create({ value: array[1] });
             case ProjectSB3InputValueType.VARIABLE: {
-                const variableInfo = this.meta.getVariable(array[2]);
-                return CatnipOps.data_get_var.create({
-                    sprite: variableInfo.spriteID,
-                    variable: variableInfo.variableID
-                });
+                // const variableInfo = this.meta.getVariable(array[2]);
+                // return CatnipOps.data_get_var.create({
+                //     sprite: variableInfo.spriteID,
+                //     variable: variableInfo.variableID
+                // });
+                if (this.meta.config.allow_unknown_opcodes) {
+                    SB3ReadLogger.warn("Unsupported variable reporter.");
+                    return CatnipOps.core_const.create({ value: "" });
+                }
+                throw new Error("Not supported.");
             }
             case ProjectSB3InputValueType.LIST:
                 if (this.meta.config.allow_unknown_opcodes) {

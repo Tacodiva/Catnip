@@ -1,12 +1,12 @@
-import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { ir_join } from "../../compiler/ir/operators/join";
+import { IR0InputJoin } from "../../compiler/ir0/ops/log";
 import { registerSB3InputBlock } from "../../sb3_ops";
 import { CatnipInputBinaryOpType } from "./BinaryOperator";
 
 export const op_join = new CatnipInputBinaryOpType((ctx, inputs) => {
-    ctx.emitInput(inputs.left, CatnipValueFormat.I32_HSTRING);
-    ctx.emitInput(inputs.right, CatnipValueFormat.I32_HSTRING);
-    ctx.emitIr(ir_join, { }, {});
+    return new IR0InputJoin(
+        ctx.emitInput(inputs.left),  
+        ctx.emitInput(inputs.right)
+    );
 });
 
 registerSB3InputBlock("operator_join", (ctx, block) => op_join.create({

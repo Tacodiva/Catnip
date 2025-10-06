@@ -1,5 +1,9 @@
 
 export enum CatnipCompilerStage {
+
+    IR0_INIT,
+    IR0_GEN,
+    
     IR_CREATION,
     IR_PRE_ANLYSIS,
     IR_GEN,

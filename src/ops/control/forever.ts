@@ -1,32 +1,25 @@
-import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-import { CatnipIr } from "../../compiler/CatnipIr";
-import { ir_branch } from "../../compiler/ir/core/branch";
-import { ir_nop } from "../../compiler/ir/core/nop";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { IR0InputConst, IR0InstructionLog } from "../../compiler/ir0/ops/log";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipCommandList, CatnipCommandOpType, CatnipOp } from "../CatnipOp";
 
 type forever_inputs = { loop: CatnipCommandList };
 
 export const op_forever = new class extends CatnipCommandOpType<forever_inputs> {
-    public *getInputsAndSubstacks(ir: CatnipIr, inputs: forever_inputs): IterableIterator<CatnipOp | CatnipCommandList> {
-        yield inputs.loop;
-    }
+    public generateIr(ctx: IR0Emitter, inputs: forever_inputs): void {
 
-    public isYielding(ir: CatnipIr): boolean {
-        return ir.compiler.config.enable_warp_timer || !ir.isWarp;
-    }
+        ctx.emitInlineBlock(ctx => {
+            const loopBlock = ctx.block;
 
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: forever_inputs): void {
-        ctx.emitIr(
-            ir_branch, {},
-            {
-                branch: ctx.emitBranch((loopHead) => {
-                    ctx.emitCommands(inputs.loop);
-                    ctx.emitLoopYield();
-                    ctx.emitJump(loopHead);
-                })
-            }
-        );
+            ctx.emitCommands(inputs.loop);
+            // ctx.emitLoopYield();
+
+            ctx.emitInstruction(new IR0InstructionLog(
+                new IR0InputConst(undefined)
+            ));
+            
+            ctx.emitFlow(loopBlock);
+        });
     }
 }
 

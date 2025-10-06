@@ -1,15 +1,15 @@
-import { CatnipInputOpType, CatnipOp } from "../CatnipOp";
-import { registerSB3InputBlock } from "../../sb3_ops";
-import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-import { ir_get_xy } from "../../compiler/ir/motion/get_xy";
+// import { CatnipInputOpType, CatnipOp } from "../CatnipOp";
+// import { registerSB3InputBlock } from "../../sb3_ops";
+// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
+// import { ir_get_xy } from "../../compiler/ir/motion/get_xy";
 
-export const op_get_x = new class extends CatnipInputOpType<{}> {
-    public *getInputsAndSubstacks(): IterableIterator<CatnipOp> { }
+// export const op_get_x = new class extends CatnipInputOpType<{}> {
+//     public *getInputsAndSubstacks(): IterableIterator<CatnipOp> { }
 
-    public generateIr(ctx: CatnipCompilerIrGenContext, inputs: {}) {
+//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: {}) {
 
-        ctx.emitIr(ir_get_xy, { axis: "x" }, {});
-    }
-}
+//         ctx.emitIr(ir_get_xy, { axis: "x" }, {});
+//     }
+// }
 
-registerSB3InputBlock("motion_xposition", (ctx, block) => op_get_x.create({}));
+// registerSB3InputBlock("motion_xposition", (ctx, block) => op_get_x.create({}));
