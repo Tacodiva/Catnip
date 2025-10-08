@@ -30,7 +30,7 @@ export class IR0BasicBlock {
 
 
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
-        IR0Logger.assert(!generator.blockMap.has(this));
+        IR0Logger.assert(!generator.blocks.has(this));
         
         const clusterName = generator.getName();
 
@@ -61,7 +61,7 @@ export class IR0BasicBlock {
 
         if (firstNode === null) firstNode = finalNode;
 
-        generator.blockMap.set(this, { firstNode, clusterName, finalNode });
+        generator.blocks.set(this, { firstNode, clusterName, finalNode });
 
         generator.decrementIndentation();
         generator.writeLine(`}`);
@@ -70,13 +70,13 @@ export class IR0BasicBlock {
     }
 
     public linkGraphVisNode(generator: IR0GraphVisDotGenerator) {
-        const info = generator.blockMap.get(this)!;
+        const info = generator.blocks.get(this)!;
 
         generator.writeLine(`subgraph cluster_${info.clusterName} {`);
         generator.incrementIndentation();
 
         function getLink(block: IR0BasicBlock) {
-            return generator.blockMap.get(block)!.firstNode;
+            return generator.blocks.get(block)!.firstNode;
         }
 
         if (!this.isComplete) {

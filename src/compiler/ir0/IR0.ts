@@ -92,6 +92,8 @@ export class IR0Script {
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
         const clusterName = generator.getName();
 
+        generator.scripts.set(this, clusterName);
+
         generator.writeLine(`subgraph cluster_${clusterName} {`);
         generator.incrementIndentation();
 
@@ -100,7 +102,7 @@ export class IR0Script {
         this.forEachBasicBlock((block) => block.createGraphVisNode(generator));
         this.forEachBasicBlock((block) => block.linkGraphVisNode(generator));
 
-        const firstNode = generator.blockMap.get(this.head)!.firstNode;
+        const firstNode = generator.blocks.get(this.head)!.firstNode;
 
         generator.writeExecutionEdge(triggerNode, firstNode);
 
@@ -205,13 +207,15 @@ export class IR0GraphVisDotGenerator {
     public nextName: number;
     public edges: string[];
 
-    public blockMap: Map<IR0BasicBlock, BasicBlockInfo>;
+    public blocks: Map<IR0BasicBlock, BasicBlockInfo>;
+    public scripts: Map<IR0Script, string>;
 
     public constructor() {
         this.dot = "digraph {\n  compound=true;";
         this.indentation = 1;
         this.nextName = 0;
-        this.blockMap = new Map();
+        this.blocks = new Map();
+        this.scripts = new Map();
         this.edges = [];
     }
 

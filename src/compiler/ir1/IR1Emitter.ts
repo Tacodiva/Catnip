@@ -43,8 +43,8 @@ export class IR1Emitter {
                 case IR0ControlFlowType.Next:
                     if (block.flow.status !== CatnipWasmEnumThreadStatus.RUNNING) {
                         // This is a yield, so the target block has to be a function
-                        if (!this.functions.has(block))
-                            this.functions.set(block, new IR1Function(this.ir1Script));
+                        if (!this.functions.has(block.flow.next))
+                            this.functions.set(block.flow.next, new IR1Function(this.ir1Script));
                     }
                     break;
                 case IR0ControlFlowType.Call:
@@ -108,9 +108,20 @@ export class IR1Emitter {
         // We need to look for any blocks who are being called into from multiple functions
         //   Those blocks need to become their own functions if their not already.
         {
+
+            const convertDecendants = (info: BasicBlockInfo) => {
+                for (const child of info.out) {
+                    if (child.func === info.func) continue;
+                    if (this.functions.has(child.block)) continue;
+
+                    child.func = info.func;
+                    convertDecendants(child);
+                }
+            }
+
             const checkBlock = (info: BasicBlockInfo) => {
                 if (this.functions.has(info.block)) {
-                    // This function is already an entrypoint.
+                    info.isEntrypoint = true;
                     return;
                 }
 
@@ -122,23 +133,31 @@ export class IR1Emitter {
                         func = new IR1Function(this.ir1Script);
 
                         this.functions.set(info.block, func);
+                        info.isEntrypoint = true;
                         break;
                     }
                 }
 
                 if (func !== info.func) {
-                    // We've changed this block's function, we need to check all of our decendants too
+                    // We've changed this block's function, we need to convert all of our decendants too
                     info.func = func;
-
-                    for (const out of info.out) {
-                        checkBlock(out);
-                    }
+                    convertDecendants(info);
                 }
             }
 
-            for (const entrypoint of [...this.functions.keys()]) {
-                for (const out of this.blocks.get(entrypoint)!.out) {
-                    checkBlock(out);
+            // Check all the blocks in a breadth first search
+
+            const queue: BasicBlockInfo[] = [this.blocks.get(this.ir0Script.head)!];
+            const visited: Set<BasicBlockInfo> = new Set();
+
+            while (queue.length !== 0) {
+                const block = queue.pop()!;
+                checkBlock(block);
+
+                for (const next of block.out) {
+                    if (visited.has(next)) continue;
+                    visited.add(next);
+                    queue.push(next);
                 }
             }
         }
@@ -148,9 +167,8 @@ export class IR1Emitter {
             const entrypoint = this.blocks.get(entrypointBlock)!;
 
             IR1Logger.assert(entrypoint !== undefined);
-
-            // Also while we're here mark all the entrypoints as entrypoints
-            entrypoint.isEntrypoint = true;
+            IR1Logger.assert(entrypoint.isEntrypoint);
+            IR1Logger.assert(entrypoint.func === func);
 
             // We are going to create the reverse post order array and set the index on each block.
             let reversePostorder: BasicBlockInfo[];
@@ -194,6 +212,7 @@ export class IR1Emitter {
                 for (let i = 1; i < reversePostorder.length; i++) {
 
                     const block = reversePostorder[i];
+                    IR1Logger.assert(!block.isEntrypoint);
 
                     let newParent: BasicBlockInfo | null = null;
 
@@ -275,15 +294,24 @@ export class IR1Emitter {
     }
 
     public addGraphVisDominanceEdges(generator: IR0GraphVisDotGenerator) {
+        generator.writeLine(`subgraph cluster_${generator.scripts.get(this.ir0Script)!} {`);
+        generator.incrementIndentation();
+
         for (const blockInfo of this.blocks.values()) {
+            if (blockInfo.immediateDominator === null) {
+                IR1Logger.assert(blockInfo.isEntrypoint);
+                generator.writeLine(`subgraph cluster_${generator.blocks.get(blockInfo.block)!.clusterName} { color=blue; }`);
+                continue;
+            }
 
-            if (blockInfo.immediateDominator === null) continue;
-
-            const blockGraphInfo = generator.blockMap.get(blockInfo.block)!;
-            const parentGraphInfo = generator.blockMap.get(blockInfo.immediateDominator.block)!;
+            const blockGraphInfo = generator.blocks.get(blockInfo.block)!;
+            const parentGraphInfo = generator.blocks.get(blockInfo.immediateDominator.block)!;
 
             generator.writeEdge(parentGraphInfo.finalNode, blockGraphInfo.firstNode, `color=black lhead="cluster_${blockGraphInfo.clusterName}" ltail="cluster_${parentGraphInfo.clusterName}"`);
         }
+
+        generator.decrementIndentation();
+        generator.writeLine(`}`);
 
     }
 
