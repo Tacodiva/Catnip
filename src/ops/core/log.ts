@@ -1,6 +1,6 @@
 import { CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
-import { IR0InstructionLog } from "../../compiler/ir0/ops/log";
+import { IR0CmdLog } from "../../compiler/ir0/ops/log";
 
 type log_inputs = { msg: CatnipInputOp, type: "log" | "warn" | "error" };
 
@@ -27,7 +27,7 @@ export const op_log = new class extends CatnipCommandOpType<log_inputs> {
         //     }
         // }, [CatnipValueFormat.I32_HSTRING], null);
 
-        ctx.emitInstruction(new IR0InstructionLog(
+        ctx.emitCommand(new IR0CmdLog(
             ctx.emitInput(inputs.msg)
         ));
     }

@@ -1,12 +1,12 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0GraphVisDotGenerator, IR0Instruction } from "./IR0";
+import { IR0GraphVisDotGenerator, IR0Command } from "./IR0";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
 
 
 
 export class IR0BasicBlock {
-    public instructions: IR0Instruction[];
+    public commands: IR0Command[];
 
     private _flow: IR0ControlFlow | null;
 
@@ -23,8 +23,8 @@ export class IR0BasicBlock {
         return this._flow !== null;
     }
 
-    public constructor(instructions: IR0Instruction[] = [], flow: IR0ControlFlow | null = null) {
-        this.instructions = instructions;
+    public constructor(instructions: IR0Command[] = [], flow: IR0ControlFlow | null = null) {
+        this.commands = instructions;
         this._flow = flow;
     }
 
@@ -40,7 +40,7 @@ export class IR0BasicBlock {
         let firstNode: string | null = null;
         let lastNode: string | null = null;
 
-        for (const instruction of this.instructions) {
+        for (const instruction of this.commands) {
 
             const instructionNodeName = instruction.createGraphVisNode(generator);
 

@@ -1,5 +1,5 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0Instruction, IR0Script, IR0Input } from "./IR0";
+import { IR0Command, IR0Script, IR0Input } from "./IR0";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0Logger } from "./IR0Logger";
@@ -36,9 +36,9 @@ export class IR0Emitter {
         }
     }
 
-    public emitInstruction(inst: IR0Instruction) {
+    public emitCommand(inst: IR0Command) {
         this.assertIncomplete();
-        this.block.instructions.push(inst);
+        this.block.commands.push(inst);
     }
 
     public emitReturn() {

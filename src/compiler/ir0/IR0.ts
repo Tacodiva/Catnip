@@ -4,6 +4,8 @@ import { CatnipScriptID } from "../../runtime/CatnipScript";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
+import { IR1Instruction } from "../ir1/IR1";
+import { IR1Emitter } from "../ir1/IR1Emitter";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Emitter } from "./IR0Emitter";
@@ -157,7 +159,7 @@ type IR0InstructionArguments<TArgs extends string[]> = {
     [K in TArgs[number]]: IR0InstructionArgument;
 }
 
-class IR0Node<TArgs extends string[] = string[]> {
+export abstract class IR0Node<TArgs extends string[] = string[]> {
     public readonly name: string;
 
     public readonly args: Readonly<IR0InstructionArguments<TArgs>>;
@@ -184,13 +186,15 @@ class IR0Node<TArgs extends string[] = string[]> {
         return `[label="${this.name}"]`;
     }
 
-}
-
-export class IR0Instruction<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
+    public abstract emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[];
 
 }
 
-export class IR0Input<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
+export abstract class IR0Command<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
+
+}
+
+export abstract class IR0Input<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
 
 }
 

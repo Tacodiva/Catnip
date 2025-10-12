@@ -1,5 +1,5 @@
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
-import { IR0InputConst, IR0InstructionLog } from "../../compiler/ir0/ops/log";
+import { IR0InputConst, IR0CmdLog } from "../../compiler/ir0/ops/log";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipCommandList, CatnipCommandOpType, CatnipOp } from "../CatnipOp";
 
@@ -12,12 +12,8 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
             const loopBlock = ctx.block;
 
             ctx.emitCommands(inputs.loop);
-            // ctx.emitLoopYield();
+            ctx.emitLoopYield();
 
-            ctx.emitInstruction(new IR0InstructionLog(
-                new IR0InputConst(undefined)
-            ));
-            
             ctx.emitFlow(loopBlock);
         });
     }

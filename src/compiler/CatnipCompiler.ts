@@ -188,8 +188,6 @@ export class CatnipCompiler {
             script.generateInstructions();
         }
 
-        // console.log(ir0.createGraphVis());
-
         const graphVis = new IR0GraphVisDotGenerator();
         ir0.createGraphVis(graphVis);
 
@@ -199,9 +197,11 @@ export class CatnipCompiler {
         for (const script of ir0.scripts) {
             const emitter = new IR1Emitter(script, ir1);
             emitter.addGraphVisDominanceEdges(graphVis);
+            emitter.emitAll();
         }
 
-        console.log(graphVis.toDotFile());
+        // console.log(graphVis.toDotFile());
+        console.log(ir1.stringify());
 
         throw new Error("Done :3");
         return null!;
