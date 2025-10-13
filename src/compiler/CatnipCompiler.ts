@@ -7,7 +7,7 @@ import { PassFunctionIndexAllocation } from "./passes/pre-analysis/PassFunctionI
 import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
 import { PassAnalyzeFunctionCallers } from "./passes/pre-analysis/PassAnalyzeFunctionCallers";
 import { PassTransientVariablePropagation } from "./passes/pre-wasm/PassTransientVariablePropagation";
-import { createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
+import { createModule, SpiderElementFuncIdxActive, SpiderFunction, SpiderFunctionDefinition, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderOpcodes, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipCompilerSubsystem, CatnipCompilerSubsystemClass } from "./CatnipCompilerSubsystem";
@@ -26,6 +26,9 @@ import { CatnipCompilerPassContext } from "./CatnipCompilerPassContext";
 import { IR0, IR0GraphVisDotGenerator, IR0Script } from "./ir0/IR0";
 import { IR1 } from "./ir1/IR1";
 import { IR1Emitter } from "./ir1/IR1Emitter";
+import { IR1ToWasmPrepass } from "./ir1/IR1ToWasmPrepass";
+import { CatnipCompilerWasmModule } from "./CatnipCompilerWasmModule";
+import { WasmEmitter } from "./wasm/WasmEmitter";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -188,20 +191,93 @@ export class CatnipCompiler {
             script.generateInstructions();
         }
 
-        const graphVis = new IR0GraphVisDotGenerator();
-        ir0.createGraphVis(graphVis);
+
+        if (this.config.dump_ir0) {
+            const graphVis = new IR0GraphVisDotGenerator();
+            ir0.createGraphVis(graphVis);
+            console.log(graphVis.toDotFile());
+        }
+
+        this._transitionStage(CatnipCompilerStage.IR0_TO_IR1_PREPASS);
+
+        // TODO 
+
+        this._transitionStage(CatnipCompilerStage.IR0_IR1_GEN);
 
         const ir1 = new IR1(this);
 
-
         for (const script of ir0.scripts) {
-            const emitter = new IR1Emitter(script, ir1);
-            emitter.addGraphVisDominanceEdges(graphVis);
-            emitter.emitAll();
+            new IR1Emitter(script, ir1).emitAll();
         }
 
-        // console.log(graphVis.toDotFile());
-        console.log(ir1.stringify());
+        if (this.config.dump_ir1) {
+            console.log(ir1.stringify());
+        }
+
+        this._transitionStage(CatnipCompilerStage.IR1_TO_WASM_PREPASS);
+
+        const module = new CatnipCompilerWasmModule(this);
+        const ir1ToWasmPrepass = new IR1ToWasmPrepass(ir1, module);
+
+        this._transitionStage(CatnipCompilerStage.IR1_WASM_GEN);
+
+        for (const script of ir1.scripts) {
+            for (const func of script.functions) {
+                const emitter = new WasmEmitter(ir1ToWasmPrepass, func);
+                emitter.emitInstructions(func.body);
+                emitter.finish();
+
+                // emitter.spiderFunction.body.emit(SpiderOpcodes.);
+            }
+        }
+
+        this._transitionStage(CatnipCompilerStage.MODULE_INIT);
+
+        module.spiderModule.exportFunction("test", ir1ToWasmPrepass.getSpiderFunction(ir1.scripts[0].functions[0]));
+
+        let moduleSource = module.createModule();
+
+        this._transitionStage(CatnipCompilerStage.MODULE_BINARYEN_OPTIMIZE);
+
+        if (this.config.enable_optimization_binaryen || this.config.dump_binaryen) {
+            const binaryenModule = binaryen.readBinary(moduleSource);
+
+            if (this.config.enable_optimization_binaryen) {
+                const optLevel = typeof (this.config.enable_optimization_binaryen) === "number" ?
+                    this.config.enable_optimization_binaryen : 4;
+
+                binaryen.setOptimizeLevel(optLevel);
+                binaryenModule.optimize();
+                moduleSource = binaryenModule.emitBinary();
+            }
+
+            if (this.config.dump_binaryen) {
+                switch (this.config.dump_binaryen) {
+                    case "wat":
+                        console.log(binaryenModule.emitText());
+                        break;
+                    case "as":
+                        console.log(binaryenModule.emitAsmjs());
+                        break;
+                    case "stack":
+                        console.log(binaryenModule.emitStackIR());
+                        break;
+                }
+            }
+        }
+
+        const wasmModule = await WebAssembly.compile(moduleSource as BufferSource);
+
+        const wasmInstance = await WebAssembly.instantiate(wasmModule, {
+            env: {
+                memory: this.runtimeModule.imports.env.memory,
+                indirect_function_table: this.runtimeModule.indirectFunctionTable
+            },
+            catnip: this.runtimeModule.functions,
+            catnip_callbacks: module.getCallbacks()
+        });
+
+        wasmInstance.exports.test();
 
         throw new Error("Done :3");
         return null!;

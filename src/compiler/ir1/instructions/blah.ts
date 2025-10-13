@@ -1,6 +1,8 @@
+import { SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { catnip_compiler_constant } from "../../cast";
+import { WasmEmitter } from "../../wasm/WasmEmitter";
 import { IR1Function, IR1Instruction, IR1StringificationContext } from "../IR1";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 
 export class IR1InstrBlock extends IR1Instruction {
@@ -10,6 +12,10 @@ export class IR1InstrBlock extends IR1Instruction {
     public constructor(body?: IR1Instruction[]) {
         super();
         this.body = body ?? [];
+    }
+
+    public emitWasm(emitter: WasmEmitter): void {
+        emitter.emitWasm(SpiderOpcodes.block, emitter.emitExpression(this.body));
     }
 
     public stringify(ctx: IR1StringificationContext): void {
@@ -28,12 +34,15 @@ export class IR1InstrLoop extends IR1Instruction {
         this.body = body ?? [];
     }
 
+    public emitWasm(emitter: WasmEmitter): void {
+        emitter.emitWasm(SpiderOpcodes.loop, emitter.emitExpression(this.body));
+    }
+
     public stringify(ctx: IR1StringificationContext): void {
         ctx.openBlock("loop");
         ctx.writeInstructions(this.body);
         ctx.closeBlock();
     }
-
 }
 
 export class IR1InstrBr extends IR1Instruction {
@@ -43,6 +52,10 @@ export class IR1InstrBr extends IR1Instruction {
     public constructor(index: number) {
         super();
         this.index = index;
+    }
+
+    public emitWasm(emitter: WasmEmitter): void {
+        emitter.emitWasm(SpiderOpcodes.br, this.index);
     }
 
     public stringify(ctx: IR1StringificationContext): void {
@@ -61,6 +74,14 @@ export class IR1InstrIf extends IR1Instruction {
         this.fail = fail;
     }
 
+    public emitWasm(emitter: WasmEmitter): void {
+        if (this.fail.length === 0) {
+            emitter.emitWasm(SpiderOpcodes.if, emitter.emitExpression(this.pass));
+        } else {
+            emitter.emitWasm(SpiderOpcodes.if, emitter.emitExpression(this.pass), emitter.emitExpression(this.fail));
+        }
+    }
+
     public stringify(ctx: IR1StringificationContext): void {
         ctx.openBlock("if");
         ctx.writeInstructions(this.pass);
@@ -75,6 +96,10 @@ export class IR1InstrIf extends IR1Instruction {
 }
 
 export class IR1InstrReturn extends IR1Instruction {
+    public emitWasm(emitter: WasmEmitter): void {
+        emitter.emitWasm(SpiderOpcodes.return);
+    }
+
     public stringify(ctx: IR1StringificationContext): void {
         ctx.writeLine(`return`);
     }
@@ -83,6 +108,10 @@ export class IR1InstrReturn extends IR1Instruction {
 export class IR1InstrCall extends IR1Instruction {
 
     public func: IR1Function;
+
+    public emitWasm(emitter: WasmEmitter): void {
+        emitter.emitWasm(SpiderOpcodes.call, emitter.prepass.getSpiderFunction(this.func));
+    }
 
     public constructor(func: IR1Function) {
         super();
@@ -105,6 +134,10 @@ export class IR1InstrYield extends IR1Instruction {
         this.status = status;
     }
 
+    public emitWasm(emitter: WasmEmitter): void {
+        throw new Error("Not implemented.");
+    }
+
     public stringify(ctx: IR1StringificationContext): void {
         ctx.writeLine(`yield ${ctx.getFunctionName(this.func)} status = ${this.status}`);
     }
@@ -112,25 +145,19 @@ export class IR1InstrYield extends IR1Instruction {
 }
 
 
-export class IR1InstrConst extends IR1Instruction {
-
-    public value: catnip_compiler_constant;
-
-    public constructor(value: catnip_compiler_constant) {
-        super();
-        this.value = value;
-    }
-
-    public stringify(ctx: IR1StringificationContext): void {
-        ctx.writeLine(`const ${JSON.stringify(this.value)}`);
-    }
-
-}
-
 export class IR1InstrLog extends IR1Instruction {
-
+    
     public constructor() {
         super();
+    }
+
+    public emitWasm(emitter: WasmEmitter): void {
+        emitter.emitWasm(SpiderOpcodes.call,
+            emitter.module.importCallback("log",
+                console.log,
+                [CatnipValueFormat.I32_HSTRING], null
+            )
+        );
     }
 
     public stringify(ctx: IR1StringificationContext): void {
@@ -139,12 +166,18 @@ export class IR1InstrLog extends IR1Instruction {
 }
 
 export class IR1InstrJoin extends IR1Instruction {
-
+    
     public constructor() {
         super();
+    }
+
+    public emitWasm(emitter: WasmEmitter): void {
+        emitter.emitWasmPushRuntime();
+        emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_join");
     }
 
     public stringify(ctx: IR1StringificationContext): void {
         ctx.writeLine(`join`);
     }
 }
+

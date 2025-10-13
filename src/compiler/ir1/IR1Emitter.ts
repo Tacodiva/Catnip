@@ -1,12 +1,16 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
+import { CatnipValueFormat } from "../CatnipValueFormat";
+import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 import { IR0GraphVisDotGenerator, IR0Input, IR0Command, IR0Script, IR0Node } from "../ir0/IR0";
 import { IR0BasicBlock } from "../ir0/IR0BasicBlock";
 import { IR0ControlFlowType, IR0ControlFlow } from "../ir0/IR0ControlFlow";
 import { IR1InstrCall, IR1InstrBlock, IR1InstrBr, IR1InstrLoop, IR1InstrYield, IR1InstrIf, IR1InstrReturn } from "./instructions/blah";
+import { IR1InstrCast } from "./instructions/IR1InstrCast";
 import { IR1Script, IR1Function, IR1, IR1Instruction } from "./IR1";
 import { IR1Logger } from "./IR1Logger";
 
+// Holds additional info we need about each basic block for translating it to IR1
 interface BasicBlockInfo {
     block: IR0BasicBlock,
     func: IR1Function,
@@ -29,17 +33,20 @@ export class IR1Emitter {
     public readonly ir0Script: IR0Script;
 
     // A map of basic blocks to their function heads
-    public readonly functions: Map<IR0BasicBlock, IR1Function>;
+    private readonly _functions: Map<IR0BasicBlock, IR1Function>;
 
-    public readonly blocks: Map<IR0BasicBlock, BasicBlockInfo>;
+    // A map of basic blocks to their extended basic block info
+    private readonly _blocks: Map<IR0BasicBlock, BasicBlockInfo>;
+
+    public get compiler() { return this.ir1Script.ir.compiler; }
 
     public constructor(ir0Script: IR0Script, ir1: IR1) {
 
         this.ir0Script = ir0Script;
         this.ir1Script = new IR1Script(ir1, ir0Script.spriteID);
 
-        this.functions = new Map();
-        this.functions.set(ir0Script.head, this.ir1Script.entrypoint);
+        this._functions = new Map();
+        this._functions.set(ir0Script.head, this.ir1Script.entrypoint);
 
         // Figure out which basic blocks correspond to function heads
         ir0Script.forEachBasicBlock(block => {
@@ -47,8 +54,8 @@ export class IR1Emitter {
                 case IR0ControlFlowType.Next:
                     if (block.flow.status !== CatnipWasmEnumThreadStatus.RUNNING) {
                         // This is a yield, so the target block has to be a function
-                        if (!this.functions.has(block.flow.next))
-                            this.functions.set(block.flow.next, new IR1Function(this.ir1Script));
+                        if (!this._functions.has(block.flow.next))
+                            this._functions.set(block.flow.next, new IR1Function(this.ir1Script));
                     }
                     break;
                 case IR0ControlFlowType.Call:
@@ -58,15 +65,15 @@ export class IR1Emitter {
 
 
         // Create BasicBlockInfo for every basic block, while also linking up in and out blocks
-        this.blocks = new Map();
+        this._blocks = new Map();
 
         {
             const visitBlock = (block: IR0BasicBlock, func: IR1Function) => {
 
-                let blockInfo = this.blocks.get(block);
+                let blockInfo = this._blocks.get(block);
                 if (blockInfo !== undefined) return blockInfo;
 
-                let blockFunc = this.functions.get(block);
+                let blockFunc = this._functions.get(block);
                 if (blockFunc === undefined)
                     blockFunc = func;
 
@@ -87,7 +94,7 @@ export class IR1Emitter {
                     reversePostorderIndex: -1,
                 };
 
-                this.blocks.set(block, blockInfo);
+                this._blocks.set(block, blockInfo);
 
                 function addEdge(src: BasicBlockInfo, dest: BasicBlockInfo) {
                     src.out.push(dest);
@@ -119,7 +126,7 @@ export class IR1Emitter {
             const convertDecendants = (info: BasicBlockInfo) => {
                 for (const child of info.out) {
                     if (child.func === info.func) continue;
-                    if (this.functions.has(child.block)) continue;
+                    if (this._functions.has(child.block)) continue;
 
                     child.func = info.func;
                     convertDecendants(child);
@@ -127,7 +134,7 @@ export class IR1Emitter {
             }
 
             const checkBlock = (info: BasicBlockInfo) => {
-                if (this.functions.has(info.block)) {
+                if (this._functions.has(info.block)) {
                     info.isEntrypoint = true;
                     return;
                 }
@@ -139,7 +146,7 @@ export class IR1Emitter {
                         // We found one. We need to make this basic block into its own function
                         func = new IR1Function(this.ir1Script);
 
-                        this.functions.set(info.block, func);
+                        this._functions.set(info.block, func);
                         info.isEntrypoint = true;
                         break;
                     }
@@ -154,7 +161,7 @@ export class IR1Emitter {
 
             // Check all the blocks in a breadth first search
 
-            const queue: BasicBlockInfo[] = [this.blocks.get(this.ir0Script.head)!];
+            const queue: BasicBlockInfo[] = [this._blocks.get(this.ir0Script.head)!];
             const visited: Set<BasicBlockInfo> = new Set();
 
             while (queue.length !== 0) {
@@ -174,8 +181,8 @@ export class IR1Emitter {
         //  - Assign a reverse postorder index to each block.
         //  - Figure out which blocks are merges and which are loop heads.
         //  - Create the dominator tree for each function.
-        for (const [entrypointBlock, func] of this.functions) {
-            const entrypoint = this.blocks.get(entrypointBlock)!;
+        for (const [entrypointBlock, func] of this._functions) {
+            const entrypoint = this._blocks.get(entrypointBlock)!;
 
             IR1Logger.assert(entrypoint !== undefined);
             IR1Logger.assert(entrypoint.isEntrypoint);
@@ -338,7 +345,7 @@ export class IR1Emitter {
         generator.writeLine(`subgraph cluster_${generator.scripts.get(this.ir0Script)!} {`);
         generator.incrementIndentation();
 
-        for (const blockInfo of this.blocks.values()) {
+        for (const blockInfo of this._blocks.values()) {
 
             if (blockInfo.isLoopHead || blockInfo.isMerge) {
 
@@ -373,16 +380,16 @@ export class IR1Emitter {
     }
 
     public emitAll(): void {
-        for (const entrypoint of this.functions.keys())
-            this.emitFunction(this.blocks.get(entrypoint)!);
+        for (const entrypoint of this._functions.keys())
+            this.emitFunction(this._blocks.get(entrypoint)!);
     }
 
     private emitFunction(entrypoint: BasicBlockInfo): void {
 
         const func = entrypoint.func;
-        
+
         IR1Logger.assert(entrypoint.isEntrypoint);
-        IR1Logger.assert(entrypoint.func === this.functions.get(entrypoint.block));
+        IR1Logger.assert(entrypoint.func === this._functions.get(entrypoint.block));
 
         enum ContainingSyntaxType {
             BlockFollowedBy,
@@ -432,7 +439,7 @@ export class IR1Emitter {
 
             // Sanity check, every block we immediatly dominate should belong to this function
             IR1Logger.assert(block.immediateDominates.findIndex(a => a.func !== func) === -1);
-            
+
             const selectedChildren = block.immediateDominates
                 .filter(x => x.isMerge)
                 .sort((x, y) => x.reversePostorderIndex - y.reversePostorderIndex);
@@ -509,7 +516,7 @@ export class IR1Emitter {
             switch (flow.type) {
                 case IR0ControlFlowType.Next: {
 
-                    const next = this.blocks.get(flow.next)!;
+                    const next = this._blocks.get(flow.next)!;
 
                     if (flow.status === CatnipWasmEnumThreadStatus.RUNNING) {
                         body.push(...doBranch(x, next, ctx));
@@ -524,15 +531,15 @@ export class IR1Emitter {
 
                 case IR0ControlFlowType.Condition: {
 
-                    this.emitIR0(flow.condition, body);
-                    
+                    this.emitIR0Input(flow.condition, CatnipValueFormat.I32_BOOLEAN, body);
+
                     const branchCtx = ctx.inside({
                         type: ContainingSyntaxType.IfElseThen,
                         block: followMark
                     });
 
-                    const passBranch = doBranch(x, this.blocks.get(flow.pass)!, branchCtx.clone());
-                    const failBranch = doBranch(x, this.blocks.get(flow.fail)!, branchCtx.clone());
+                    const passBranch = doBranch(x, this._blocks.get(flow.pass)!, branchCtx.clone());
+                    const failBranch = doBranch(x, this._blocks.get(flow.fail)!, branchCtx.clone());
 
                     body.push(new IR1InstrIf(passBranch, failBranch));
                     break;
@@ -563,7 +570,7 @@ export class IR1Emitter {
                 }
 
                 const isBackedge = from.reversePostorderIndex > to.reversePostorderIndex;
-                
+
                 // If this is a backedge, the target should be a loop head
                 IR1Logger.assert(!isBackedge || to.isLoopHead);
 
@@ -580,14 +587,27 @@ export class IR1Emitter {
         }
 
         func.body = doNode(entrypoint, new Context());
+
     }
 
-    private emitIR0(node: IR0Node, body: IR1Instruction[]) {
+    private emitIR0Input(input: IR0Input, expectedFormat: CatnipValueFormat, body: IR1Instruction[]): void {
+        input.requestResultFormat(expectedFormat);
+
+        this.emitIR0(input, body);
+
+        const resultFormat = input.getResultFormat();
+
+        if (!CatnipValueFormatUtils.isAlways(resultFormat, expectedFormat)) {
+            body.push(new IR1InstrCast(resultFormat, expectedFormat));
+        }
+    }
+
+    private emitIR0(node: IR0Node, body: IR1Instruction[]): void {
         for (const argName in node.args) {
             const arg = node.args[argName];
-            this.emitIR0(arg.value, body);
+            this.emitIR0Input(arg.value, arg.format, body);
         }
-        
+
         const emitted = node.emitIR1(this);
 
         if (Array.isArray(emitted)) body.push(...emitted);

@@ -12,6 +12,8 @@ export class IR0Emitter {
     public readonly script: IR0Script;
     public block: IR0BasicBlock;
 
+    public get compiler() { return this.script.ir.compiler; }
+
     public constructor(script: IR0Script) {
         this.script = script;
         this.block = this.script.head;
@@ -61,7 +63,7 @@ export class IR0Emitter {
     public emitLoopYield() {
         if (!this.script.isWarp) {
             this.emitYield();
-        } else if (this.script.ir.compiler.config.enable_warp_timer) {
+        } else if (this.compiler.config.enable_warp_timer) {
             // TODO Warp timer
         }
     }

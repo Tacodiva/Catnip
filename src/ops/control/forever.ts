@@ -12,7 +12,7 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
             const loopBlock = ctx.block;
 
             ctx.emitCommands(inputs.loop);
-            ctx.emitLoopYield();
+            // ctx.emitLoopYield();
 
             ctx.emitFlow(loopBlock);
         });

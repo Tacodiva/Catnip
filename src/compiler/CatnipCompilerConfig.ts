@@ -1,7 +1,8 @@
 
 export interface CatnipCompilerConfig {
     dump_binaryen: false | "wat" | "as" | "stack";
-    dump_ir: boolean;
+    dump_ir0: boolean;
+    dump_ir1: boolean;
     dump_wasm_blob: boolean;
     enable_tail_call: boolean;
     enable_optimization_binaryen: boolean | number;
@@ -16,7 +17,8 @@ export interface CatnipCompilerConfig {
 export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
     let def = {
         dump_binaryen: false,
-        dump_ir: false,
+        dump_ir0: false,
+        dump_ir1: false,
         dump_wasm_blob: false,
         enable_tail_call: true,
         enable_optimization_binaryen: true,

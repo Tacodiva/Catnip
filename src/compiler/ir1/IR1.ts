@@ -1,6 +1,7 @@
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompiler } from "../CatnipCompiler";
 import { IR0 } from "../ir0/IR0";
+import { WasmEmitter } from "../wasm/WasmEmitter";
 import { IR1Logger } from "./IR1Logger";
 
 export class IR1 {
@@ -91,6 +92,8 @@ export class IR1Function {
 export abstract class IR1Instruction {
 
     public abstract stringify(ctx: IR1StringificationContext): void;
+
+    public abstract emitWasm(emitter: WasmEmitter): void;
 }
 
 export class IR1StringificationContext {

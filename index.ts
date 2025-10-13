@@ -20,10 +20,9 @@ async function main() {
     const project = await run(catnipModule, projectFile);
     const projectModule = await project.compile({
         enable_optimization_binaryen: false,
-        // dump_binaryen: "stack",
-        // enable_optimization_variable_inlining_force: true,
-        enable_optimization_variable_inlining: false,
-        dump_ir: true,
+        dump_binaryen: "stack",
+        // dump_ir0: true,
+        // dump_ir1: true,
         enable_warp_timer: false
     });
 

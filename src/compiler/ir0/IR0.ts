@@ -4,6 +4,7 @@ import { CatnipScriptID } from "../../runtime/CatnipScript";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
+import { CatnipValueFormat } from "../CatnipValueFormat";
 import { IR1Instruction } from "../ir1/IR1";
 import { IR1Emitter } from "../ir1/IR1Emitter";
 import { IR0BasicBlock } from "./IR0BasicBlock";
@@ -11,8 +12,6 @@ import { IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Emitter } from "./IR0Emitter";
 import { IR0Logger } from "./IR0Logger";
 import { IR0Trigger } from "./IR0Trigger";
-
-
 
 export class IR0 {
 
@@ -153,6 +152,7 @@ export class IR0Script {
 
 interface IR0InstructionArgument {
     value: IR0Input;
+    format: CatnipValueFormat;
 }
 
 type IR0InstructionArguments<TArgs extends string[]> = {
@@ -196,6 +196,10 @@ export abstract class IR0Command<TArgs extends string[] = string[]> extends IR0N
 
 export abstract class IR0Input<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
 
+    public abstract getResultFormat(): CatnipValueFormat;
+
+    public requestResultFormat(dest: CatnipValueFormat): void {
+    }
 }
 
 interface BasicBlockInfo {
