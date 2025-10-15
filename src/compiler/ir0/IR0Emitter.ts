@@ -1,22 +1,40 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0Command, IR0Script, IR0Input } from "./IR0";
+import { IR0Command, IR0Script, IR0Input, IR0InstructionArguments } from "./IR0";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0Logger } from "./IR0Logger";
 import { CatnipCommandList, CatnipInputOp } from "../../ops";
+import { SB3ToIR0Info } from "./SB3ToIR0Info";
+import { CatnipScript } from "../../runtime/CatnipScript";
+import { catnip_compiler_callback } from "../CatnipCompiler";
+import { IR0CmdCallback } from "./ops/IR0CmdCallback";
 
 export type IR0EmitterFunc = (emitter: IR0Emitter) => void;
 
 export class IR0Emitter {
 
-    public readonly script: IR0Script;
+    public readonly ir0Script: IR0Script;
+    public readonly sb3Script: CatnipScript;
     public block: IR0BasicBlock;
 
-    public get compiler() { return this.script.ir.compiler; }
+    public readonly conversionInfo: SB3ToIR0Info;
 
-    public constructor(script: IR0Script) {
-        this.script = script;
-        this.block = this.script.head;
+    public get compiler() { return this.ir0Script.ir.compiler; }
+
+    public constructor(conversionInfo: SB3ToIR0Info, script: IR0Script) {
+        this.conversionInfo = conversionInfo;
+        this.ir0Script = script;
+        this.sb3Script = this.conversionInfo.getScriptSB3(this.ir0Script);
+        this.block = this.ir0Script.head;
+    }
+
+    public emitAll() {
+        this.assertIncomplete();
+
+        this.emitCommands(this.sb3Script.commands);
+        this.completeBlock({
+            type: IR0ControlFlowType.Return
+        });
     }
 
     private assertIncomplete() {
@@ -43,6 +61,10 @@ export class IR0Emitter {
         this.block.commands.push(inst);
     }
 
+    public emitCallbackCommand(name: string, callback: catnip_compiler_callback, args: IR0InstructionArguments) {
+        this.emitCommand(new IR0CmdCallback(name, callback, args));
+    }
+
     public emitReturn() {
         this.assertIncomplete();
         this.completeBlock({ type: IR0ControlFlowType.Return });
@@ -61,7 +83,7 @@ export class IR0Emitter {
     }
 
     public emitLoopYield() {
-        if (!this.script.isWarp) {
+        if (!this.ir0Script.isWarp) {
             this.emitYield();
         } else if (this.compiler.config.enable_warp_timer) {
             // TODO Warp timer

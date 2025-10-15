@@ -1,34 +1,41 @@
-import { CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
-import { IR0CmdLog } from "../../compiler/ir0/ops/log";
+import { createLogger } from "../../log";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 
-type log_inputs = { msg: CatnipInputOp, type: "log" | "warn" | "error" };
+type log_inputs = { msg: CatnipInputOp, type: "info" | "warn" | "error" };
 
 export const op_log = new class extends CatnipCommandOpType<log_inputs> {
-    // private readonly _logger = createLogger("CatnipBlockLog");
+    private readonly _logger = createLogger("CatnipBlockLog");
+    
+    private readonly callbackError = (msg: string) => this._logger.error(msg);
+    private readonly callbackWarn = (msg: string) => this._logger.warn(msg);
+    private readonly callbackInfo = (msg: string) => this._logger.log(msg);
+
+    public *getInputsAndSubstacks(inputs: log_inputs) {
+        yield inputs.msg;
+    }
 
     public generateIr(ctx: IR0Emitter, inputs: log_inputs): void {
 
-        // ctx.emitInput(inputs.msg, CatnipValueFormat.I32_HSTRING);
+        let callback;
 
-        // ctx.emitCallback("log_" + inputs.type, (msg: string) => {
-        //     switch (inputs.type) {
-        //         case "error":
-        //             this._logger.error(msg);
-        //             break;
-        //         case "warn":
-        //             this._logger.warn(msg);
-        //             break;
-        //         default:
-        //             this._logger.warn(`Unknown log type '${inputs.type}'.`);
-        //         case "log":
-        //             this._logger.log(msg);
-        //             break;
-        //     }
-        // }, [CatnipValueFormat.I32_HSTRING], null);
+        switch (inputs.type) {
+            case "error":
+                callback = this.callbackError;
+                break;
+            case "warn":
+                callback = this.callbackWarn;
+                break;
+            default:
+                this._logger.warn(`Unknown log type '${inputs.type}'.`);
+            case "info":
+                callback = this.callbackInfo;
+                break;
+        }
 
-        ctx.emitCommand(new IR0CmdLog(
-            ctx.emitInput(inputs.msg)
-        ));
+        ctx.emitCallbackCommand("log_" + inputs.type, callback,
+            { msg: { format: CatnipValueFormat.I32_HSTRING, value: ctx.emitInput(inputs.msg) } }
+        );
     }
 }

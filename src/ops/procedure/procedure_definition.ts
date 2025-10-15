@@ -1,108 +1,97 @@
-// import { CatnipIr, CatnipIrParameterInfo } from "../../compiler/CatnipIr";
-// import { CatnipIrScriptTrigger } from "../../compiler/CatnipIrScriptTrigger";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { ir_procedure_trigger } from "../../compiler/ir/procedure/procedure_trigger";
-// import { ProjectSB3Block } from "../../sb3";
-// import { registerSB3HatBlock } from "../../sb3_ops";
-// import { SB3ProcedureArgumentInfo } from "../../sb3_reader";
-// import { CatnipScriptTriggerType } from "../CatnipScriptTrigger";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
+import { IR0Script } from "../../compiler/ir0/IR0";
+import { IR0Trigger } from "../../compiler/ir0/IR0Trigger";
+import { IR0TriggerProcedure } from "../../compiler/ir0/ops/IR0TriggerProcedure";
+import { ProjectSB3Block } from "../../sb3";
+import { registerSB3HatBlock } from "../../sb3_ops";
+import { SB3ProcedureArgumentInfo } from "../../sb3_reader";
+import { CatnipScriptTriggerType } from "../CatnipScriptTrigger";
 
 export type CatnipProcedureID = string;
 
-// export interface CatinpProcedureTriggerArg {
-//     format: CatnipValueFormat,
-//     name: string,
-// }
+export interface CatinpProcedureTriggerArg {
+    format: CatnipValueFormat,
+    name: string,
+}
 
-// export type procedure_trigger_inputs = {
-//     id: CatnipProcedureID,
-//     args: CatinpProcedureTriggerArg[],
-//     warp: boolean,
-// }
+export type procedure_trigger_inputs = {
+    id: CatnipProcedureID,
+    args: readonly CatinpProcedureTriggerArg[],
+    warp: boolean,
+}
 
-// export const procedure_trigger = new class extends CatnipScriptTriggerType<procedure_trigger_inputs> {
+export const procedure_trigger = new class extends CatnipScriptTriggerType<procedure_trigger_inputs> {
+    
+    public createIR(script: IR0Script, inputs: procedure_trigger_inputs): IR0Trigger {
+        return new IR0TriggerProcedure(
+            inputs.id, inputs.args, inputs.warp
+        );
+    }
 
-//     public createTriggerIR(ir: CatnipIr, inputs: procedure_trigger_inputs): CatnipIrScriptTrigger {
-//         const args: CatnipIrParameterInfo[] = [];
+}
 
-//         for (const arg of inputs.args) {
-//             args.push({
-//                 format: arg.format,
-//                 name: arg.name
-//             });
-//         }
+registerSB3HatBlock("procedures_definition", (ctx, block) => {
 
-//         return ir_procedure_trigger.create(ir, {
-//             id: inputs.id,
-//             args,
-//             warp: inputs.warp
-//         });
-//     }
+    const procPrototypeID = ctx.readBlockID(block.inputs.custom_block);
 
-// }
+    if (procPrototypeID === null)
+        throw new Error(`Could not find procedure prototype.`);
 
-// registerSB3HatBlock("procedures_definition", (ctx, block) => {
+    const procPrototype = ctx.getBlock(procPrototypeID) as ProjectSB3Block<"procedures_prototype">;
 
-//     const procPrototypeID = ctx.readBlockID(block.inputs.custom_block);
+    if (procPrototype.opcode !== "procedures_prototype")
+        throw new Error(`Unexpected block '${procPrototype.opcode}' (block ${procPrototypeID}). Expected 'procedures_prototype'.`);
 
-//     if (procPrototypeID === null)
-//         throw new Error(`Could not find procedure prototype.`);
+    const proccode = procPrototype.mutation.proccode;
 
-//     const procPrototype = ctx.getBlock(procPrototypeID) as ProjectSB3Block<"procedures_prototype">;
+    const sb3Args: SB3ProcedureArgumentInfo[] = [];
+    const catnipArgs: CatinpProcedureTriggerArg[] = [];
 
-//     if (procPrototype.opcode !== "procedures_prototype")
-//         throw new Error(`Unexpected block '${procPrototype.opcode}' (block ${procPrototypeID}). Expected 'procedures_prototype'.`);
+    for (const inputID in procPrototype.inputs) {
 
-//     const proccode = procPrototype.mutation.proccode;
-
-//     const sb3Args: SB3ProcedureArgumentInfo[] = [];
-//     const catnipArgs: CatinpProcedureTriggerArg[] = [];
-
-//     for (const inputID in procPrototype.inputs) {
-
-//         const input = procPrototype.inputs[inputID];
-//         const inputBlockID = ctx.readOptionalBlockID(input);
+        const input = procPrototype.inputs[inputID];
+        const inputBlockID = ctx.readOptionalBlockID(input);
         
-//         if (inputBlockID === null) continue;
+        if (inputBlockID === null) continue;
 
-//         const inputBlock = ctx.getBlock(inputBlockID) as 
-//             ProjectSB3Block<"argument_reporter_string_number"> | ProjectSB3Block<"argument_reporter_boolean">;
+        const inputBlock = ctx.getBlock(inputBlockID) as 
+            ProjectSB3Block<"argument_reporter_string_number"> | ProjectSB3Block<"argument_reporter_boolean">;
 
-//         let format: CatnipValueFormat;
+        let format: CatnipValueFormat;
 
-//         if (inputBlock.opcode === "argument_reporter_string_number") {
-//             format = CatnipValueFormat.F64;
-//         } else if (inputBlock.opcode === "argument_reporter_boolean") {
-//             format = CatnipValueFormat.I32_BOOLEAN;
-//         } else {
-//             throw new Error(`Unexpected block '${(inputBlock as ProjectSB3Block).opcode}' (block ${inputBlockID}). Expected 'argument_reporter_string_number' or 'argument_reporter_boolean'.`)
-//         }
+        if (inputBlock.opcode === "argument_reporter_string_number") {
+            format = CatnipValueFormat.F64;
+        } else if (inputBlock.opcode === "argument_reporter_boolean") {
+            format = CatnipValueFormat.I32_BOOLEAN;
+        } else {
+            throw new Error(`Unexpected block '${(inputBlock as ProjectSB3Block).opcode}' (block ${inputBlockID}). Expected 'argument_reporter_string_number' or 'argument_reporter_boolean'.`)
+        }
         
-//         const inputName = ""+inputBlock.fields.VALUE[0];
+        const inputName = ""+inputBlock.fields.VALUE[0];
 
-//         sb3Args.push({
-//             id: inputID,
-//             name: inputName,
-//             format
-//         });
+        sb3Args.push({
+            id: inputID,
+            name: inputName,
+            format
+        });
 
-//         catnipArgs.push({
-//             name: inputName,
-//             format: format
-//         });
-//     }
+        catnipArgs.push({
+            name: inputName,
+            format: format
+        });
+    }
 
-//     const warp = procPrototype.mutation.warp === "true";
+    const warp = procPrototype.mutation.warp === "true";
 
-//     const procedureID = ctx.meta.addProcedure(
-//         proccode,
-//         sb3Args,
-//         warp
-//     );
+    const procedureID = ctx.meta.addProcedure(
+        proccode,
+        sb3Args,
+        warp
+    );
 
-//     return procedure_trigger.create({
-//         id: procedureID,
-//         args: catnipArgs,
-//         warp
-//     });
-// });
+    return procedure_trigger.create({
+        id: procedureID,
+        args: catnipArgs,
+        warp
+    });
+});

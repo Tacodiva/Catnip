@@ -1,12 +1,14 @@
 import { catnip_compiler_constant } from "../../compiler/cast";
 import { IR0Input } from "../../compiler/ir0/IR0";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
-import { IR0InputConst } from "../../compiler/ir0/ops/log";
-import { CatnipInputOpType, CatnipOp } from "../CatnipOp";
+import { IR0InputConst } from "../../compiler/ir0/ops/IR0InputConst";
+import { CatnipCommandList, CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
 
 type const_inputs = { value: catnip_compiler_constant };
 
 export const op_const = new class extends CatnipInputOpType<const_inputs> {
+    public *getInputsAndSubstacks() {}
+
     public generateIr(ctx: IR0Emitter, inputs: const_inputs): IR0Input {
 
         // let format: CatnipValueFormat | undefined;

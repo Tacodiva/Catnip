@@ -21,9 +21,9 @@ async function main() {
     const projectModule = await project.compile({
         enable_optimization_binaryen: false,
         // dump_binaryen: "stack",
-        // dump_ir0: true,
-        // dump_ir1: true,
-        enable_compiler_timing: true,
+        // dump_ir0: "advanced",
+        dump_ir1: true,
+        // enable_compiler_timing: true,
         enable_warp_timer: false,
     });
 

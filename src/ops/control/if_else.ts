@@ -5,6 +5,12 @@ import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../Catnip
 type if_else_inputs = { condition: CatnipInputOp, true_branch: CatnipCommandList, false_branch?: CatnipCommandList };
 
 export const op_if_else = new class extends CatnipCommandOpType<if_else_inputs> {
+    public *getInputsAndSubstacks(inputs: if_else_inputs) {
+        yield inputs.condition;
+        yield inputs.true_branch;
+        if (inputs.false_branch) yield inputs.false_branch;
+    }
+
     public generateIr(ctx: IR0Emitter, inputs: if_else_inputs): void {
 
         ctx.emitCondition(

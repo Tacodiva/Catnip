@@ -8,13 +8,13 @@ import { IR1Trigger } from "../ir1/IR1Trigger";
 
 export class CatnipCompilerWasmEmitter {
 
-    public get module() { return this.prepass.module; }
+    public get module() { return this.conversionInfo.module; }
     public get compiler() { return this.module.compiler; }
     public get spiderModule() { return this.module.spiderModule; }
     public get runtimeModule() { return this.module.runtimeModule; }
     public get runtimeInstance() { return this.module.runtimeInstance; }
 
-    public readonly prepass: IR1ToWasmInfo;
+    public readonly conversionInfo: IR1ToWasmInfo;
 
     public readonly ir1Function: IR1Function;
     public readonly spiderFunction: SpiderFunctionDefinition;
@@ -28,11 +28,11 @@ export class CatnipCompilerWasmEmitter {
     private _locals: Map<SpiderValueType, SpiderLocalVariableReference[]>;
     private _localsUnreturnedCount: number;
 
-    public constructor(prepass: IR1ToWasmInfo, func: IR1Function) {
-        this.prepass = prepass;
+    public constructor(conversionInfo: IR1ToWasmInfo, func: IR1Function) {
+        this.conversionInfo = conversionInfo;
         this.ir1Function = func;
 
-        this.spiderFunction = this.prepass.getSpiderFunction(func);
+        this.spiderFunction = this.conversionInfo.getSpiderFunction(func);
         this._expression = this.spiderFunction.body;
         this._locals = new Map();
         this._localsUnreturnedCount = 0;

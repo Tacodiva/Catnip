@@ -1,8 +1,9 @@
 import { CatnipCompilerIrGenContext } from "../compiler/CatnipCompilerIrGenContext";
 import { CatnipIr } from "../compiler/CatnipIr";
 import { CatnipIrExternalBranch } from "../compiler/CatnipIrBranch";
-import { IR0Input } from "../compiler/ir0/IR0";
+import { IR0Input, IR0Script } from "../compiler/ir0/IR0";
 import { IR0Emitter } from "../compiler/ir0/IR0Emitter";
+import { SB3ToIR0Info } from "../compiler/ir0/SB3ToIR0Info";
 
 export type CatnipCommandList = CatnipCommandOp[];
 
@@ -23,6 +24,19 @@ export interface CatnipInputOp<TInputs extends CatnipOpInputs = CatnipOpInputs> 
 export abstract class CatnipOpType<TInputs extends CatnipOpInputs> {
     public abstract create(inputs: TInputs): CatnipOp<TInputs>;
 
+    public abstract getInputsAndSubstacks(inputs: TInputs): IterableIterator<CatnipInputOp | CatnipCommandList>;
+
+    public prepass(script: IR0Script, conversionInfo: SB3ToIR0Info, inputs: TInputs): void {
+        for (const inputOrSubstack of this.getInputsAndSubstacks(inputs)) {
+            if (Array.isArray(inputOrSubstack)) {
+                for (const cmd of inputOrSubstack) {
+                    cmd.type.prepass(script, conversionInfo, cmd.inputs);
+                }
+            } else {
+                inputOrSubstack.type.prepass(script, conversionInfo, inputOrSubstack.inputs);
+            }
+        }
+    }
 }
 
 export abstract class CatnipInputOpType<TInputs extends CatnipOpInputs> extends CatnipOpType<TInputs> {

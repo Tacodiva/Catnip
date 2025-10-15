@@ -1,4 +1,4 @@
-import { IR0InputJoin } from "../../compiler/ir0/ops/log";
+import { IR0InputJoin } from "../../compiler/ir0/ops/IR0InputJoin";
 import { registerSB3InputBlock } from "../../sb3_ops";
 import { CatnipInputBinaryOpType } from "./BinaryOperator";
 

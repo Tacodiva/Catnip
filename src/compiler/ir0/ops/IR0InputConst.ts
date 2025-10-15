@@ -1,25 +1,10 @@
-import { Cast, catnip_compiler_constant } from "../../cast";
+import { catnip_compiler_constant, Cast } from "../../cast";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
-import { IR1InstrJoin, IR1InstrLog } from "../../ir1/instructions/blah";
 import { IR1InstrConst } from "../../ir1/instructions/IR1InstrConst";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR1Trigger, IR1TriggerEvent } from "../../ir1/IR1Trigger";
-import { IR0Input, IR0Command } from "../IR0";
-import { IR0Trigger } from "../IR0Trigger";
+import { IR0Input } from "../IR0";
 
-export class IR0CmdLog extends IR0Command<["msg"]> {
-
-    public constructor(value: IR0Input) {
-        super("log", {
-            msg: { value, format: CatnipValueFormat.I32_HSTRING }
-        });
-    }
-
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrLog();
-    }
-}
 
 export class IR0InputConst extends IR0Input<[]> {
 
@@ -66,32 +51,5 @@ export class IR0InputConst extends IR0Input<[]> {
 
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrConst(this.value, this.getResultFormat());
-    }
-}
-
-
-export class IR0InputJoin extends IR0Input<["left", "right"]> {
-    public constructor(left: IR0Input, right: IR0Input) {
-        super("join", {
-            left: { value: left, format: CatnipValueFormat.I32_HSTRING },
-            right: { value: right, format: CatnipValueFormat.I32_HSTRING }
-        });
-    }
-
-    public getResultFormat(): CatnipValueFormat {
-        return CatnipValueFormat.I32_HSTRING;
-    }
-
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrJoin();
-    }
-}
-
-export class IR0TriggerEvent extends IR0Trigger {
-    public name: string = "Green Flag";
-    public isWarp: boolean = false;
-
-    public toIR1(): IR1Trigger {
-        return new IR1TriggerEvent("PROJECT_START");
     }
 }

@@ -1,12 +1,12 @@
 
 export enum CatnipCompilerStage {
-    IR0_INIT,
-    IR0_PREPASS,
-    IR0_GEN,
-    IR0_TO_IR1_PREPASS,
+    SB3_IR0_PREPASS,
+    SB3_IR0_GEN,
+    
+    IR0_IR1_PREPASS,
     IR0_IR1_GEN,
 
-    IR1_TO_WASM_PREPASS,
+    IR1_WASM_PREPASS,
     IR1_WASM_GEN,
 
     MODULE_PREWRITE,

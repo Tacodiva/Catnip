@@ -31,7 +31,7 @@ export class IR0BasicBlock {
 
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
         IR0Logger.assert(!generator.blocks.has(this));
-        
+
         const clusterName = generator.getName();
 
         generator.writeLine(`subgraph cluster_${clusterName} {`);
@@ -100,17 +100,30 @@ export class IR0BasicBlock {
                 }
                 case IR0ControlFlowType.Condition: {
                     generator.writeLine(`${info.finalNode} [shape=diamond, label="Condition"]`);
-                    const conditionNodeName = flow.condition.createGraphVisNode(generator);
 
                     const passNodeName = getLink(flow.pass);
                     const failNodeName = getLink(flow.fail);
                     generator.writeExecutionEdge(info.finalNode, passNodeName, "Pass");
                     generator.writeExecutionEdge(info.finalNode, failNodeName, "Fail");
+
+                    const conditionNodeName = flow.condition.createGraphVisNode(generator);
                     generator.writeValueEdge(conditionNodeName, info.finalNode, "condition");
                     break;
                 }
                 case IR0ControlFlowType.Call: {
-                    throw new Error("Not implemented.");
+                    generator.writeLine(`${info.finalNode} [shape=diamond, label="Call"]`);
+
+                    for (const arg of flow.args) {
+                        const argNodeName = arg.createGraphVisNode(generator);
+                        generator.writeValueEdge(argNodeName, info.finalNode, "condition");
+                    }
+
+                    const nextNodeName = getLink(flow.next);
+                    const returnScriptInfo = generator.getScriptInfo(flow.procedure);
+
+                    generator.writeExecutionEdge(info.finalNode, nextNodeName, "Return");
+                    generator.writeEdge(info.finalNode, returnScriptInfo.triggerNode, `color=blue label="Call" lhead="cluster_${returnScriptInfo.clusterName}"`);
+
                 }
             }
         }

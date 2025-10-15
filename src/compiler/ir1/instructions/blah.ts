@@ -1,7 +1,7 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
-import { IR1Function, IR1Instruction, IR1StringificationContext } from "../IR1";
+import { IR1Function, IR1Instruction, IR1Script, IR1StringificationContext } from "../IR1";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 
@@ -125,13 +125,14 @@ export class IR1InstrCall extends IR1Instruction {
 
     public func: IR1Function;
 
-    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        emitter.emitWasm(SpiderOpcodes.call, emitter.prepass.getSpiderFunction(this.func));
-    }
-
     public constructor(func: IR1Function) {
         super();
         this.func = func;
+    }
+    
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
+        emitter.emitWasmPushThread();
+        emitter.emitWasm(SpiderOpcodes.call, emitter.conversionInfo.getSpiderFunction(this.func));
     }
 
     public stringify(ctx: IR1StringificationContext): void {
@@ -151,7 +152,13 @@ export class IR1InstrYield extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        throw new Error("Not implemented.");
+        emitter.emitWasmPushThread();
+        emitter.emitWasmPushNumber(SpiderNumberType.i32, 
+            emitter.module.getFunctionTableIndex(emitter.conversionInfo.getSpiderFunction(this.func))
+        );
+        emitter.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("function"));
+
+        emitter.emitWasm(SpiderOpcodes.return);
     }
 
     public stringify(ctx: IR1StringificationContext): void {
@@ -162,7 +169,7 @@ export class IR1InstrYield extends IR1Instruction {
 
 
 export class IR1InstrLog extends IR1Instruction {
-    
+
     public constructor() {
         super();
     }
@@ -182,7 +189,7 @@ export class IR1InstrLog extends IR1Instruction {
 }
 
 export class IR1InstrJoin extends IR1Instruction {
-    
+
     public constructor() {
         super();
     }
@@ -197,3 +204,24 @@ export class IR1InstrJoin extends IR1Instruction {
     }
 }
 
+export class IR1InstrCallProcedure extends IR1Instruction {
+
+    public procedure: IR1Script;
+
+    public constructor(procedure: IR1Script) {
+        super();
+        this.procedure = procedure;
+    }
+
+    public stringify(ctx: IR1StringificationContext): void {
+        ctx.writeLine(`call ${ctx.getFunctionName(this.procedure.entrypoint)}`);
+    }
+
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
+        emitter.emitWasmPushThread();
+        emitter.emitWasm(SpiderOpcodes.call,
+            emitter.conversionInfo.getSpiderFunction(this.procedure.entrypoint)
+        );
+    }
+
+}

@@ -19,6 +19,9 @@ import { PassFunctionIndexAllocation } from "./passes/pre-analysis/PassFunctionI
 import { PassTransientVariablePropagation } from "./passes/pre-wasm/PassTransientVariablePropagation";
 import { CatnipCompilerWasmEmitter } from "./wasm/CatnipCompilerWasmEmitter";
 import { CatnipCompilerWasmModule } from "./wasm/CatnipCompilerWasmModule";
+import { SB3ToIR0Info } from "./ir0/SB3ToIR0Info";
+import { IR0Emitter } from "./ir0/IR0Emitter";
+import { IR0ToIR1Info } from "./ir0/IR0ToIR1Info";
 
 export interface CatnipIrPreAnalysis {
     isYielding: boolean;
@@ -107,7 +110,6 @@ export class CatnipCompiler {
         }
 
         this._stage = stage;
-
     }
 
     public async createModule(): Promise<CatnipProjectModule> {
@@ -115,51 +117,55 @@ export class CatnipCompiler {
             console.time("COMPILE");
         }
 
-        this._transitionStage(CatnipCompilerStage.IR0_INIT);
+        this._transitionStage(CatnipCompilerStage.SB3_IR0_PREPASS);
 
         const ir0 = new IR0(this);
+        const sb3ToIR0 = new SB3ToIR0Info(this.project, ir0);
 
-        for (const sprite of this.project.sprites) {
-            for (const script of sprite.scripts) {
-                new IR0Script(ir0, {
-                    commands: script.commands,
-                    scriptID: script.id,
-                    spriteID: sprite.id,
-                    trigger: script.trigger
-                });
-            }
+        sb3ToIR0.create();
+
+        this._transitionStage(CatnipCompilerStage.SB3_IR0_GEN);
+
+        for (const ir0Script of ir0.scripts) {
+            const emitter = new IR0Emitter(sb3ToIR0, ir0Script);
+            emitter.emitAll();
         }
 
-        this._transitionStage(CatnipCompilerStage.IR0_GEN);
-
-        for (const script of ir0.scripts) {
-            script.generateInstructions();
-        }
-
+        let graphVisGenerator: IR0GraphVisDotGenerator;
 
         if (this.config.dump_ir0) {
-            const graphVis = new IR0GraphVisDotGenerator();
-            ir0.createGraphVis(graphVis);
-            console.log(graphVis.toDotFile());
+            graphVisGenerator = new IR0GraphVisDotGenerator();
+            ir0.createGraphVis(graphVisGenerator);
+
+            if (this.config.dump_ir0 === "basic")
+                console.log(ir0.createGraphVis());
         }
 
-        this._transitionStage(CatnipCompilerStage.IR0_TO_IR1_PREPASS);
+        this._transitionStage(CatnipCompilerStage.IR0_IR1_PREPASS);
 
-        // TODO 
+        const ir1 = new IR1(this);
+        const ir0ToIR1 = new IR0ToIR1Info(ir0, ir1);
+
+        ir0ToIR1.create();
 
         this._transitionStage(CatnipCompilerStage.IR0_IR1_GEN);
 
-        const ir1 = new IR1(this);
-
         for (const script of ir0.scripts) {
-            new IR1Emitter(script, ir1).emitAll();
+            const emitter = new IR1Emitter(script, ir0ToIR1);
+
+            if (this.config.dump_ir0 === "advanced")
+                emitter.addGraphVisDominanceEdges(graphVisGenerator!);
+
+            emitter.emitAll();
         }
 
-        if (this.config.dump_ir1) {
+        if (this.config.dump_ir0 === "advanced")
+            console.log(graphVisGenerator!.toDotFile());
+
+        if (this.config.dump_ir1)
             console.log(ir1.stringify());
-        }
 
-        this._transitionStage(CatnipCompilerStage.IR1_TO_WASM_PREPASS);
+        this._transitionStage(CatnipCompilerStage.IR1_WASM_PREPASS);
 
         const module = new CatnipCompilerWasmModule(this);
         const ir1ToWasmPrepass = new IR1ToWasmInfo(ir1, module);
@@ -184,8 +190,6 @@ export class CatnipCompiler {
         module.preWrite();
 
         this._transitionStage(CatnipCompilerStage.MODULE_WRITE);
-
-        module.spiderModule.exportFunction("test", ir1ToWasmPrepass.getSpiderFunction(ir1.scripts[0].functions[0]));
 
         let moduleSource = module.write();
 
@@ -244,7 +248,7 @@ export class CatnipCompiler {
         if (this.config.enable_compiler_timing) {
             console.timeEnd("COMPILE");
         }
-        
+
         return projectModule;
     }
 }

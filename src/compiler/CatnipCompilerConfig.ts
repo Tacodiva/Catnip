@@ -2,7 +2,7 @@ import { CatnipEventID } from "../CatnipEvents";
 
 export interface CatnipCompilerConfig {
     dump_binaryen: false | "wat" | "as" | "stack";
-    dump_ir0: boolean;
+    dump_ir0: false | "basic" | "advanced";
     dump_ir1: boolean;
     dump_wasm_blob: boolean;
     enable_compiler_timing: boolean;

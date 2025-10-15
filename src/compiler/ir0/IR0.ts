@@ -20,7 +20,8 @@ export class IR0 {
 
     public constructor(compiler: CatnipCompiler) {
         this.compiler = compiler;
-        this.compiler.assertStage(CatnipCompilerStage.IR0_INIT);
+        this.compiler.assertStage(CatnipCompilerStage.SB3_IR0_PREPASS);
+
         this.scripts = [];
     }
 
@@ -43,8 +44,6 @@ export class IR0 {
 
 export interface IR0ScriptInfo {
     spriteID: CatnipSpriteID;
-    scriptID: CatnipSpriteID;
-    commands: CatnipCommandList;
     trigger: CatnipScriptTrigger;
 }
 
@@ -54,8 +53,6 @@ export class IR0Script {
     public readonly trigger: IR0Trigger;
 
     public readonly spriteID: CatnipSpriteID;
-    public readonly scriptID: CatnipScriptID;
-    public readonly commands: CatnipCommandList;
 
     public head: IR0BasicBlock;
 
@@ -63,11 +60,9 @@ export class IR0Script {
 
     public constructor(ir: IR0, info: IR0ScriptInfo) {
         this.ir = ir;
-        this.ir.compiler.assertStage(CatnipCompilerStage.IR0_INIT);
+        this.ir.compiler.assertStage(CatnipCompilerStage.SB3_IR0_PREPASS);
 
         this.spriteID = info.spriteID;
-        this.scriptID = info.scriptID;
-        this.commands = info.commands;
 
         this.head = new IR0BasicBlock();
 
@@ -76,36 +71,20 @@ export class IR0Script {
         this.ir.scripts.push(this);
     }
 
-    public generateInstructions() {
-        this.ir.compiler.assertStage(CatnipCompilerStage.IR0_GEN);
-        IR0Logger.assert(!this.head.isComplete);
-
-        const emitter = new IR0Emitter(this);
-
-        emitter.emitCommands(this.commands);
-        emitter.completeBlock({
-            type: IR0ControlFlowType.Return
-        });
-
-        IR0Logger.assert(this.head.isComplete);
-    }
-
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
-        const clusterName = generator.getName();
+        const scriptInfo = generator.getScriptInfo(this);
 
-        generator.scripts.set(this, clusterName);
-
-        generator.writeLine(`subgraph cluster_${clusterName} {`);
+        generator.writeLine(`subgraph cluster_${scriptInfo.clusterName} {`);
         generator.incrementIndentation();
 
-        const triggerNode = this.trigger.createGraphVisNode(generator);
+        this.trigger.createGraphVisNode(generator, scriptInfo.triggerNode);
 
         this.forEachBasicBlock((block) => block.createGraphVisNode(generator));
         this.forEachBasicBlock((block) => block.linkGraphVisNode(generator));
 
         const firstNode = generator.blocks.get(this.head)!.firstNode;
 
-        generator.writeExecutionEdge(triggerNode, firstNode);
+        generator.writeExecutionEdge(scriptInfo.triggerNode, firstNode);
 
         generator.decrementIndentation();
         generator.writeLine(`}`);
@@ -143,7 +122,8 @@ export class IR0Script {
                     break;
                 }
                 case IR0ControlFlowType.Call: {
-                    throw new Error("Not implemented.");
+                    descend(flow.next);
+                    break;
                 }
             }
         }
@@ -155,7 +135,7 @@ interface IR0InstructionArgument {
     format: CatnipValueFormat;
 }
 
-type IR0InstructionArguments<TArgs extends string[]> = {
+export type IR0InstructionArguments<TArgs extends string[] = string[]> = {
     [K in TArgs[number]]: IR0InstructionArgument;
 }
 
@@ -208,6 +188,11 @@ interface BasicBlockInfo {
     finalNode: string;
 }
 
+interface ScriptInfo {
+    clusterName: string;
+    triggerNode: string;
+}
+
 export class IR0GraphVisDotGenerator {
 
     public indentation: number;
@@ -216,7 +201,7 @@ export class IR0GraphVisDotGenerator {
     public edges: string[];
 
     public blocks: Map<IR0BasicBlock, BasicBlockInfo>;
-    public scripts: Map<IR0Script, string>;
+    public scripts: Map<IR0Script, ScriptInfo>;
 
     public constructor() {
         this.dot = "digraph {\n  compound=true;";
@@ -225,6 +210,16 @@ export class IR0GraphVisDotGenerator {
         this.blocks = new Map();
         this.scripts = new Map();
         this.edges = [];
+    }
+
+    public getScriptInfo(script: IR0Script): ScriptInfo {
+        let info = this.scripts.get(script);
+        if (info !== undefined) return info;
+        this.scripts.set(script, info = {
+            clusterName: this.getName(),
+            triggerNode: this.getName()
+        });
+        return info;
     }
 
     public getName(): string {
@@ -256,7 +251,7 @@ export class IR0GraphVisDotGenerator {
     public writeValueEdge(from: string, to: string, label: string) {
         this.writeEdge(from, to, `label="${label}" color=blue arrowhead=vee`);
     }
-
+    
     public incrementIndentation() {
         ++this.indentation;
     }

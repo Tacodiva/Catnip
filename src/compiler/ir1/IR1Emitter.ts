@@ -5,7 +5,8 @@ import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 import { IR0GraphVisDotGenerator, IR0Input, IR0Command, IR0Script, IR0Node } from "../ir0/IR0";
 import { IR0BasicBlock } from "../ir0/IR0BasicBlock";
 import { IR0ControlFlowType, IR0ControlFlow } from "../ir0/IR0ControlFlow";
-import { IR1InstrCall, IR1InstrBlock, IR1InstrBr, IR1InstrLoop, IR1InstrYield, IR1InstrIf, IR1InstrReturn, IR1InstrTerminate } from "./instructions/blah";
+import { IR0ToIR1Info } from "../ir0/IR0ToIR1Info";
+import { IR1InstrCall, IR1InstrBlock, IR1InstrBr, IR1InstrLoop, IR1InstrYield, IR1InstrIf, IR1InstrReturn, IR1InstrTerminate, IR1InstrCallProcedure } from "./instructions/blah";
 import { IR1InstrCast } from "./instructions/IR1InstrCast";
 import { IR1Script, IR1Function, IR1, IR1Instruction } from "./IR1";
 import { IR1Logger } from "./IR1Logger";
@@ -29,6 +30,8 @@ interface BasicBlockInfo {
 };
 
 export class IR1Emitter {
+    public readonly conversionInfo: IR0ToIR1Info;
+
     public readonly ir1Script: IR1Script;
     public readonly ir0Script: IR0Script;
 
@@ -40,29 +43,45 @@ export class IR1Emitter {
 
     public get compiler() { return this.ir1Script.ir.compiler; }
 
-    public constructor(ir0Script: IR0Script, ir1: IR1) {
+    public constructor(ir0Script: IR0Script, conversionInfo: IR0ToIR1Info) {
 
         this.ir0Script = ir0Script;
-        this.ir1Script = new IR1Script(ir1, ir0Script.trigger.toIR1(), ir0Script.spriteID);
+        this.conversionInfo = conversionInfo;
+
+        const scriptInfo = this.conversionInfo.getScriptInfo(ir0Script);
+        this.ir1Script = scriptInfo.ir1;
 
         this._functions = new Map();
-        this._functions.set(ir0Script.head, this.ir1Script.entrypoint);
 
         // Figure out which basic blocks correspond to function heads
-        ir0Script.forEachBasicBlock(block => {
-            switch (block.flow.type) {
-                case IR0ControlFlowType.Next:
-                    if (block.flow.status !== CatnipWasmEnumThreadStatus.RUNNING) {
-                        // This is a yield, so the target block has to be a function
-                        if (!this._functions.has(block.flow.next))
-                            this._functions.set(block.flow.next, new IR1Function(this.ir1Script));
-                    }
-                    break;
-                case IR0ControlFlowType.Call:
-                    throw new Error("Not implemented.");
-            }
-        });
+        {
+            // The head will always be a function
+            this._functions.set(ir0Script.head, this.ir1Script.entrypoint);
 
+            const createFunction = (block: IR0BasicBlock) => {
+                if (!this._functions.has(block))
+                    this._functions.set(block, new IR1Function(this.ir1Script));
+            }
+
+            ir0Script.forEachBasicBlock(block => {
+                switch (block.flow.type) {
+                    case IR0ControlFlowType.Next:
+                        if (block.flow.status !== CatnipWasmEnumThreadStatus.RUNNING) {
+                            // This is a yield, so the target block has to be a function
+                            createFunction(block.flow.next);
+                        }
+                        break;
+                    case IR0ControlFlowType.Call: {
+                        const calledProcedureInfo = this.conversionInfo.getScriptInfo(block.flow.procedure);
+
+                        if (calledProcedureInfo.isYielding) {
+                            createFunction(block.flow.next);
+                        }
+                        break;
+                    }
+                }
+            });
+        }
 
         // Create BasicBlockInfo for every basic block, while also linking up in and out blocks
         this._blocks = new Map();
@@ -110,7 +129,8 @@ export class IR1Emitter {
                         addEdge(blockInfo, visitBlock(block.flow.fail, blockInfo.func));
                         break;
                     case IR0ControlFlowType.Call:
-                        throw new Error("Not implemented.");
+                        addEdge(blockInfo, visitBlock(block.flow.next, blockInfo.func));
+                        break;
                 }
 
                 return blockInfo;
@@ -225,6 +245,10 @@ export class IR1Emitter {
                 let foundForwardEdge = false;
 
                 for (const inBlock of block.in) {
+
+                    if (inBlock.func !== block.func)
+                        continue;
+
                     if (inBlock.reversePostorderIndex >= block.reversePostorderIndex) {
                         // This is a backedge
                         block.isLoopHead = true;
@@ -342,7 +366,7 @@ export class IR1Emitter {
     }
 
     public addGraphVisDominanceEdges(generator: IR0GraphVisDotGenerator) {
-        generator.writeLine(`subgraph cluster_${generator.scripts.get(this.ir0Script)!} {`);
+        generator.writeLine(`subgraph cluster_${generator.getScriptInfo(this.ir0Script).clusterName} {`);
         generator.incrementIndentation();
 
         for (const blockInfo of this._blocks.values()) {
@@ -367,8 +391,8 @@ export class IR1Emitter {
             const blockGraphInfo = generator.blocks.get(blockInfo.block)!;
 
             // Dominator edges
-            const dominatorGraphInfo = generator.blocks.get(blockInfo.immediateDominator.block)!;
-            generator.writeEdge(dominatorGraphInfo.finalNode, blockGraphInfo.firstNode, `color=black lhead="cluster_${blockGraphInfo.clusterName}" ltail="cluster_${dominatorGraphInfo.clusterName}"`);
+            // const dominatorGraphInfo = generator.blocks.get(blockInfo.immediateDominator.block)!;
+            // generator.writeEdge(dominatorGraphInfo.finalNode, blockGraphInfo.firstNode, `color=black lhead="cluster_${blockGraphInfo.clusterName}" ltail="cluster_${dominatorGraphInfo.clusterName}"`);
 
             // Function ownership edges
             // const funcEntrypointGraphInfo = generator.blocks.get([...this.functions].find(([block, func]) => func === blockInfo.func)![0])!;
@@ -551,8 +575,16 @@ export class IR1Emitter {
                     break;
                 }
 
-                case IR0ControlFlowType.Call:
-                    throw new Error("Not implemented.")
+                case IR0ControlFlowType.Call: {
+                    const calledProcedureInfo = this.conversionInfo.getScriptInfo(flow.procedure);
+
+                    if (calledProcedureInfo.isYielding)
+                        throw new Error("Not supported.");
+
+                    body.push(new IR1InstrCallProcedure(calledProcedureInfo.ir1));
+
+                    body.push(...doBranch(x, this._blocks.get(flow.next)!, ctx));
+                }
 
             }
 

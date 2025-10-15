@@ -6,10 +6,8 @@ export abstract class IR0Trigger {
     public abstract readonly isWarp: boolean;
     public abstract readonly name: string;
 
-    public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
-        const nodeName = generator.getName();
+    public createGraphVisNode(generator: IR0GraphVisDotGenerator, nodeName: string): void {
         generator.writeLine(`${nodeName} [shape=rect, label="${this.name}"]`);
-        return nodeName;
     }
 
     public abstract toIR1(): IR1Trigger;
