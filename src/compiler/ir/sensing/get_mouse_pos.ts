@@ -6,7 +6,7 @@ import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTarget";
 import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 import { CatnipWasmStructIO } from "../../../wasm-interop/CatnipWasmStructIO";
-import { CatnipCompilerMouseSubsystem } from "../../subsystems/CatnipCompilerMouseSubsystem";
+import { MouseSubsystem } from "../../subsystems/MouseSubsystem";
 
 type get_mouse_pos_ir_inputs = { axis: "x" | "y" };
 
@@ -23,7 +23,7 @@ export const ir_get_mouse_pos = new class extends CatnipIrInputOpType<get_mouse_
 
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp<get_mouse_pos_ir_inputs>): void {
         // Ensure subsystem is in
-        ctx.compiler.getSubsystem(CatnipCompilerMouseSubsystem)
+        ctx.compiler.getSubsystem(MouseSubsystem)
         ctx.emitWasmGetRuntime();
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("io"));
         ctx.emitWasm(SpiderOpcodes.f64_load, 3, CatnipWasmStructIO.getMemberOffset(ir.inputs.axis === "x" ? "mouse_x" : "mouse_y"));

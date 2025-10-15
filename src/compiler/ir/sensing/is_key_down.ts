@@ -7,7 +7,7 @@ import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 import { CatnipWasmStructIO } from "../../../wasm-interop/CatnipWasmStructIO";
-import { CatnipCompilerKeyDownSubsystem } from "../../subsystems/CatnipCompilerKeyDownSubsystem";
+import { KeyDownSubsystem } from "../../subsystems/KeyDownSubsystem";
 
 export const ir_is_key_down = new class extends CatnipIrInputOpType {
     public constructor() { super("sensing_is_key_dowm"); }
@@ -23,7 +23,7 @@ export const ir_is_key_down = new class extends CatnipIrInputOpType {
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp): void {
 
         // Make sure the subsystem is in the compiler
-        ctx.compiler.getSubsystem(CatnipCompilerKeyDownSubsystem);
+        ctx.compiler.getSubsystem(KeyDownSubsystem);
 
         const keyInput = ir.operands[0];
 

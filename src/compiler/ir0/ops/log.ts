@@ -4,6 +4,7 @@ import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { IR1InstrJoin, IR1InstrLog } from "../../ir1/instructions/blah";
 import { IR1InstrConst } from "../../ir1/instructions/IR1InstrConst";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
+import { IR1Trigger, IR1TriggerEvent } from "../../ir1/IR1Trigger";
 import { IR0Input, IR0Command } from "../IR0";
 import { IR0Trigger } from "../IR0Trigger";
 
@@ -89,4 +90,8 @@ export class IR0InputJoin extends IR0Input<["left", "right"]> {
 export class IR0TriggerEvent extends IR0Trigger {
     public name: string = "Green Flag";
     public isWarp: boolean = false;
+
+    public toIR1(): IR1Trigger {
+        return new IR1TriggerEvent("PROJECT_START");
+    }
 }

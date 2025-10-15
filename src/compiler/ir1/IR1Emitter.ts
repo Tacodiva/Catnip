@@ -5,7 +5,7 @@ import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 import { IR0GraphVisDotGenerator, IR0Input, IR0Command, IR0Script, IR0Node } from "../ir0/IR0";
 import { IR0BasicBlock } from "../ir0/IR0BasicBlock";
 import { IR0ControlFlowType, IR0ControlFlow } from "../ir0/IR0ControlFlow";
-import { IR1InstrCall, IR1InstrBlock, IR1InstrBr, IR1InstrLoop, IR1InstrYield, IR1InstrIf, IR1InstrReturn } from "./instructions/blah";
+import { IR1InstrCall, IR1InstrBlock, IR1InstrBr, IR1InstrLoop, IR1InstrYield, IR1InstrIf, IR1InstrReturn, IR1InstrTerminate } from "./instructions/blah";
 import { IR1InstrCast } from "./instructions/IR1InstrCast";
 import { IR1Script, IR1Function, IR1, IR1Instruction } from "./IR1";
 import { IR1Logger } from "./IR1Logger";
@@ -43,7 +43,7 @@ export class IR1Emitter {
     public constructor(ir0Script: IR0Script, ir1: IR1) {
 
         this.ir0Script = ir0Script;
-        this.ir1Script = new IR1Script(ir1, ir0Script.spriteID);
+        this.ir1Script = new IR1Script(ir1, ir0Script.trigger.toIR1(), ir0Script.spriteID);
 
         this._functions = new Map();
         this._functions.set(ir0Script.head, this.ir1Script.entrypoint);
@@ -225,7 +225,7 @@ export class IR1Emitter {
                 let foundForwardEdge = false;
 
                 for (const inBlock of block.in) {
-                    if (inBlock.reversePostorderIndex > block.reversePostorderIndex) {
+                    if (inBlock.reversePostorderIndex >= block.reversePostorderIndex) {
                         // This is a backedge
                         block.isLoopHead = true;
                         continue;
@@ -546,7 +546,8 @@ export class IR1Emitter {
                 }
 
                 case IR0ControlFlowType.Return: {
-                    body.push(new IR1InstrReturn());
+                    // body.push(new IR1InstrReturn());
+                    body.push(new IR1InstrTerminate());
                     break;
                 }
 
@@ -569,7 +570,7 @@ export class IR1Emitter {
                     return [];
                 }
 
-                const isBackedge = from.reversePostorderIndex > to.reversePostorderIndex;
+                const isBackedge = from.reversePostorderIndex >= to.reversePostorderIndex;
 
                 // If this is a backedge, the target should be a loop head
                 IR1Logger.assert(!isBackedge || to.isLoopHead);

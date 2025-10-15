@@ -150,7 +150,7 @@ export class CatnipRuntimeModule {
     }
 
     /** Creates a new garbage collectable string associated with the given runtime. */
-    public createNewString(runtime: WasmStructWrapper<typeof CatnipWasmStructRuntime>, str: string): number {
+    public createHString(runtime: WasmStructWrapper<typeof CatnipWasmStructRuntime>, str: string): number {
         const encodedStr = UTF16.encode(str);
         const hstringPtr = this.functions.catnip_runtime_new_hstring(runtime.ptr, encodedStr.length);
 

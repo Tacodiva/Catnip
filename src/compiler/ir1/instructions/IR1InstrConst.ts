@@ -3,7 +3,7 @@ import { VALUE_STRING_MASK } from "../../../wasm-interop/CatnipWasmStructValue";
 import { catnip_compiler_constant, Cast } from "../../cast";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
-import { WasmEmitter } from "../../wasm/WasmEmitter";
+import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction, IR1StringificationContext } from "../IR1";
 
 export class IR1InstrConst extends IR1Instruction {
@@ -17,7 +17,7 @@ export class IR1InstrConst extends IR1Instruction {
         this.format = format;
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.I32_HSTRING)) {
             emitter.emitWasmPushString(Cast.toString(this.value));
             return;

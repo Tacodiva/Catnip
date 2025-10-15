@@ -3,42 +3,54 @@ import { createLogger, Logger } from "../log";
 import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
-import { WasmStructValue, WasmStructWrapper } from "../wasm-interop/wasm-types";
-import { CatnipRuntimeGcStats, CatnipWasmStructRuntimeGcStats } from '../wasm-interop/CatnipWasmStructRuntimeGcStats';
+import { WasmStructWrapper } from "../wasm-interop/wasm-types";
+import { CatnipRuntimeGcStats } from '../wasm-interop/CatnipWasmStructRuntimeGcStats';
 
-export type CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> = { id: TEvnetID, exportName: string };
+export interface CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> {
+    readonly id: TEvnetID;
+    // The function to call to trigger the event
+    readonly jsTrigger: Function;
+    // The list of listeners the module will call when the event is triggered
+    //   If null, this event was not compiled with JS listeners supported
+    //   This must stay readonly, the array object must not change
+    readonly jsListeners: CatnipEventListener<TEvnetID>[] | null;
+};
 
 export class CatnipProjectModule {
     private static readonly _logger: Logger = createLogger("CatnipProjectModule");
 
     public readonly project: CatnipProject;
-    
+
     public readonly runtimeModule: CatnipRuntimeModule;
     public readonly runtimeInstance: WasmStructWrapper<typeof CatnipWasmStructRuntime>;
 
     public readonly instance: WebAssembly.Instance;
-    private _events: Map<CatnipEventID, CatnipEventListener> = new Map();
-    
+
+    // A map of event ID to info about that event.
+    // If this map does not contain a given event ID, it means the project has nothing which listens for that event.
+    private readonly _events: ReadonlyMap<CatnipEventID, CatnipProjectModuleEvent> = new Map();
+
     /** @internal */
-    constructor(project: CatnipProject, instance: WebAssembly.Instance, events: CatnipProjectModuleEvent[]) {
+    constructor(project: CatnipProject, instance: WebAssembly.Instance, events: readonly CatnipProjectModuleEvent[]) {
         this.project = project;
         this.instance = instance;
         this.runtimeModule = project.runtimeModule;
         this.runtimeInstance = project.runtimeInstance;
 
-        this._events = new Map();
+        const eventMap = new Map();
+        
         for (const event of events) {
-            const eventExport = this.instance.exports[event.exportName] as (CatnipEventListener | undefined);
-            if (eventExport === undefined) throw new Error(`Can't find event export '${event.exportName}'.`);
-            this._events.set(event.id, eventExport);
+            eventMap.set(event.id, event);
         }
+
+        this._events = eventMap;
     }
 
-    public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>): boolean {
+    public triggerEvent<TEventID extends CatnipEventID>(event: TEventID, ...args: CatnipEventArgs<TEventID>) {
         CatnipProjectModule._logger.assert(CatnipEvents[event].args.length === args.length);
 
-        const eventLambda = this._events.get(event);
-        if (eventLambda === undefined) return false;
+        const eventInfo = this._events.get(event);
+        if (eventInfo === undefined) return;
 
         const encodedArgs: any[] = [];
 
@@ -48,13 +60,37 @@ export class CatnipProjectModule {
             encodedArgs.push(argInfo.encodeWASM(this.project, arg));
         }
 
-        eventLambda(...(encodedArgs as any));
+        eventInfo.jsTrigger(...(encodedArgs as any));
+    }
+
+    public addEventListener<TEventID extends CatnipEventID>(event: TEventID, listener: CatnipEventListener<TEventID>) {
+        const eventInfo = this._events.get(event);
+
+        if (eventInfo === undefined || eventInfo.jsListeners === null)
+            throw new Error(`Module was not compiled with event '${event}' supporting JS listeners.`);
+
+        eventInfo.jsListeners.push(listener);
+    }
+
+    public removeEventListener<TEventID extends CatnipEventID>(event: TEventID, listener: CatnipEventListener<TEventID>): boolean {
+        const eventInfo = this._events.get(event);
+
+        if (eventInfo === undefined || eventInfo.jsListeners === null)
+            return false;
+
+        const listenerIndex = eventInfo.jsListeners.indexOf(listener);
+
+        if (listenerIndex === -1)
+            return false;
+
+        eventInfo.jsListeners.splice(listenerIndex, 1);
 
         return true;
     }
 
-    public hasEvent(event: CatnipEventID): boolean {
-        return this._events.has(event);
+    public supportsEventListener(event: CatnipEventID): boolean {
+        const eventInfo = this._events.get(event);
+        return eventInfo !== undefined && eventInfo.jsListeners !== null;
     }
 
     public start(): void {
@@ -72,7 +108,7 @@ export class CatnipProjectModule {
         this.runtimeModule.renderer.frame();
     }
 
-    public hasRunningThreads() : boolean {
+    public hasRunningThreads(): boolean {
         return this.runtimeInstance.getMember("num_active_threads") !== 0;
     }
 

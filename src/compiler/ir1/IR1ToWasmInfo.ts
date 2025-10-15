@@ -1,9 +1,9 @@
 import { SpiderFunctionDefinition } from "wasm-spider";
 import { IR1, IR1Function } from "./IR1";
-import { CatnipCompilerWasmModule } from "../CatnipCompilerWasmModule";
+import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
 import { IR1Logger } from "./IR1Logger";
 
-export class IR1ToWasmPrepass {
+export class IR1ToWasmInfo {
 
     public readonly ir1: IR1;
     public readonly module: CatnipCompilerWasmModule;

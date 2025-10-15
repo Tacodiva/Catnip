@@ -2,7 +2,7 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrCommandOpType, CatnipIrOp } from "../../CatnipIrOp";
-import { CatnipCompilerBroadcastSubsystem } from "../../subsystems/CatnipCompilerBroadcastSubsystem";
+import { BroadcastSubsystem } from "../../subsystems/BroadcastSubsystem";
 import { CatnipWasmPtrThread, CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 import { CatnipIrTransientVariable } from "../../CatnipIrTransientVariable";
 
@@ -40,7 +40,7 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
         if (broadcastName.isConstant) {
             ctx.emitWasm(
                 SpiderOpcodes.call,
-                ctx.compiler.getSubsystem(CatnipCompilerBroadcastSubsystem).getBroadcastFunction(broadcastName.asConstantString())
+                ctx.compiler.getSubsystem(BroadcastSubsystem).getBroadcastFunction(broadcastName.asConstantString())
             );
 
             if (broadcastEventFunc === null) {
@@ -49,7 +49,7 @@ export const ir_broadcast = new class extends CatnipIrCommandOpType<ir_broadcast
         } else {
             ctx.emitWasm(
                 SpiderOpcodes.call,
-                ctx.compiler.getSubsystem(CatnipCompilerBroadcastSubsystem).getGenericBroadcastFunction()
+                ctx.compiler.getSubsystem(BroadcastSubsystem).getGenericBroadcastFunction()
             );
         }
 

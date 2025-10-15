@@ -1,23 +1,25 @@
 import { SpiderModule } from "wasm-spider";
 import { CatnipCompiler } from "./CatnipCompiler";
+import { CatnipCompilerWasmModule } from "./wasm/CatnipCompilerWasmModule";
 
-export interface CatnipCompilerSubsystemClass<TSubsystem extends CatnipCompilerSubsystem = CatnipCompilerSubsystem> {
-    new(compiler: CatnipCompiler): TSubsystem;
+export interface CatnipCompilerModuleSubsystemClass<TSubsystem extends CatnipCompilerModuleSubsystem = CatnipCompilerModuleSubsystem> {
+    new(compiler: CatnipCompilerWasmModule): TSubsystem;
 }
 
-export interface CatnipCompilerSubsystem {
+export interface CatnipCompilerModuleSubsystem {
 
-    addEvents?(): void;
+    preModuleWrite?(): void;
     
 }
 
-export abstract class CatnipCompilerSubsystem {
+export abstract class CatnipCompilerModuleSubsystem {
 
-    public readonly compiler: CatnipCompiler;
-    public get spiderModule(): SpiderModule { return this.compiler.spiderModule; }
+    public readonly module: CatnipCompilerWasmModule;
+    public get compiler() { return this.module.compiler; }
+    public get spiderModule() { return this.module.spiderModule; }
 
-    public constructor(compiler: CatnipCompiler) {
-        this.compiler = compiler;
+    public constructor(module: CatnipCompilerWasmModule) {
+        this.module = module;
     }
 
 }

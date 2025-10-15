@@ -1,28 +1,26 @@
-import { SpiderFunctionDefinition, SpiderLocalParameterReference, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipSpriteID } from "../runtime/CatnipSprite";
-import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
-import { CatnipWasmStructTarget } from "../wasm-interop/CatnipWasmStructTarget";
-import { CatnipCompiler } from "./CatnipCompiler";
-import { CatnipIrScriptTrigger } from "./CatnipIrScriptTrigger";
-import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
+import { SpiderFunction, SpiderFunctionDefinition, SpiderLocalParameterReference, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
+import { CatnipSpriteID } from "../../runtime/CatnipSprite";
+import { CatnipWasmStructRuntime } from "../../wasm-interop/CatnipWasmStructRuntime";
+import { CatnipWasmStructTarget } from "../../wasm-interop/CatnipWasmStructTarget";
+import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
+import { CatnipCompilerWasmModule } from "./CatnipCompilerWasmModule";
 
 /**
- * Generates a function which starts threads.
- * All triggers are added to it, then it generates a function which
- *  starts each script attached to those triggers.
+ * Generates a function which starts threads with listener functions.
  */
-export class CatnipTriggerFunctionGenerator {
-    public readonly compiler: CatnipCompiler;
-    public readonly triggers: Map<CatnipSpriteID, CatnipIrScriptTrigger[]>;
+export class CatnipCompilerWasmTrigger {
+    public readonly module: CatnipCompilerWasmModule;
+
+    public readonly listeners: Map<CatnipSpriteID, { func: SpiderFunction, priority: number }[]>;
     public readonly triggerFunction: SpiderFunctionDefinition;
     public readonly writeThreadList: boolean;
 
     private _generated: boolean;
 
-    public constructor(compiler: CatnipCompiler, writeThreadList: boolean) {
-        this.compiler = compiler;
-        this.triggers = new Map();
-        this.triggerFunction = this.compiler.spiderModule.createFunction();
+    public constructor(module: CatnipCompilerWasmModule, writeThreadList: boolean) {
+        this.module = module;
+        this.listeners = new Map();
+        this.triggerFunction = this.module.spiderModule.createFunction();
         this._generated = false;
         this.writeThreadList = writeThreadList;
 
@@ -31,20 +29,20 @@ export class CatnipTriggerFunctionGenerator {
         }
     }
 
-    public addTrigger(trigger: CatnipIrScriptTrigger) {
+    public addListener(func: SpiderFunction, spriteID: CatnipSpriteID, priority?: number) {
         CatnipCompilerLogger.assert(!this._generated, true, "Function already generated.");
-        let triggers = this.triggers.get(trigger.ir.spriteID);
+        let triggers = this.listeners.get(spriteID);
 
         if (triggers === undefined) {
             triggers = [];
-            this.triggers.set(trigger.ir.spriteID, triggers);
+            this.listeners.set(spriteID, triggers);
         }
 
-        triggers.push(trigger);
-        triggers.sort((a, b) => a.inputs.priority - b.inputs.priority);
+        triggers.push({ func, priority: priority ?? 0 });
+        triggers.sort((a, b) => a.priority - b.priority);
     }
 
-    public createEventFunction(): SpiderFunctionDefinition {
+    public createTriggerFunction(): SpiderFunctionDefinition {
         CatnipCompilerLogger.assert(!this._generated, true, "Function already generated.");
 
         let threadListPtrVarRef: SpiderLocalParameterReference;
@@ -55,7 +53,7 @@ export class CatnipTriggerFunctionGenerator {
 
         const targetVarRef = this.triggerFunction.addLocalVariable(SpiderNumberType.i32);
 
-        this.triggerFunction.body.emitConstant(SpiderNumberType.i32, this.compiler.runtimeInstance.ptr);
+        this.triggerFunction.body.emitConstant(SpiderNumberType.i32, this.module.runtimeInstance.ptr);
         this.triggerFunction.body.emit(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("targets"));
         this.triggerFunction.body.emit(SpiderOpcodes.local_set, targetVarRef);
 
@@ -73,8 +71,8 @@ export class CatnipTriggerFunctionGenerator {
                 loop.emit(SpiderOpcodes.local_set, spriteVarRef);
 
                 loop.emitBlock(innerBlock => {
-                    for (const [spriteID, triggers] of this.triggers) {
-                        const sprite = this.compiler.project.getSprite(spriteID);
+                    for (const [spriteID, listeners] of this.listeners) {
+                        const sprite = this.module.project.getSprite(spriteID);
 
                         // Check to see if this target is an instance of the sprite
                         innerBlock.emit(SpiderOpcodes.local_get, spriteVarRef);
@@ -83,12 +81,12 @@ export class CatnipTriggerFunctionGenerator {
 
                         innerBlock.emitIf(ifTrue => {
                             // If it is, create the threads
-                            for (const trigger of triggers) {
+                            for (const listener of listeners) {
                                 ifTrue.emit(SpiderOpcodes.local_get, targetVarRef);
-                                ifTrue.emitConstant(SpiderNumberType.i32, trigger.ir.entrypoint.functionTableIndex);
+                                ifTrue.emitConstant(SpiderNumberType.i32, this.module.getFunctionTableIndex(listener.func));
                                 if (this.writeThreadList) ifTrue.emit(SpiderOpcodes.local_get, threadListPtrVarRef);
                                 else ifTrue.emitConstant(SpiderNumberType.i32, 0);
-                                ifTrue.emit(SpiderOpcodes.call, this.compiler.getRuntimeFunction("catnip_target_start_new_thread"));
+                                ifTrue.emit(SpiderOpcodes.call, this.module.getRuntimeFunction("catnip_target_start_new_thread"));
                             }
                             // Skip to the end of "innerBlock"
                             ifTrue.emit(SpiderOpcodes.br, 1);

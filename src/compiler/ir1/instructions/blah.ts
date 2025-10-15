@@ -1,8 +1,9 @@
-import { SpiderOpcodes } from "wasm-spider";
+import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { WasmEmitter } from "../../wasm/WasmEmitter";
+import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Function, IR1Instruction, IR1StringificationContext } from "../IR1";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
+import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 
 
 export class IR1InstrBlock extends IR1Instruction {
@@ -14,7 +15,7 @@ export class IR1InstrBlock extends IR1Instruction {
         this.body = body ?? [];
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasm(SpiderOpcodes.block, emitter.emitExpression(this.body));
     }
 
@@ -34,7 +35,7 @@ export class IR1InstrLoop extends IR1Instruction {
         this.body = body ?? [];
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasm(SpiderOpcodes.loop, emitter.emitExpression(this.body));
     }
 
@@ -54,7 +55,7 @@ export class IR1InstrBr extends IR1Instruction {
         this.index = index;
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasm(SpiderOpcodes.br, this.index);
     }
 
@@ -74,7 +75,7 @@ export class IR1InstrIf extends IR1Instruction {
         this.fail = fail;
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         if (this.fail.length === 0) {
             emitter.emitWasm(SpiderOpcodes.if, emitter.emitExpression(this.pass));
         } else {
@@ -96,7 +97,7 @@ export class IR1InstrIf extends IR1Instruction {
 }
 
 export class IR1InstrReturn extends IR1Instruction {
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasm(SpiderOpcodes.return);
     }
 
@@ -105,11 +106,26 @@ export class IR1InstrReturn extends IR1Instruction {
     }
 }
 
+export class IR1InstrTerminate extends IR1Instruction {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
+        emitter.emitWasmPushThread();
+        emitter.emitWasmPushNumber(SpiderNumberType.i32, CatnipWasmEnumThreadStatus.TERMINATED);
+        emitter.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("status"));
+
+        // emitter.cleanStack();
+        emitter.emitWasm(SpiderOpcodes.return);
+    }
+
+    public stringify(ctx: IR1StringificationContext): void {
+        ctx.writeLine(`terminate`);
+    }
+}
+
 export class IR1InstrCall extends IR1Instruction {
 
     public func: IR1Function;
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasm(SpiderOpcodes.call, emitter.prepass.getSpiderFunction(this.func));
     }
 
@@ -134,7 +150,7 @@ export class IR1InstrYield extends IR1Instruction {
         this.status = status;
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         throw new Error("Not implemented.");
     }
 
@@ -151,7 +167,7 @@ export class IR1InstrLog extends IR1Instruction {
         super();
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasm(SpiderOpcodes.call,
             emitter.module.importCallback("log",
                 console.log,
@@ -171,7 +187,7 @@ export class IR1InstrJoin extends IR1Instruction {
         super();
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasmPushRuntime();
         emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_join");
     }

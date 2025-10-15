@@ -2,7 +2,7 @@ import { CatnipProcedureID } from "../../ops/procedure/procedure_definition";
 import { CatnipScript } from "../../runtime/CatnipScript";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompiler } from "../CatnipCompiler";
-import { CatnipCompilerSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerSubsystem";
 import { CatnipIrScriptProcedureTrigger } from "../ir/procedure/procedure_trigger";
 
 
@@ -11,7 +11,7 @@ interface ProcedureVarients {
     noWarp?: CatnipIrScriptProcedureTrigger
 }
 
-export class CatnipCompilerProcedureSubsystem extends CatnipCompilerSubsystem {
+export class CatnipCompilerProcedureSubsystem extends CatnipCompilerModuleSubsystem {
 
     private readonly _compiledProcedures: Map<CatnipSpriteID, Map<CatnipProcedureID, ProcedureVarients>>;
 

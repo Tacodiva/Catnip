@@ -46,7 +46,7 @@ export const CatnipEventValueTypes = {
             return UTF16.decode(proj.runtimeModule.memory.buffer.slice(bytes, bytes + byteLength));
         },
         (proj, value: string) => {
-            return proj.createNewString(String(value));
+            return proj.runtimeModule.createHString(proj.runtimeInstance, String(value));
         }
     ),
 

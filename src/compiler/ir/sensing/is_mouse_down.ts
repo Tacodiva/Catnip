@@ -5,7 +5,7 @@ import { CatnipIrInputOp, CatnipIrInputOpType, CatnipIrOp } from "../../CatnipIr
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 import { CatnipWasmStructIO } from "../../../wasm-interop/CatnipWasmStructIO";
-import { CatnipCompilerMouseSubsystem } from "../../subsystems/CatnipCompilerMouseSubsystem";
+import { MouseSubsystem } from "../../subsystems/MouseSubsystem";
 
 export const ir_is_mouse_down = new class extends CatnipIrInputOpType {
     public constructor() { super("sensing_is_mouse_dowm"); }
@@ -21,7 +21,7 @@ export const ir_is_mouse_down = new class extends CatnipIrInputOpType {
     public generateWasm(ctx: CatnipCompilerWasmGenContext, ir: CatnipIrInputOp): void {
 
         // Make sure the subsystem is in the compiler
-        ctx.compiler.getSubsystem(CatnipCompilerMouseSubsystem);
+        ctx.compiler.getSubsystem(MouseSubsystem);
 
         ctx.emitWasmGetRuntime();
         ctx.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("io"));

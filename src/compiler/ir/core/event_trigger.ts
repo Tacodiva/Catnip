@@ -2,7 +2,7 @@ import { CatnipEventID } from "../../../CatnipEvents";
 import { CatnipCompilerIrGenContext } from "../../CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../CatnipIr";
 import { CatnipIrScriptTrigger, CatnipIrScriptTriggerType } from "../../CatnipIrScriptTrigger";
-import { CatnipCompilerEventTriggerSubsystem } from "../../subsystems/CatnipCompilerEventTriggerSubsystem";
+import { EventTriggerSubsystem } from "../../subsystems/EventTriggerSubsystem";
 import { ir_thread_terminate } from "./thread_terminate";
 
 export type ir_event_trigger_inputs = {
@@ -18,7 +18,7 @@ export interface CatnipIrScriptEventTriggerListener<TInputs extends ir_event_tri
 export const ir_event_trigger = new class extends CatnipIrScriptTriggerType<ir_event_trigger_inputs> {
     public create(ir: CatnipIr, inputs: ir_event_trigger_inputs): CatnipIrScriptTrigger<ir_event_trigger_inputs, this> {
         const trigger = super.create(ir, inputs);
-        ir.compiler.getSubsystem(CatnipCompilerEventTriggerSubsystem).addTrigger(trigger);
+        ir.compiler.getSubsystem(EventTriggerSubsystem).addTrigger(trigger);
         return trigger;
     }
 

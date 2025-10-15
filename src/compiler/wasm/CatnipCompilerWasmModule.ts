@@ -1,18 +1,22 @@
-import { createModule, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
-import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipCompiler } from "./CatnipCompiler";
-import { CatnipValueFormat } from "./CatnipValueFormat";
-import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
-import { CatnipWasmStructHeapString } from "../wasm-interop/CatnipWasmStructHeapString";
-import UTF16 from "../utf16";
+import { createModule, SpiderFunction, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
+import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../../runtime/CatnipRuntimeModuleFunctions";
+import { CatnipCompiler } from "../CatnipCompiler";
+import { CatnipValueFormat } from "../CatnipValueFormat";
+import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
+import { CatnipWasmStructHeapString } from "../../wasm-interop/CatnipWasmStructHeapString";
+import UTF16 from "../../utf16";
+import { CatnipEventID } from "../../CatnipEvents";
+import { CatnipCompilerWasmEvent } from "./CatnipCompilerWasmEvent";
+import { CatnipCompilerStage } from "../CatnipCompilerStage";
+import { CatnipProjectModuleEvent } from "../../runtime/CatnipProjectModule";
+import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "../CatnipCompilerSubsystem";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
-export type catnip_compiler_direct_callback = (...args: number[]) => void | number;
 
 interface CallbackInfo {
     name: string;
     import: SpiderImportFunction;
-    callback: catnip_compiler_direct_callback;
+    callback: Function;
 }
 
 export class CatnipCompilerWasmModule {
@@ -28,12 +32,23 @@ export class CatnipCompilerWasmModule {
     public readonly spiderIndirectFunctionTable: SpiderImportTable;
     public readonly spiderIndirectFunctionType: SpiderTypeDefinition;
 
+    private readonly _subsystems: Map<CatnipCompilerModuleSubsystemClass, CatnipCompilerModuleSubsystem>;
+
     // We need to import all the functions we need from the runtime into the module we're constructing
     //   This maps between runtime function names and that function's import.
     private readonly _runtimeFuncs: ReadonlyMap<CatnipRuntimeModuleFunctionName, SpiderImportFunction>;
 
-    private readonly _directCallbacks: Map<catnip_compiler_direct_callback, CallbackInfo>;
-    private readonly _callbacks: Map<catnip_compiler_callback, catnip_compiler_direct_callback>;
+    private readonly _functionTableOffset: number;
+    private readonly _functionTable: SpiderFunction[];
+
+    private readonly _directCallbacks: Map<Function, CallbackInfo>;
+    private readonly _directCallbackNames: Set<string>;
+    private readonly _callbacks: Map<catnip_compiler_callback, Function>;
+
+    private readonly _events: Map<CatnipEventID, CatnipCompilerWasmEvent>;
+
+
+    private readonly _exportNames: Set<string>;
 
     public constructor(compiler: CatnipCompiler) {
         this.compiler = compiler;
@@ -48,6 +63,8 @@ export class CatnipCompilerWasmModule {
             [SpiderNumberType.i32]
         );
 
+        this._subsystems = new Map();
+
         // Create all the imports for the runtime functions
         {
             const runtimeFuncs = new Map();
@@ -61,8 +78,47 @@ export class CatnipCompilerWasmModule {
             }
         }
 
+        this._functionTableOffset = 1;
+        this._functionTable = [];
+
+        // The C module might use some indirect function indices, so we need to find an offset for our
+        //   function table where we wont touch the ones already there.
+        while (this.project.runtimeModule.indirectFunctionTable.get(this._functionTableOffset) !== null) {
+            ++this._functionTableOffset;
+        }
+
         this._directCallbacks = new Map();
+        this._directCallbackNames = new Set();
         this._callbacks = new Map();
+
+        this._events = new Map();
+
+        this._exportNames = new Set();
+
+        // Create all the events specificed in the config
+        for (const eventID in this.compiler.config.events) {
+            this.getEvent(eventID as CatnipEventID);
+        }
+
+    }
+
+
+    public getSubsystem<
+        TClass extends CatnipCompilerModuleSubsystemClass<TSubsystem>,
+        TSubsystem extends CatnipCompilerModuleSubsystem =
+        TClass extends CatnipCompilerModuleSubsystemClass<infer I> ? I : never
+    >(subsystemClass: TClass): TSubsystem {
+        this.compiler.assertStageBefore(CatnipCompilerStage.MODULE_WRITE);
+
+        const mapSubsystem = this._subsystems.get(subsystemClass);
+
+        if (mapSubsystem !== undefined)
+            return mapSubsystem as TSubsystem;
+
+        const newSubsystem = new subsystemClass(this);
+        this._subsystems.set(subsystemClass, newSubsystem);
+
+        return newSubsystem;
     }
 
     /**
@@ -85,8 +141,8 @@ export class CatnipCompilerWasmModule {
      */
     public importDirectCallback(
         name: string,
-        callback: catnip_compiler_direct_callback,
-        argFormats: SpiderValueType[],
+        callback: Function,
+        argFormats: readonly SpiderValueType[],
         returnFormat: SpiderValueType | null,
     ): SpiderImportFunction {
 
@@ -95,15 +151,17 @@ export class CatnipCompilerWasmModule {
         // If we have already imported this callback, no need to do it again.
         if (callbackInfo !== undefined) return callbackInfo.import;
 
+        const uniqueName = this.uniquifyDirectCallbackName(name);
+
         callbackInfo = {
-            name,
+            name: uniqueName,
             callback,
             import: this.spiderModule.importFunction(
                 "catnip_callbacks",
-                name,
+                uniqueName,
                 returnFormat ?
-                    this.spiderModule.createType(argFormats, returnFormat) :
-                    this.spiderModule.createType(argFormats)
+                    this.spiderModule.createType([...argFormats], returnFormat) :
+                    this.spiderModule.createType([...argFormats])
             )
         };
 
@@ -123,7 +181,7 @@ export class CatnipCompilerWasmModule {
     public importCallback(
         name: string,
         callback: catnip_compiler_callback,
-        argFormats: CatnipValueFormat[],
+        argFormats: readonly CatnipValueFormat[],
         returnFormat: CatnipValueFormat | null,
     ): SpiderImportFunction {
 
@@ -181,18 +239,83 @@ export class CatnipCompilerWasmModule {
         );
     }
 
-    public createModule() {
-        return writeModule(this.spiderModule, { mergeTypes: false });
+    private static uniquifyName(name: string, taken: Set<string>): string {
+        let counter = 1;
+        let uniqueName = name;
+
+        while (taken.has(name)) {
+            uniqueName = `${name}_${counter++}`;
+        }
+
+        taken.add(uniqueName);
+
+        return uniqueName;
     }
 
-    public getCallbacks(): Record<string, catnip_compiler_direct_callback> {
-        const callbacks: Record<string, catnip_compiler_direct_callback> = {};
+    private uniquifyDirectCallbackName(name: string) {
+        return CatnipCompilerWasmModule.uniquifyName(name, this._directCallbackNames);
+    }
+
+    public uniquifyExportName(name: string) {
+        return CatnipCompilerWasmModule.uniquifyName(name, this._exportNames);
+    }
+
+    public getCallbacks(): Record<string, Function> {
+        const callbacks: Record<string, Function> = {};
 
         for (const callbackInfo of this._directCallbacks.values()) {
             callbacks[callbackInfo.import.name] = callbackInfo.callback;
         }
 
         return callbacks;
+    }
+
+    public getEvent(id: CatnipEventID): CatnipCompilerWasmEvent {
+        let event = this._events.get(id);
+        if (event !== undefined) return event;
+        this._events.set(id, event = new CatnipCompilerWasmEvent(id, this));
+        return event;
+    }
+
+    public addEventListener(id: CatnipEventID, func: SpiderFunction) {
+        this.getEvent(id).addListener(func);
+    }
+
+    public getEvents(): CatnipCompilerWasmEvent[] {
+        return [...this._events.values()];
+    }
+
+    public getFunctionTableIndex(func: SpiderFunction): number {
+        let tableIndex = this._functionTable.indexOf(func);
+
+        if (tableIndex !== -1) return tableIndex + this._functionTableOffset;
+
+        tableIndex = this._functionTable.length;
+        this._functionTable.push(func);
+
+        return tableIndex + this._functionTableOffset;
+    }
+
+    public preWrite() {
+        this.compiler.assertStage(CatnipCompilerStage.MODULE_PREWRITE);
+
+        for (const subsystem of this._subsystems.values()) {
+            if (subsystem.preModuleWrite) subsystem.preModuleWrite();
+        }
+
+        for (const event of this._events.values()) {
+            event.preModuleWrite();
+        }
+
+        // Create the functions element to fill in the function table
+        this.spiderModule.createElementFuncIdxActive(
+            this.spiderIndirectFunctionTable, this._functionTableOffset, this._functionTable
+        );
+    }
+
+    public write(): Uint8Array {
+        this.compiler.assertStage(CatnipCompilerStage.MODULE_WRITE);
+        return writeModule(this.spiderModule, { mergeTypes: false });
     }
 
 }

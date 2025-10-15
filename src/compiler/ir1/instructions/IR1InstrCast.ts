@@ -1,7 +1,7 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
-import { WasmEmitter } from "../../wasm/WasmEmitter";
+import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction, IR1StringificationContext } from "../IR1";
 import { IR1Logger } from "../IR1Logger";
 import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
@@ -20,17 +20,17 @@ export class IR1InstrCast extends IR1Instruction {
         this.dst = dst;
     }
 
-    public static emitStringCheck(emitter: WasmEmitter, format: CatnipValueFormat,
-        isString: (emitter: WasmEmitter, format: CatnipValueFormat) => CatnipValueFormat,
-        isNumber: (emitter: WasmEmitter, format: CatnipValueFormat) => CatnipValueFormat): CatnipValueFormat;
+    public static emitStringCheck(emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat,
+        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat,
+        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat): CatnipValueFormat;
 
-    public static emitStringCheck(emitter: WasmEmitter, format: CatnipValueFormat,
-        isString: (emitter: WasmEmitter, format: CatnipValueFormat) => void,
-        isNumber: (emitter: WasmEmitter, format: CatnipValueFormat) => void): void;
+    public static emitStringCheck(emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat,
+        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => void,
+        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => void): void;
 
-    public static emitStringCheck(emitter: WasmEmitter, format: CatnipValueFormat,
-        isString: (emitter: WasmEmitter, format: CatnipValueFormat) => CatnipValueFormat | void,
-        isNumber: (emitter: WasmEmitter, format: CatnipValueFormat) => CatnipValueFormat | void): CatnipValueFormat | void {
+    public static emitStringCheck(emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat,
+        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat | void,
+        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat | void): CatnipValueFormat | void {
 
         {
             // We do a block so if there is a br in the lambda, the index stays the same.
@@ -83,7 +83,7 @@ export class IR1InstrCast extends IR1Instruction {
         return outFormat;
     }
 
-    public static emitConversion(emitter: WasmEmitter | null, src: CatnipValueFormat, dst: CatnipValueFormat): CatnipValueFormat {
+    public static emitConversion(emitter: CatnipCompilerWasmEmitter | null, src: CatnipValueFormat, dst: CatnipValueFormat): CatnipValueFormat {
 
         if (CatnipValueFormatUtils.isAlways(src, dst))
             return src;
@@ -448,7 +448,7 @@ export class IR1InstrCast extends IR1Instruction {
         notSupported();
     }
 
-    public emitWasm(emitter: WasmEmitter): void {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         IR1InstrCast.emitConversion(emitter, this.src, this.dst);
     }
 

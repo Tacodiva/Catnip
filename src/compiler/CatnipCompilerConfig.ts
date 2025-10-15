@@ -1,3 +1,4 @@
+import { CatnipEventID } from "../CatnipEvents";
 
 export interface CatnipCompilerConfig {
     dump_binaryen: false | "wat" | "as" | "stack";
@@ -12,10 +13,17 @@ export interface CatnipCompilerConfig {
     enable_optimization_type_analysis: boolean;
 
     enable_warp_timer: boolean;
+
+    events: Partial<Record<CatnipEventID, Partial<CatnipCompilerEventConfig>>>;
+}
+
+export interface CatnipCompilerEventConfig {
+    enable_js_listeners: boolean;
+    raw_listeners: Function[];
 }
 
 export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
-    let def = {
+    let def: CatnipCompilerConfig = {
         dump_binaryen: false,
         dump_ir0: false,
         dump_ir1: false,
@@ -26,16 +34,9 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         enable_optimization_variable_inlining_force: false,
         enable_optimization_type_analysis: true,
         enable_warp_timer: false,
-    } as CatnipCompilerConfig;
 
-    
-
-    // def.dump_binaryen = "stack";
-    // def.dump_ir = true;
-    // def.dump_wasm_blob = true;
-    // def.enable_optimization_binaryen = false;
-    // def.enable_optimization_variable_inlining = false;
-    // def.enable_optimization_type_analysis = false;
+        events: {}
+    };
 
     return def;
 }

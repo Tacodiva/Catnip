@@ -1,7 +1,7 @@
 import { CatnipCompilerIrGenContext } from "../../CatnipCompilerIrGenContext";
 import { CatnipIr } from "../../CatnipIr";
 import { CatnipIrScriptTrigger, CatnipIrScriptTriggerType } from "../../CatnipIrScriptTrigger";
-import { CatnipCompilerKeyTriggerSubsystem } from "../../subsystems/CatnipCompilerKeyTriggerSubsystem";
+import { KeyTriggerSubsystem } from "../../subsystems/KeyTriggerSubsystem";
 import { ir_thread_terminate } from "../core/thread_terminate";
 
 
@@ -13,7 +13,7 @@ export const ir_key_pressed_trigger = new class extends CatnipIrScriptTriggerTyp
 
     public create(ir: CatnipIr, inputs: ir_key_pressed_trigger_inputs): CatnipIrScriptTrigger<ir_key_pressed_trigger_inputs, this> {
         const trigger = super.create(ir, inputs);
-        ir.compiler.getSubsystem(CatnipCompilerKeyTriggerSubsystem).registerTrigger(trigger);
+        ir.compiler.getSubsystem(KeyTriggerSubsystem).registerTrigger(trigger);
         return trigger;
     }
     

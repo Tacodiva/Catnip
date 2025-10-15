@@ -1,21 +1,21 @@
-import { CatnipCompiler } from "../CatnipCompiler";
-import { CatnipCompilerSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerSubsystem";
 import { CatnipIrScriptBroadcastTrigger } from "../ir/event/broadcast_trigger";
 import { SpiderFunction, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipTriggerFunctionGenerator } from "../CatnipTriggerGenerator";
+import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";
+import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
 
 interface BroadcastTriggerInfo {
-    triggerGenerator: CatnipTriggerFunctionGenerator,
+    triggerGenerator: CatnipCompilerWasmTrigger,
     broadcastName: string
 }
 
-export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
+export class BroadcastSubsystem extends CatnipCompilerModuleSubsystem {
 
     private readonly _broadcastTriggers: Map<string, BroadcastTriggerInfo>;
     private readonly _broadcastGeneric: SpiderFunctionDefinition;
 
-    public constructor(compiler: CatnipCompiler) {
-        super(compiler);
+    public constructor(module: CatnipCompilerWasmModule) {
+        super(module);
         this._broadcastTriggers = new Map();
         this._broadcastGeneric = this.spiderModule.createFunction();
     }
@@ -27,7 +27,7 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
         if (broadcastInfo === undefined) {
             broadcastInfo = {
                 broadcastName: name,
-                triggerGenerator: new CatnipTriggerFunctionGenerator(this.compiler, true)
+                triggerGenerator: new CatnipCompilerWasmTrigger(this.compiler, true)
             };
             this._broadcastTriggers.set(name, broadcastInfo);
         }
@@ -36,7 +36,7 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
     }
 
     public registerBroadcastTrigger(trigger: CatnipIrScriptBroadcastTrigger) {
-        this._getBroadcastInfo(trigger.inputs.name).triggerGenerator.addTrigger(trigger);
+        this._getBroadcastInfo(trigger.inputs.name).triggerGenerator.addListener(trigger);
     }
 
     public getBroadcastFunction(name: string): SpiderFunction {
@@ -47,12 +47,12 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
         return this._broadcastGeneric;
     }
 
-    public addEvents(): void {
+    public preModuleWrite(): void {
         const broadcastName = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
         const threadListPtrVarRef = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
 
         for (const broadcastInfo of this._broadcastTriggers.values()) {
-            const eventFunc = broadcastInfo.triggerGenerator.createEventFunction();
+            const eventFunc = broadcastInfo.triggerGenerator.createTriggerFunction();
 
             this._broadcastGeneric.body.emit(SpiderOpcodes.local_get, broadcastName);
             this._broadcastGeneric.body.emitConstant(
@@ -61,7 +61,7 @@ export class CatnipCompilerBroadcastSubsystem extends CatnipCompilerSubsystem {
             );
             this._broadcastGeneric.body.emit(
                 SpiderOpcodes.call,
-                this.compiler.getRuntimeFunction("catnip_blockutil_hstring_cmp")
+                this.module.getRuntimeFunction("catnip_blockutil_hstring_cmp")
             );
             this._broadcastGeneric.body.emit(SpiderOpcodes.i32_eqz);
 

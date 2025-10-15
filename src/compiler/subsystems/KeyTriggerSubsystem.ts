@@ -1,33 +1,34 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "../CatnipCompiler";
-import { CatnipCompilerSubsystem } from "../CatnipCompilerSubsystem";
-import { CatnipTriggerFunctionGenerator } from "../CatnipTriggerGenerator";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";
 import { CatnipIrScriptKeyPressedTrigger } from "../ir/event/key_pressed_trigger";
+import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
 
 
-export class CatnipCompilerKeyTriggerSubsystem extends CatnipCompilerSubsystem {
+export class KeyTriggerSubsystem extends CatnipCompilerModuleSubsystem {
     // A map of key codes to the function to call to trigger the hats for that key
-    private _keyMap: Map<number, CatnipTriggerFunctionGenerator>;
+    private _keyMap: Map<number, CatnipCompilerWasmTrigger>;
     // The trigger when any key is pressed.
-    private _anyKey: CatnipTriggerFunctionGenerator | null;
+    private _anyKey: CatnipCompilerWasmTrigger | null;
 
-    public constructor(compiler: CatnipCompiler) {
-        super(compiler);
+    public constructor(module: CatnipCompilerWasmModule) {
+        super(module);
         this._keyMap = new Map();
         this._anyKey = null;
     }
 
-    private _getTriggerFunctionGenerator(key: number | null): CatnipTriggerFunctionGenerator {
+    private _getTriggerFunctionGenerator(key: number | null): CatnipCompilerWasmTrigger {
         if (key === null) {
             if (this._anyKey === null)
-                this._anyKey = new CatnipTriggerFunctionGenerator(this.compiler, false);
+                this._anyKey = new CatnipCompilerWasmTrigger(this.module, false);
             return this._anyKey;
         }
 
         let generator = this._keyMap.get(key);
 
         if (generator === undefined) {
-            generator = new CatnipTriggerFunctionGenerator(this.compiler, false);
+            generator = new CatnipCompilerWasmTrigger(this.module, false);
             this._keyMap.set(key, generator);
         }
 
@@ -35,10 +36,10 @@ export class CatnipCompilerKeyTriggerSubsystem extends CatnipCompilerSubsystem {
     }
 
     public registerTrigger(trigger: CatnipIrScriptKeyPressedTrigger) {
-        this._getTriggerFunctionGenerator(trigger.inputs.key).addTrigger(trigger);
+        this._getTriggerFunctionGenerator(trigger.inputs.key).addListener(trigger);
     }
 
-    public addEvents(): void {
+    public preModuleWrite(): void {
 
         const eventFunction = this.spiderModule.createFunction({
             parameters: [SpiderNumberType.i32] // Key code
@@ -46,7 +47,7 @@ export class CatnipCompilerKeyTriggerSubsystem extends CatnipCompilerSubsystem {
 
         eventFunction.body.emitBlock(body => {
             for (const [keyCode, generator] of this._keyMap) {
-                const eventFunction = generator.createEventFunction();
+                const eventFunction = generator.createTriggerFunction();
 
                 body.emit(SpiderOpcodes.local_get, eventFunction.getParameter(0));
                 body.emitConstant(SpiderNumberType.i32, keyCode);
@@ -60,11 +61,11 @@ export class CatnipCompilerKeyTriggerSubsystem extends CatnipCompilerSubsystem {
         });
 
         if (this._anyKey) {
-            const anyEventFunction = this._anyKey.createEventFunction();
+            const anyEventFunction = this._anyKey.createTriggerFunction();
             eventFunction.body.emit(SpiderOpcodes.call, anyEventFunction);
         }
 
-        this.compiler.addEventListener("IO_KEY_PRESSED", eventFunction);
+        this.module.addEventListener("IO_KEY_PRESSED", eventFunction);
     }
 
 }

@@ -1,8 +1,9 @@
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompiler } from "../CatnipCompiler";
 import { IR0 } from "../ir0/IR0";
-import { WasmEmitter } from "../wasm/WasmEmitter";
+import { CatnipCompilerWasmEmitter } from "../wasm/CatnipCompilerWasmEmitter";
 import { IR1Logger } from "./IR1Logger";
+import { IR1Trigger } from "./IR1Trigger";
 
 export class IR1 {
 
@@ -28,13 +29,15 @@ export class IR1 {
 
 export class IR1Script {
     public readonly ir: IR1;
+    public readonly trigger: IR1Trigger;
     public readonly spriteID: CatnipSpriteID;
 
     public entrypoint: IR1Function;
     public functions: IR1Function[];
 
-    public constructor(ir: IR1, spriteID: CatnipSpriteID) {
+    public constructor(ir: IR1, trigger: IR1Trigger, spriteID: CatnipSpriteID) {
         this.ir = ir;
+        this.trigger = trigger;
         this.spriteID = spriteID;
         this.functions = [];
         this.entrypoint = new IR1Function(this);
@@ -48,6 +51,8 @@ export class IR1Script {
         ctx.openBlock("script");
 
         ctx.writeLine(`entrypoint ${ctx.getFunctionName(this.entrypoint)}`);
+        ctx.writeLine(`trigger ${this.trigger.stringify()}`);
+        ctx.writeLine();
 
         for (const func of this.functions) func.stringify(ctx);
 
@@ -93,7 +98,7 @@ export abstract class IR1Instruction {
 
     public abstract stringify(ctx: IR1StringificationContext): void;
 
-    public abstract emitWasm(emitter: WasmEmitter): void;
+    public abstract emitWasm(emitter: CatnipCompilerWasmEmitter): void;
 }
 
 export class IR1StringificationContext {

@@ -1,15 +1,16 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompiler } from "../CatnipCompiler";
-import { CatnipCompilerSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
 
 
-export class CatnipCompilerKeyDownSubsystem extends CatnipCompilerSubsystem {
+export class KeyDownSubsystem extends CatnipCompilerModuleSubsystem {
 
-    public constructor(compiler: CatnipCompiler) {
-        super(compiler);
+    public constructor(module: CatnipCompilerWasmModule) {
+        super(module);
     }
 
-    public addEvents(): void {
+    public preModuleWrite(): void {
         
         const keyPressedFunction = this.spiderModule.createFunction({
             parameters: [SpiderNumberType.i32] // Key code
@@ -17,9 +18,9 @@ export class CatnipCompilerKeyDownSubsystem extends CatnipCompilerSubsystem {
 
         keyPressedFunction.body.emitConstant(SpiderNumberType.i32, this.compiler.runtimeInstance.ptr);
         keyPressedFunction.body.emit(SpiderOpcodes.local_get, keyPressedFunction.getParameter(0));
-        keyPressedFunction.body.emit(SpiderOpcodes.call, this.compiler.getRuntimeFunction("catnip_io_key_pressed"));
+        keyPressedFunction.body.emit(SpiderOpcodes.call, this.module.getRuntimeFunction("catnip_io_key_pressed"));
 
-        this.compiler.addEventListener("IO_KEY_PRESSED", keyPressedFunction);
+        this.module.addEventListener("IO_KEY_PRESSED", keyPressedFunction);
 
         ////
 
@@ -29,8 +30,8 @@ export class CatnipCompilerKeyDownSubsystem extends CatnipCompilerSubsystem {
 
         keyReleasedFunction.body.emitConstant(SpiderNumberType.i32, this.compiler.runtimeInstance.ptr);
         keyReleasedFunction.body.emit(SpiderOpcodes.local_get, keyReleasedFunction.getParameter(0));
-        keyReleasedFunction.body.emit(SpiderOpcodes.call, this.compiler.getRuntimeFunction("catnip_io_key_released"));
+        keyReleasedFunction.body.emit(SpiderOpcodes.call, this.module.getRuntimeFunction("catnip_io_key_released"));
 
-        this.compiler.addEventListener("IO_KEY_RELEASED", keyReleasedFunction);
+        this.module.addEventListener("IO_KEY_RELEASED", keyReleasedFunction);
     }
 }
