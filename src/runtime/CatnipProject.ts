@@ -45,13 +45,7 @@ export class CatnipProject {
     }
 
     public async compile(config?: Partial<CatnipCompilerConfig>): Promise<CatnipProjectModule> {
-        const compiler = new CatnipCompiler(this, config);
-
-        console.time("compile");
-        const module = await compiler.createModule();
-        console.timeEnd("compile");
-
-        return module;
+        return await new CatnipCompiler(this, config).createModule();
     }
 
     public getSprite(id: CatnipSpriteID): CatnipSprite {

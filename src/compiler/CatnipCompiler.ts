@@ -4,8 +4,7 @@ import { CatnipProject } from "../runtime/CatnipProject";
 import { CatnipProjectModule, CatnipProjectModuleEvent } from "../runtime/CatnipProjectModule";
 import { CatnipCompilerConfig, catnipCompilerConfigPoppulate } from "./CatnipCompilerConfig";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
-import { CatnipCompilerPassStage, CatnipCompilerStage } from "./CatnipCompilerStage";
-import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "./CatnipCompilerSubsystem";
+import { CatnipCompilerStage } from "./CatnipCompilerStage";
 import { CatnipIrExternalBranch } from "./CatnipIrBranch";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { IR0, IR0GraphVisDotGenerator, IR0Script } from "./ir0/IR0";
@@ -45,7 +44,7 @@ export class CatnipCompiler {
 
     public readonly config: Readonly<CatnipCompilerConfig>;
 
-    private readonly _passes: Map<CatnipCompilerPassStage, CatnipCompilerPass[]>;
+    // private readonly _passes: Map<CatnipCompilerPassStage, CatnipCompilerPass[]>;
     private _stage: CatnipCompilerStage | null;
 
     public get stage() { return this._stage; }
@@ -53,7 +52,7 @@ export class CatnipCompiler {
     constructor(project: CatnipProject, config?: Partial<CatnipCompilerConfig>) {
         this.project = project;
         this.config = catnipCompilerConfigPoppulate(config);
-        this._passes = new Map();
+        // this._passes = new Map();
         this._stage = null;
 
         this.addPass(PassAnalyzeFunctionCallers);
@@ -69,18 +68,18 @@ export class CatnipCompiler {
     }
 
     public addPass(pass: CatnipCompilerPass) {
-        CatnipCompilerLogger.assert(this._stage === null);
+        // CatnipCompilerLogger.assert(this._stage === null);
 
-        const stage = pass.stage;
-        let passes = this._passes.get(stage);
+        // const stage = pass.stage;
+        // let passes = this._passes.get(stage);
 
-        if (passes === undefined) {
-            passes = [];
-            this._passes.set(stage, passes);
-        }
+        // if (passes === undefined) {
+        //     passes = [];
+        //     this._passes.set(stage, passes);
+        // }
 
-        passes.push(pass);
-        passes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+        // passes.push(pass);
+        // passes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     }
 
     public assertStageBefore(arg: CatnipCompilerStage) {
@@ -99,11 +98,23 @@ export class CatnipCompiler {
     }
 
     private _transitionStage(stage: CatnipCompilerStage | null) {
-        // TODO timing
+        if (this.config.enable_compiler_timing) {
+            if (this._stage !== null)
+                console.timeEnd(CatnipCompilerStage[this._stage]);
+
+            if (stage !== null)
+                console.time(CatnipCompilerStage[stage]);
+        }
+
         this._stage = stage;
+
     }
 
     public async createModule(): Promise<CatnipProjectModule> {
+        if (this.config.enable_compiler_timing) {
+            console.time("COMPILE");
+        }
+
         this._transitionStage(CatnipCompilerStage.IR0_INIT);
 
         const ir0 = new IR0(this);
@@ -230,6 +241,10 @@ export class CatnipCompiler {
 
         this._transitionStage(null);
 
+        if (this.config.enable_compiler_timing) {
+            console.timeEnd("COMPILE");
+        }
+        
         return projectModule;
     }
 }
