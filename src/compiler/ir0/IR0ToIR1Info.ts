@@ -1,10 +1,13 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
-import { IR1, IR1Function, IR1Script } from "../ir1/IR1";
+import { IR1, IR1Script } from "../ir1/IR1";
+import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
+import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
 import { IR1Logger } from "../ir1/IR1Logger";
 import { IR0, IR0GraphVisDotGenerator, IR0Script, IR0ScriptInfo } from "./IR0";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlowType } from "./IR0ControlFlow";
+import { IR0InputProcedureArgument } from "./ops/IR0InputProcedureArgument";
 
 // Holds additional info we need about each basic block for translating it to IR1
 export interface BasicBlockInfo {
@@ -15,6 +18,7 @@ export interface BasicBlockInfo {
     isMerge: boolean;
     isLoopHead: boolean;
 
+    // These array do not include blocks called with the `call` flow type, so these are isolated to a single script
     in: BasicBlockInfo[];
     out: BasicBlockInfo[];
 
@@ -26,9 +30,11 @@ export interface BasicBlockInfo {
 
 export interface FunctionInfo {
     script: ScriptInfo;
-    
+
     ir0: IR0BasicBlock;
     ir1: IR1Function;
+
+    isYieldTarget: boolean;
 }
 
 // Holds additional info we need about each script for translating it to IR1
@@ -129,24 +135,34 @@ export class IR0ToIR1Info {
 
         for (const script of this._scripts.values()) {
 
-            const createFunction = (block: IR0BasicBlock, func?: IR1Function): FunctionInfo => {
+            const createFunction = (block: IR0BasicBlock, isYieldTarget: boolean, func?: IR1Function): FunctionInfo => {
                 let functionInfo = this._functions.get(block);
-                if (functionInfo !== undefined) return functionInfo;
 
-                functionInfo = {
-                    script,
-                    ir0: block,
-                    ir1: func ?? new IR1Function(script.ir1),
-                };
+                if (functionInfo === undefined) {
+                    functionInfo = {
+                        script,
+                        isYieldTarget,
+                        ir0: block,
+                        ir1: func ?? new IR1Function(script.ir1),
+                    };
 
-                this._functions.set(block, functionInfo);
-                script.functions.push(functionInfo);
+                    this._functions.set(block, functionInfo);
+                    script.functions.push(functionInfo);
+                }
+
+                if (isYieldTarget) {
+                    functionInfo.isYieldTarget = true;
+                    // This function is a yield target, so its external values must be sourced from the stack.
+                    functionInfo.ir1.externalValueSource = IR1ExternalValueSourceType.STACK;
+                }
+
+                CatnipCompilerLogger.assert(functionInfo.ir0 === block);
 
                 return functionInfo;
             }
 
             // The head will always be a function
-            script.entrypoint = createFunction(script.ir0.head, script.ir1.entrypoint);
+            script.entrypoint = createFunction(script.ir0.head, false, script.ir1.entrypoint);
 
             // Figure out which basic blocks must be function heads
             script.ir0.forEachBasicBlock(block => {
@@ -154,14 +170,14 @@ export class IR0ToIR1Info {
                     case IR0ControlFlowType.Next:
                         if (block.flow.status !== CatnipWasmEnumThreadStatus.RUNNING) {
                             // This is a yield, so the target block has to be a function
-                            createFunction(block.flow.next);
+                            createFunction(block.flow.next, true);
                         }
                         break;
                     case IR0ControlFlowType.Call: {
                         const calledProcedureInfo = this.getScriptInfo(block.flow.procedure);
 
                         if (calledProcedureInfo.isYielding) {
-                            createFunction(block.flow.next);
+                            createFunction(block.flow.next, true);
                         }
                         break;
                     }
@@ -248,7 +264,7 @@ export class IR0ToIR1Info {
                     for (let i = 1; i < info.in.length; i++) {
                         if (func !== info.in[i].func) {
                             // We found one. We need to make this basic block into its own function
-                            func = createFunction(info.block);
+                            func = createFunction(info.block, false);
 
                             this._functions.set(info.block, func);
                             info.isEntrypoint = true;
@@ -449,8 +465,41 @@ export class IR0ToIR1Info {
 
         // Okay so we've figured out every IR1 function we're going emit
         // Now we need to figure out what the inputs to each of these functions is going to be
+        {
+            const sourceExternalValue = (func: FunctionInfo, value: IR1ExternalValue): void => {
+                // Firsly, check to see if this function already has sources this value
+                for (const existingExtern of func.ir1.externalValues) {
+                    // If we already source this external value, bail
+                    if (IR1ExternalValue.areEquivalent(existingExtern, value))
+                        return;
+                }
 
-        
+                // The function doesn't source the value. Let's add it
+                func.ir1.addExternalValue(value);
+
+                // Whoever calls us from within this script also needs to be able to source the external value.
+                for (const inBlock of this.getBasicBlockInfo(func.ir0).in) {
+                    sourceExternalValue(inBlock.func, value);
+                }
+            };
+
+            for (const blockInfo of this._blocks.values()) {
+                blockInfo.block.forEachNode(node => {
+                    for (const externalValue of node.getExternalValues())
+                        sourceExternalValue(blockInfo.func, externalValue);
+                });
+
+                // We need an explicit return location if the script is not top level, and the script is yielding.
+                //   If the script is top level, `Return` just terminates the thread.
+                //   If the script is not yielding, WASM deals with the return location for us.
+                const needsReturnLocation = !blockInfo.func.script.ir1.trigger.isTopLevel && blockInfo.func.script.isYielding;
+
+                if (needsReturnLocation && blockInfo.block.flow.type === IR0ControlFlowType.Return) {
+                    sourceExternalValue(blockInfo.func, { type: IR1ExternalValueType.RETURN_LOCATION });
+                }
+            }
+        }
+
     }
 
     public addGraphVisDominanceEdges(generator: IR0GraphVisDotGenerator) {

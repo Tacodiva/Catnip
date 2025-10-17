@@ -5,6 +5,7 @@ import { IR1Trigger } from "../IR1Trigger";
 
 
 export class IR1TriggerEvent extends IR1Trigger {
+    public readonly isTopLevel = true;
 
     public readonly eventID: CatnipEventID;
 

@@ -1,10 +1,13 @@
 import { SpiderExpression, SpiderFunctionDefinition, SpiderLocalParameterReference, SpiderLocalReference, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes, SpiderValueType } from "wasm-spider";
 import { CatnipCompilerWasmModule } from "./CatnipCompilerWasmModule";
-import { IR1Function, IR1Instruction } from "../ir1/IR1";
+import { IR1Instruction } from "../ir1/IR1";
+import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
 import { IR1ToWasmInfo } from '../ir1/IR1ToWasmInfo';
 import { CatnipRuntimeModuleFunctionName } from "../../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { IR1Trigger } from "../ir1/IR1Trigger";
+import { CatnipWasmStructThread } from "../../wasm-interop/CatnipWasmStructThread";
+import { IR1ExternalValue } from "../ir1/IR1ExternalValue";
 
 export class CatnipCompilerWasmEmitter {
 
@@ -22,6 +25,7 @@ export class CatnipCompilerWasmEmitter {
     public get spriteID() { return this.ir1Function.script.spriteID; }
 
     public readonly threadParameter: SpiderLocalParameterReference;
+    public readonly externalValueReferences: SpiderLocalReference[];
 
     private _expression: SpiderExpression;
 
@@ -38,7 +42,64 @@ export class CatnipCompilerWasmEmitter {
         this._localsUnreturnedCount = 0;
 
         CatnipCompilerLogger.assert(this.spiderFunction.parameters.length === 0);
+
+        this.externalValueReferences = [];
+
+        if (this.ir1Function.externalValueSource === IR1ExternalValueSourceType.PARAMETERS) {
+            for (const externalValue of this.ir1Function.externalValues) {
+                this.externalValueReferences.push(this.spiderFunction.addParameter(IR1ExternalValue.getSpiderType(externalValue)));
+            }
+        }
+
         this.threadParameter = this.spiderFunction.addParameter(SpiderNumberType.i32);
+
+        if (this.ir1Function.externalValueSource === IR1ExternalValueSourceType.STACK) {
+            const frameSizeBytes = this.ir1Function.externalValues.length * 8;
+
+            if (frameSizeBytes !== 0) {
+                // We subtract the frame size from the stack pointer to get the base of our frame
+                this.emitWasmPushStackPtr();
+                this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
+                this.emitWasm(SpiderOpcodes.i32_sub);
+
+
+                const stackPointer = this.borrowLocal(SpiderNumberType.i32);
+                this.emitWasm(SpiderOpcodes.local_set, stackPointer);
+
+                let stackOffset = 0;
+                // We need to get the values off of the stack. They were stored in reverse order.
+                for (const externalValue of [...this.ir1Function.externalValues].reverse()) {
+
+                    const spiderType = IR1ExternalValue.getSpiderType(externalValue);
+
+                    this.emitWasm(SpiderOpcodes.local_get, stackPointer);
+
+                    if (spiderType === SpiderNumberType.i32) {
+                        this.emitWasm(SpiderOpcodes.i32_load, 2, stackOffset);
+                    } else {
+                        CatnipCompilerLogger.assert(spiderType === SpiderNumberType.f64);
+                        this.emitWasm(SpiderOpcodes.f64_load, 3, stackOffset);
+                    }
+
+                    const local = this.spiderFunction.addLocalVariable(spiderType);
+                    this.emitWasm(SpiderOpcodes.local_set, local);
+                    this.externalValueReferences.push(local);
+
+                    stackOffset += 8;
+                }
+
+                // Reverse again to go back to the correct order
+                this.externalValueReferences.reverse();
+
+                // Now that we've read everything, store the new stack pointer
+                this.emitWasmPushThread();
+                this.emitWasm(SpiderOpcodes.local_get, stackPointer);
+                this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+
+                this.returnLocal(stackPointer);
+            }
+        }
+
     }
 
     public emitTriggerEntry(trigger: IR1Trigger) {
@@ -76,6 +137,29 @@ export class CatnipCompilerWasmEmitter {
 
     public emitWasmPushThread() {
         this.emitWasm(SpiderOpcodes.local_get, this.threadParameter);
+    }
+
+    public emitWasmPushStackPtr() {
+        this.emitWasmPushThread();
+        this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+    }
+
+    public emitWasmPushStackEnd() {
+        this.emitWasmPushThread();
+        this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_end"));
+    }
+
+    public emitWasmPushExternalValue(value: IR1ExternalValue) {
+        for (let i = 0; i < this.ir1Function.externalValues.length; i++) {
+            const externalValue = this.ir1Function.externalValues[i];
+
+            if (IR1ExternalValue.areEquivalent(value, externalValue)) {
+                this.emitWasm(SpiderOpcodes.local_get, this.externalValueReferences[i]);
+                return;
+            }
+        }
+
+        throw new Error("Function does not have required external value.");
     }
 
     public emitExpression(emitter: ((emitter: CatnipCompilerWasmEmitter) => void) | IR1Instruction[]): SpiderExpression {

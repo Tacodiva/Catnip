@@ -1,3 +1,4 @@
+import { SpiderNumberType } from "wasm-spider";
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipValueFormat } from "../CatnipValueFormat";
@@ -6,11 +7,16 @@ import { IR0GraphVisDotGenerator, IR0Input, IR0Command, IR0Script, IR0Node } fro
 import { IR0BasicBlock } from "../ir0/IR0BasicBlock";
 import { IR0ControlFlowType, IR0ControlFlow } from "../ir0/IR0ControlFlow";
 import { BasicBlockInfo, FunctionInfo, IR0ToIR1Info, ScriptInfo } from "../ir0/IR0ToIR1Info";
-import { IR1InstrCall, IR1InstrBlock, IR1InstrBr, IR1InstrLoop, IR1InstrYield, IR1InstrIf, IR1InstrReturn, IR1InstrTerminate, IR1InstrCallProcedure } from "./instructions/blah";
+import { IR1InstrCall, IR1InstrBlock, IR1InstrBr, IR1InstrLoop, IR1InstrIf, IR1InstrTerminate, IR1InstrReturn, IR1InstrReturnTo } from "./instructions/blah";
+import { IR1InstrYield } from "./instructions/IR1InstrYield";
 import { IR1InstrCast } from "./instructions/IR1InstrCast";
-import { IR1Script, IR1Function, IR1, IR1Instruction } from "./IR1";
+import { IR1InstrPushFunctionIndex } from "./instructions/IR1InstrPushFunctionIndex";
+import { IR1InstrStackFrame } from "./instructions/IR1InstrStackFrame";
+import { IR1Script, IR1, IR1Instruction } from "./IR1";
+import { IR1ExternalValue, IR1ExternalValueType } from "./IR1ExternalValue";
+import { IR1ExternalValueSourceType, IR1Function } from "./IR1Function";
 import { IR1Logger } from "./IR1Logger";
-
+import { IR1InstrPushExternalValue } from "./instructions/IR1InstrPushExternalValue";
 
 export class IR1Emitter {
     public readonly conversionInfo: IR0ToIR1Info;
@@ -169,6 +175,7 @@ export class IR1Emitter {
                     } else {
                         // If we yield to a function, it should be an entrypoint
                         CatnipCompilerLogger.assert(next.isEntrypoint);
+                        this.prepareInternalCall(next.func.ir1, body);
                         body.push(new IR1InstrYield(next.func.ir1, flow.status));
                     }
 
@@ -192,49 +199,80 @@ export class IR1Emitter {
                 }
 
                 case IR0ControlFlowType.Return: {
-                    // body.push(new IR1InstrReturn());
-                    body.push(new IR1InstrTerminate());
+                    if (x.func.script.ir1.trigger.isTopLevel) {
+                        body.push(new IR1InstrTerminate());
+                    } else {
+                        if (x.func.script.isYielding) {
+                            body.push(new IR1InstrReturnTo());
+                        } else {
+                            body.push(new IR1InstrReturn());
+                        }
+                    }
                     break;
                 }
 
                 case IR0ControlFlowType.Call: {
                     const calledProcedureInfo = this.conversionInfo.getScriptInfo(flow.procedure);
+                    const calledFunction = calledProcedureInfo.entrypoint.ir1;
 
-                    if (calledProcedureInfo.isYielding)
-                        throw new Error("Not supported.");
+                    const nextBlockInfo = this.conversionInfo.getBasicBlockInfo(flow.next);
 
-                    body.push(new IR1InstrCallProcedure(calledProcedureInfo.ir1));
+                    for (const calledExternalValue of calledFunction.externalValues) {
+                        switch (calledExternalValue.type) {
+                            case IR1ExternalValueType.PROCEDURE_ARGUMENT:
+                                this.emitIR0(flow.args[calledExternalValue.index], body);
+                                break;
+                            case IR1ExternalValueType.RETURN_LOCATION:
+                                IR1Logger.assert(nextBlockInfo.isEntrypoint);
+                                IR1Logger.assert(calledProcedureInfo.isYielding);
+                                body.push(new IR1InstrPushFunctionIndex(nextBlockInfo.func.ir1));
+                                break;
+                        }
+                    }
 
-                    body.push(...doBranch(x, this.conversionInfo.getBasicBlockInfo(flow.next), ctx));
+                    this.stackifyArguments(calledFunction, body);
+
+                    if (calledProcedureInfo.isYielding) {
+                        // TODO If calledProcedureInfo.isYielding then this is a tail call
+                        body.push(new IR1InstrCall(calledFunction));
+                    } else {
+                        body.push(new IR1InstrCall(calledFunction));
+                        body.push(...doBranch(x, this.conversionInfo.getBasicBlockInfo(flow.next), ctx));
+                    }
                 }
 
             }
 
             return body;
+        }
 
-            function doBranch(from: BasicBlockInfo, to: BasicBlockInfo, ctx: Context): IR1Instruction[] {
+        const doBranch = (from: BasicBlockInfo, to: BasicBlockInfo, ctx: Context): IR1Instruction[] => {
 
-                if (from.func !== to.func) {
-                    // If we're branching to a different function, that function should be an entrypoint
-                    CatnipCompilerLogger.assert(to.isEntrypoint);
-                    return [new IR1InstrCall(to.func.ir1)];
-                }
+            if (from.func !== to.func) {
+                // If we're branching to a different function, the target block should that function's entrypoint
+                CatnipCompilerLogger.assert(to.isEntrypoint);
+                const body: IR1Instruction[] = [];
 
-                if (ctx.fallthrough === to) {
-                    return [];
-                }
+                this.prepareInternalCall(to.func.ir1, body);
+                body.push(new IR1InstrCall(to.func.ir1));
 
-                const isBackedge = from.reversePostorderIndex >= to.reversePostorderIndex;
-
-                // If this is a backedge, the target should be a loop head
-                IR1Logger.assert(!isBackedge || to.isLoopHead);
-
-                if (isBackedge || to.isMerge) {
-                    return [new IR1InstrBr(ctx.getBrIndex(to))];
-                }
-
-                return doNode(to, ctx);
+                return body;
             }
+
+            if (ctx.fallthrough === to) {
+                return [];
+            }
+
+            const isBackedge = from.reversePostorderIndex >= to.reversePostorderIndex;
+
+            // If this is a backedge, the target should be a loop head
+            IR1Logger.assert(!isBackedge || to.isLoopHead);
+
+            if (isBackedge || to.isMerge) {
+                return [new IR1InstrBr(ctx.getBrIndex(to))];
+            }
+
+            return doNode(to, ctx);
         }
 
         function generatesIf(block: BasicBlockInfo) {
@@ -242,6 +280,21 @@ export class IR1Emitter {
         }
 
         func.ir1.body = doNode(entrypoint, new Context());
+    }
+
+    private prepareInternalCall(to: IR1Function, body: IR1Instruction[]) {
+        for (const externalValue of to.externalValues) {
+            body.push(new IR1InstrPushExternalValue(externalValue));
+        }
+        this.stackifyArguments(to, body);
+    }
+
+    private stackifyArguments(to: IR1Function, body: IR1Instruction[]) {
+        if (to.externalValueSource === IR1ExternalValueSourceType.STACK && to.externalValues.length !== 0) {
+            body.push(new IR1InstrStackFrame(
+                to.externalValues.map(f => IR1ExternalValue.getFormat(f))
+            ));
+        }
     }
 
     private emitIR0Input(input: IR0Input, expectedFormat: CatnipValueFormat, body: IR1Instruction[]): void {

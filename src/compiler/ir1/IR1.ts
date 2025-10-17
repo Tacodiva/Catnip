@@ -2,6 +2,7 @@ import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompiler } from "../CatnipCompiler";
 import { IR0 } from "../ir0/IR0";
 import { CatnipCompilerWasmEmitter } from "../wasm/CatnipCompilerWasmEmitter";
+import { IR1Function } from "./IR1Function";
 import { IR1Logger } from "./IR1Logger";
 import { IR1Trigger } from "./IR1Trigger";
 
@@ -61,38 +62,12 @@ export class IR1Script {
 
 }
 
-export class IR1Function {
-    public readonly script: IR1Script;
-    private _body: IR1Instruction[] | null;
+export type IR1Expression = IR1Instruction[];
 
-    public get body(): IR1Instruction[] {
-        if (this._body === null) throw new Error("Body not generated yet.")
-        return this._body;
-    }
-
-    public set body(value: IR1Instruction[]) {
-        if (this._body !== null) throw new Error("Body already generated.")
-        this._body = value;
-    }
-
-    public constructor(script: IR1Script) {
-        this.script = script;
-        this._body = null;
-
-        this.script.functions.push(this);
-    }
-
-    public stringify(ctx: IR1StringificationContext): void {
-        if (this._body === null) {
-            ctx.writeLine(`${ctx.getFunctionName(this)} not generated`)
-        } else {
-            ctx.openBlock(ctx.getFunctionName(this));
-            ctx.writeInstructions(this._body)
-            ctx.closeBlock();
-        }
-        ctx.writeLine();
-    }
+export type IR1InstructionArgs<TArgs extends string[] = string[]> = {
+    [K in TArgs[number]]: IR1Expression;
 }
+
 
 export abstract class IR1Instruction {
 

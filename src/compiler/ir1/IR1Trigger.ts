@@ -3,6 +3,8 @@ import { IR1StringificationContext } from "./IR1";
 
 export abstract class IR1Trigger {
 
+    public readonly abstract isTopLevel: boolean;
+
     public abstract emitEntryWasm(emitter: CatnipCompilerWasmEmitter): void;
     public abstract stringify(): string;
 

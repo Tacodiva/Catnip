@@ -1,5 +1,6 @@
 import { SpiderFunctionDefinition } from "wasm-spider";
-import { IR1, IR1Function } from "./IR1";
+import { IR1 } from "./IR1";
+import { IR1Function } from "./IR1Function";
 import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
 import { IR1Logger } from "./IR1Logger";
 

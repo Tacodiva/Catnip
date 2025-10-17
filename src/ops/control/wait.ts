@@ -54,7 +54,7 @@ export const op_wait = new class extends CatnipCommandOpType<wait_inputs> {
     }
     
     public generateIr(ctx: IR0Emitter, inputs: wait_inputs): void {
-        ctx.emitYield();
+        ctx.emitYield(CatnipWasmEnumThreadStatus.YILED_TICK);
     }
 
 }

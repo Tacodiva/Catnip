@@ -1,9 +1,11 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
-import { IR1Function, IR1Instruction, IR1Script, IR1StringificationContext } from "../IR1";
+import { IR1Instruction, IR1Script, IR1StringificationContext } from "../IR1";
+import { IR1Function } from "../IR1Function";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
+import { IR1ExternalValueType } from "../IR1ExternalValue";
 
 
 export class IR1InstrBlock extends IR1Instruction {
@@ -106,13 +108,28 @@ export class IR1InstrReturn extends IR1Instruction {
     }
 }
 
+export class IR1InstrReturnTo extends IR1Instruction {
+    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
+
+        emitter.emitWasmPushThread();
+        emitter.emitWasmPushExternalValue({ type: IR1ExternalValueType.RETURN_LOCATION });
+        emitter.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("function"));
+
+
+        emitter.emitWasm(SpiderOpcodes.return);
+    }
+
+    public stringify(ctx: IR1StringificationContext): void {
+        ctx.writeLine(`return_to`);
+    }
+}
+
 export class IR1InstrTerminate extends IR1Instruction {
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasmPushThread();
         emitter.emitWasmPushNumber(SpiderNumberType.i32, CatnipWasmEnumThreadStatus.TERMINATED);
         emitter.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("status"));
 
-        // emitter.cleanStack();
         emitter.emitWasm(SpiderOpcodes.return);
     }
 
@@ -139,34 +156,6 @@ export class IR1InstrCall extends IR1Instruction {
         ctx.writeLine(`call ${ctx.getFunctionName(this.func)}`);
     }
 }
-
-export class IR1InstrYield extends IR1Instruction {
-
-    public func: IR1Function;
-    public status: CatnipWasmEnumThreadStatus;
-
-    public constructor(func: IR1Function, status: CatnipWasmEnumThreadStatus) {
-        super();
-        this.func = func;
-        this.status = status;
-    }
-
-    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        emitter.emitWasmPushThread();
-        emitter.emitWasmPushNumber(SpiderNumberType.i32, 
-            emitter.module.getFunctionTableIndex(emitter.conversionInfo.getSpiderFunction(this.func))
-        );
-        emitter.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("function"));
-
-        emitter.emitWasm(SpiderOpcodes.return);
-    }
-
-    public stringify(ctx: IR1StringificationContext): void {
-        ctx.writeLine(`yield ${ctx.getFunctionName(this.func)} status = ${this.status}`);
-    }
-
-}
-
 
 export class IR1InstrLog extends IR1Instruction {
 
@@ -202,26 +191,4 @@ export class IR1InstrJoin extends IR1Instruction {
     public stringify(ctx: IR1StringificationContext): void {
         ctx.writeLine(`join`);
     }
-}
-
-export class IR1InstrCallProcedure extends IR1Instruction {
-
-    public procedure: IR1Script;
-
-    public constructor(procedure: IR1Script) {
-        super();
-        this.procedure = procedure;
-    }
-
-    public stringify(ctx: IR1StringificationContext): void {
-        ctx.writeLine(`call ${ctx.getFunctionName(this.procedure.entrypoint)}`);
-    }
-
-    public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        emitter.emitWasmPushThread();
-        emitter.emitWasm(SpiderOpcodes.call,
-            emitter.conversionInfo.getSpiderFunction(this.procedure.entrypoint)
-        );
-    }
-
 }

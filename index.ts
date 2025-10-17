@@ -20,19 +20,21 @@ async function main() {
     const project = await run(catnipModule, projectFile);
     const projectModule = await project.compile({
         enable_optimization_binaryen: false,
-        // dump_binaryen: "stack",
-        // dump_ir0: "advanced",
+        // dump_ir0: "basic",
         // dump_ir1: true,
+        // dump_binaryen: "stack",
         enable_compiler_timing: true,
         enable_warp_timer: false,
     });
 
     projectModule.start();
 
+    projectModule.step();
     do {
+        console.log("Yield.");
         projectModule.step();
     } while (projectModule.hasRunningThreads());
-    
+
     // console.log("Garbage collection stats: ")
     // console.log(projectModule.getGcStats());
 }

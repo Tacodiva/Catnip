@@ -6,6 +6,7 @@ import { IR1Trigger } from "../IR1Trigger";
 
 
 export class IR1TriggerProcedure extends IR1Trigger {
+    public readonly isTopLevel = false;
 
     public readonly procedureID: CatnipProcedureID;
     public readonly isWarp: boolean;

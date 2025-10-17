@@ -7,6 +7,7 @@ import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { IR1Instruction } from "../ir1/IR1";
 import { IR1Emitter } from "../ir1/IR1Emitter";
+import { IR1ExternalValue } from "../ir1/IR1ExternalValue";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Emitter } from "./IR0Emitter";
@@ -166,6 +167,10 @@ export abstract class IR0Node<TArgs extends string[] = string[]> {
         return `[label="${this.name}"]`;
     }
 
+    public getExternalValues(): IR1ExternalValue[] {
+        return [];
+    }
+
     public abstract emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[];
 
 }
@@ -174,6 +179,7 @@ export abstract class IR0Command<TArgs extends string[] = string[]> extends IR0N
 
 }
 
+// Inputs must not have side effects
 export abstract class IR0Input<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
 
     public abstract getResultFormat(): CatnipValueFormat;

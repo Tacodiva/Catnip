@@ -1,5 +1,5 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0GraphVisDotGenerator, IR0Command } from "./IR0";
+import { IR0GraphVisDotGenerator, IR0Command, IR0Node } from "./IR0";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
 
@@ -28,6 +28,25 @@ export class IR0BasicBlock {
         this._flow = flow;
     }
 
+    public forEachNode(iterator: (node: IR0Node) => void): void {
+        function iterate(node: IR0Node) {
+            iterator(node);
+
+            for (const arg of Object.values(node.args))
+                iterate(arg.value);
+        }
+
+        this.commands.forEach(iterate);
+
+        switch (this.flow.type) {
+            case IR0ControlFlowType.Call:
+                this.flow.args.forEach(iterate);
+                break;
+            case IR0ControlFlowType.Condition:
+                iterate(this.flow.condition);
+                break;
+        }
+    }
 
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
         IR0Logger.assert(!generator.blocks.has(this));
