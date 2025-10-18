@@ -1,7 +1,8 @@
-import { IR1InstrCallback } from "../../ir1/instructions/IR1InstrCallback";
+import { IR1InstrCallback } from "../../ir1/core/IR1InstrCallback";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { catnip_compiler_callback } from "../../wasm/CatnipCompilerWasmModule";
-import { IR0Command, IR0GraphVisDotGenerator, IR0InstructionArguments } from "../IR0";
+import { IR0Command, IR0InstructionArguments } from "../IR0Node";
+import { IR0GraphVisDotGenerator } from "../IR0GraphVisDotGenerator";
 
 export class IR0CmdCallback extends IR0Command {
     public readonly callback: catnip_compiler_callback;

@@ -1,7 +1,8 @@
 import { CatnipCompilerIrGenContext } from "../compiler/CatnipCompilerIrGenContext";
 import { CatnipIr } from "../compiler/CatnipIr";
 import { CatnipIrExternalBranch } from "../compiler/CatnipIrBranch";
-import { IR0Input, IR0Script } from "../compiler/ir0/IR0";
+import { IR0Input } from "../compiler/ir0/IR0Node";
+import { IR0Script } from "../compiler/ir0/IR0Script";
 import { IR0Emitter } from "../compiler/ir0/IR0Emitter";
 import { SB3ToIR0Info } from "../compiler/ir0/SB3ToIR0Info";
 

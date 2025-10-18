@@ -4,7 +4,8 @@ import { catnip_compiler_constant, Cast } from "../../cast";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
-import { IR1Instruction, IR1StringificationContext } from "../IR1";
+import { IR1Instruction } from "../IR1Instruction";
+import { IR1StringificationContext } from "../IR1StringificationContext";
 
 export class IR1InstrConst extends IR1Instruction {
 

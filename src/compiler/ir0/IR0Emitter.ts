@@ -1,5 +1,6 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0Command, IR0Script, IR0Input, IR0InstructionArguments } from "./IR0";
+import { IR0Command, IR0Input, IR0InstructionArguments } from "./IR0Node";
+import { IR0Script } from "./IR0Script";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0Logger } from "./IR0Logger";
@@ -7,7 +8,7 @@ import { CatnipCommandList, CatnipInputOp } from "../../ops";
 import { SB3ToIR0Info } from "./SB3ToIR0Info";
 import { CatnipScript } from "../../runtime/CatnipScript";
 import { catnip_compiler_callback } from "../CatnipCompiler";
-import { IR0CmdCallback } from "./ops/IR0CmdCallback";
+import { IR0CmdCallback } from "./core/IR0CmdCallback";
 
 export type IR0EmitterFunc = (emitter: IR0Emitter) => void;
 

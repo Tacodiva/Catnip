@@ -1,7 +1,7 @@
 import { catnip_compiler_constant } from "../../compiler/cast";
-import { IR0Input } from "../../compiler/ir0/IR0";
+import { IR0Input } from "../../compiler/ir0/IR0Node";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
-import { IR0InputConst } from "../../compiler/ir0/ops/IR0InputConst";
+import { IR0InputConst } from "../../compiler/ir0/core/IR0InputConst";
 import { CatnipCommandList, CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
 
 type const_inputs = { value: catnip_compiler_constant };

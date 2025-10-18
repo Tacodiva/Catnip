@@ -4,8 +4,10 @@ import { CatnipScript } from "../../runtime/CatnipScript";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { IR0, IR0Script, IR0ScriptInfo } from "./IR0";
-import { IR0TriggerProcedure } from "./ops/IR0TriggerProcedure";
+import { IR0ScriptInfo } from "./IR0Node";
+import { IR0 } from "./IR0";
+import { IR0Script } from "./IR0Script";
+import { IR0TriggerProcedure } from "./procedure/IR0TriggerProcedure";
 
 interface ProcedureVarients {
     warp?: IR0Script;

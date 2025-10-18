@@ -1,5 +1,6 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0Input, IR0Script } from "./IR0";
+import { IR0Input } from "./IR0Node";
+import { IR0Script } from "./IR0Script";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 
 

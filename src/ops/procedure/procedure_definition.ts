@@ -1,7 +1,7 @@
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { IR0Script } from "../../compiler/ir0/IR0";
+import { IR0Script } from "../../compiler/ir0/IR0Script";
 import { IR0Trigger } from "../../compiler/ir0/IR0Trigger";
-import { IR0TriggerProcedure } from "../../compiler/ir0/ops/IR0TriggerProcedure";
+import { IR0TriggerProcedure } from "../../compiler/ir0/procedure/IR0TriggerProcedure";
 import { ProjectSB3Block } from "../../sb3";
 import { registerSB3HatBlock } from "../../sb3_ops";
 import { SB3ProcedureArgumentInfo } from "../../sb3_reader";

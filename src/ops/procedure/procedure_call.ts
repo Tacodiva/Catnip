@@ -3,7 +3,7 @@ import { CatnipCompilerLogger } from "../../compiler/CatnipCompilerLogger";
 import { CatnipIr } from "../../compiler/CatnipIr";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../compiler/CatnipValueFormatUtils";
-import { IR0Script } from "../../compiler/ir0/IR0";
+import { IR0Script } from "../../compiler/ir0/IR0Script";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
 import { SB3ToIR0Info } from "../../compiler/ir0/SB3ToIR0Info";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";

@@ -1,5 +1,5 @@
 import { CatinpProcedureTriggerArg, CatnipProcedureID } from "../../../ops/procedure/procedure_definition";
-import { IR1TriggerProcedure } from "../../ir1/instructions/IR1TriggerProcedure";
+import { IR1TriggerProcedure } from "../../ir1/procedure/IR1TriggerProcedure";
 import { IR1Trigger } from "../../ir1/IR1Trigger";
 import { IR0Trigger } from "../IR0Trigger";
 

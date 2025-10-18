@@ -2,7 +2,8 @@ import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
-import { IR1Instruction, IR1StringificationContext } from "../IR1";
+import { IR1Instruction } from "../IR1Instruction";
+import { IR1StringificationContext } from "../IR1StringificationContext";
 import { IR1Function } from "../IR1Function";
 
 

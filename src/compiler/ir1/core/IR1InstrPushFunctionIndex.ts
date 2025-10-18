@@ -1,6 +1,7 @@
 import { SpiderNumberType } from "wasm-spider";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
-import { IR1Instruction, IR1StringificationContext } from "../IR1";
+import { IR1Instruction } from "../IR1Instruction";
+import { IR1StringificationContext } from "../IR1StringificationContext";
 import { IR1Function } from "../IR1Function";
 
 export class IR1InstrPushFunctionIndex extends IR1Instruction {

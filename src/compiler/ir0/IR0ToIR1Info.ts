@@ -1,13 +1,17 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
-import { IR1, IR1Script } from "../ir1/IR1";
+import { IR1 } from "../ir1/IR1";
+import { IR1Script } from "../ir1/IR1Script";
 import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
 import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
 import { IR1Logger } from "../ir1/IR1Logger";
-import { IR0, IR0GraphVisDotGenerator, IR0Script, IR0ScriptInfo } from "./IR0";
+import { IR0ScriptInfo } from "./IR0Node";
+import { IR0 } from "./IR0";
+import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
+import { IR0Script } from "./IR0Script";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlowType } from "./IR0ControlFlow";
-import { IR0InputProcedureArgument } from "./ops/IR0InputProcedureArgument";
+import { IR0InputProcedureArgument } from "./procedure/IR0InputProcedureArgument";
 
 // Holds additional info we need about each basic block for translating it to IR1
 export interface BasicBlockInfo {

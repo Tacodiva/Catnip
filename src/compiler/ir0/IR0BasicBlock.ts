@@ -1,5 +1,6 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0GraphVisDotGenerator, IR0Command, IR0Node } from "./IR0";
+import { IR0Command, IR0Node } from "./IR0Node";
+import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
 

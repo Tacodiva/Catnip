@@ -1,4 +1,4 @@
-import { IR0Script } from "../compiler/ir0/IR0";
+import { IR0Script } from "../compiler/ir0/IR0Script";
 import { IR0Trigger } from "../compiler/ir0/IR0Trigger";
 
 export type CatnipScriptTriggerInputs = Record<string, any>;

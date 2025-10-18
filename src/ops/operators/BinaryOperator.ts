@@ -1,4 +1,4 @@
-import { IR0Input } from "../../compiler/ir0/IR0";
+import { IR0Input } from "../../compiler/ir0/IR0Node";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
 import { CatnipCommandList, CatnipInputOp, CatnipInputOpType } from "../CatnipOp";
 

@@ -1,6 +1,6 @@
 import { SpiderExpression, SpiderFunctionDefinition, SpiderLocalParameterReference, SpiderLocalReference, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes, SpiderValueType } from "wasm-spider";
 import { CatnipCompilerWasmModule } from "./CatnipCompilerWasmModule";
-import { IR1Instruction } from "../ir1/IR1";
+import { IR1Instruction } from "../ir1/IR1Instruction";
 import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
 import { IR1ToWasmInfo } from '../ir1/IR1ToWasmInfo';
 import { CatnipRuntimeModuleFunctionName } from "../../runtime/CatnipRuntimeModuleFunctions";

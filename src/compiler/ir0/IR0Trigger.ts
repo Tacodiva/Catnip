@@ -1,5 +1,5 @@
 import { IR1Trigger } from "../ir1/IR1Trigger";
-import { IR0GraphVisDotGenerator } from "./IR0";
+import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 
 export abstract class IR0Trigger {
 

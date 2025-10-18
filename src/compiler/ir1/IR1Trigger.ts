@@ -1,5 +1,5 @@
 import { CatnipCompilerWasmEmitter } from "../wasm/CatnipCompilerWasmEmitter";
-import { IR1StringificationContext } from "./IR1";
+import { IR1StringificationContext } from "./IR1StringificationContext";
 
 export abstract class IR1Trigger {
 

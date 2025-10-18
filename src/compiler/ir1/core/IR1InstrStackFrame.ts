@@ -5,7 +5,8 @@ import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
-import { IR1Instruction, IR1StringificationContext } from "../IR1";
+import { IR1Instruction } from "../IR1Instruction";
+import { IR1StringificationContext } from "../IR1StringificationContext";
 
 export class IR1InstrStackFrame extends IR1Instruction {
 

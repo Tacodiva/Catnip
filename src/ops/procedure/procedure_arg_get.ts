@@ -1,11 +1,11 @@
 
 import { CatnipCompilerLogger } from "../../compiler/CatnipCompilerLogger";
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-import { IR0Input } from "../../compiler/ir0/IR0";
+import { IR0Input } from "../../compiler/ir0/IR0Node";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
-import { IR0InputConst } from "../../compiler/ir0/ops/IR0InputConst";
-import { IR0InputProcedureArgument } from "../../compiler/ir0/ops/IR0InputProcedureArgument";
-import { IR0TriggerProcedure } from "../../compiler/ir0/ops/IR0TriggerProcedure";
+import { IR0InputConst } from "../../compiler/ir0/core/IR0InputConst";
+import { IR0InputProcedureArgument } from "../../compiler/ir0/procedure/IR0InputProcedureArgument";
+import { IR0TriggerProcedure } from "../../compiler/ir0/procedure/IR0TriggerProcedure";
 import { registerSB3InputBlock } from "../../sb3_ops";
 import { CatnipInputOpType } from "../CatnipOp";
 

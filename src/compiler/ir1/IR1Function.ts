@@ -1,5 +1,7 @@
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { IR1Script, IR1Instruction, IR1StringificationContext } from "./IR1";
+import { IR1Instruction } from "./IR1Instruction";
+import { IR1Script } from "./IR1Script";
+import { IR1StringificationContext } from "./IR1StringificationContext";
 import { IR1ExternalValue, IR1ExternalValueType } from "./IR1ExternalValue";
 
 export enum IR1ExternalValueSourceType {

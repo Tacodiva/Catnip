@@ -1,9 +1,9 @@
 import { catnip_compiler_constant, Cast } from "../../cast";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
-import { IR1InstrConst } from "../../ir1/instructions/IR1InstrConst";
+import { IR1InstrConst } from "../../ir1/core/IR1InstrConst";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR0Input } from "../IR0";
+import { IR0Input } from "../IR0Node";
 
 
 export class IR0InputConst extends IR0Input<[]> {

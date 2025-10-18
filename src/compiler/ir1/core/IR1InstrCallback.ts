@@ -2,7 +2,8 @@ import { SpiderOpcodes } from "wasm-spider";
 import { catnip_compiler_callback } from "../../CatnipCompiler";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
-import { IR1Instruction, IR1StringificationContext } from "../IR1";
+import { IR1Instruction } from "../IR1Instruction";
+import { IR1StringificationContext } from "../IR1StringificationContext";
 
 
 export class IR1InstrCallback extends IR1Instruction {
