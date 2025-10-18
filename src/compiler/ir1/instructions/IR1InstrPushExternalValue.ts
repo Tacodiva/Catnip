@@ -23,7 +23,7 @@ export class IR1InstrPushExternalValue extends IR1Instruction {
 
         switch (this.value.type) {
             case IR1ExternalValueType.PROCEDURE_ARGUMENT:
-                extraInfo = `index: ${this.value.index}`;
+                extraInfo = `#${this.value.index}`;
                 break;
 
         }

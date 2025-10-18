@@ -173,7 +173,7 @@ export class IR1Emitter {
                     if (flow.status === CatnipWasmEnumThreadStatus.RUNNING) {
                         body.push(...doBranch(x, next, ctx));
                     } else {
-                        // If we yield to a function, it should be an entrypoint
+                        // If we yield to a function, it should have been made an entrypoint in a previous pass
                         CatnipCompilerLogger.assert(next.isEntrypoint);
                         this.prepareInternalCall(next.func.ir1, body);
                         body.push(new IR1InstrYield(next.func.ir1, flow.status));
@@ -217,20 +217,35 @@ export class IR1Emitter {
 
                     const nextBlockInfo = this.conversionInfo.getBasicBlockInfo(flow.next);
 
-                    for (const calledExternalValue of calledFunction.externalValues) {
-                        switch (calledExternalValue.type) {
-                            case IR1ExternalValueType.PROCEDURE_ARGUMENT:
-                                this.emitIR0(flow.args[calledExternalValue.index], body);
-                                break;
-                            case IR1ExternalValueType.RETURN_LOCATION:
-                                IR1Logger.assert(nextBlockInfo.isEntrypoint);
-                                IR1Logger.assert(calledProcedureInfo.isYielding);
-                                body.push(new IR1InstrPushFunctionIndex(nextBlockInfo.func.ir1));
-                                break;
-                        }
+                    if (calledProcedureInfo.isYielding) {
+                        // This will have been marked as an entrypoint in a previous pass
+                        IR1Logger.assert(nextBlockInfo.isEntrypoint);
+
+                        // We need to setup the stack for returning to this function
+                        this.prepareInternalCall(nextBlockInfo.func.ir1, body);
                     }
 
-                    this.stackifyArguments(calledFunction, body);
+                    // If this were a function, it would be called "prepareExternalCall"
+                    {
+                        for (const calledExternalValue of calledFunction.externalValues) {
+                            switch (calledExternalValue.type) {
+                                case IR1ExternalValueType.PROCEDURE_ARGUMENT:
+                                    this.emitIR0Input(
+                                        flow.args[calledExternalValue.index],
+                                        IR1ExternalValue.getFormat(calledExternalValue), 
+                                        body
+                                    );
+                                    break;
+                                case IR1ExternalValueType.RETURN_LOCATION:
+                                    IR1Logger.assert(nextBlockInfo.isEntrypoint);
+                                    IR1Logger.assert(calledProcedureInfo.isYielding);
+                                    body.push(new IR1InstrPushFunctionIndex(nextBlockInfo.func.ir1));
+                                    break;
+                            }
+                        }
+
+                        this.stackifyArguments(calledFunction, body);
+                    }
 
                     if (calledProcedureInfo.isYielding) {
                         // TODO If calledProcedureInfo.isYielding then this is a tail call
@@ -282,6 +297,8 @@ export class IR1Emitter {
         func.ir1.body = doNode(entrypoint, new Context());
     }
 
+    // Sets up the WASM stack or thread stack in preperation for a call to a function that is within this script.
+    //   We need to pass any external values the function needs to it.
     private prepareInternalCall(to: IR1Function, body: IR1Instruction[]) {
         for (const externalValue of to.externalValues) {
             body.push(new IR1InstrPushExternalValue(externalValue));

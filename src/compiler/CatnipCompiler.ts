@@ -148,19 +148,19 @@ export class CatnipCompiler {
 
         ir0ToIR1.create();
 
+        if (this.config.dump_ir0 === "advanced") {
+            ir0ToIR1.addGraphVisDominanceEdges(graphVisGenerator!);
+            console.log(graphVisGenerator!.toDotFile());
+        }
+
         this._transitionStage(CatnipCompilerStage.IR0_IR1_GEN);
 
         for (const script of ir0.scripts) {
             const emitter = new IR1Emitter(script, ir0ToIR1);
 
-            if (this.config.dump_ir0 === "advanced")
-                emitter.addGraphVisDominanceEdges(graphVisGenerator!);
 
             emitter.emitAll();
         }
-
-        if (this.config.dump_ir0 === "advanced")
-            console.log(graphVisGenerator!.toDotFile());
 
         if (this.config.dump_ir1)
             console.log(ir1.stringify());

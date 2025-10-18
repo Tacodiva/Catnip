@@ -1,48 +1,58 @@
 
-// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-// import { CatnipCompilerLogger } from "../../compiler/CatnipCompilerLogger";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { ir_transient_load } from "../../compiler/ir/core/transient_load";
-// import { ir_procedure_arg_get } from "../../compiler/ir/procedure/procedure_arg_get";
-// import { ir_procedure_trigger, ir_procedure_trigger_inputs } from "../../compiler/ir/procedure/procedure_trigger";
-// import { SB3ReadLogger } from "../../sb3_logger";
-// import { registerSB3InputBlock } from "../../sb3_ops";
-// import { CatnipInputOpType, CatnipOp } from "../CatnipOp";
+import { CatnipCompilerLogger } from "../../compiler/CatnipCompilerLogger";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
+import { IR0Input } from "../../compiler/ir0/IR0";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { IR0InputConst } from "../../compiler/ir0/ops/IR0InputConst";
+import { IR0InputProcedureArgument } from "../../compiler/ir0/ops/IR0InputProcedureArgument";
+import { IR0TriggerProcedure } from "../../compiler/ir0/ops/IR0TriggerProcedure";
+import { registerSB3InputBlock } from "../../sb3_ops";
+import { CatnipInputOpType } from "../CatnipOp";
 
-// type procedure_arg_get_inputs = { argName: string, format: CatnipValueFormat };
+type procedure_arg_get_inputs = { argName: string, format: CatnipValueFormat };
 
-// export const op_procedure_arg_get = new class extends CatnipInputOpType<procedure_arg_get_inputs> {
-//     public *getInputsAndSubstacks(): IterableIterator<CatnipOp> {}
+export const op_procedure_arg_get = new class extends CatnipInputOpType<procedure_arg_get_inputs> {
+    public *getInputsAndSubstacks(inputs: procedure_arg_get_inputs) { }
 
-//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: procedure_arg_get_inputs) {
+    public generateIr(ctx: IR0Emitter, inputs: procedure_arg_get_inputs): IR0Input {
 
-//         let paramIdx;
+        function findParameterIndex(): number {
+            const scriptTrigger = ctx.ir0Script.trigger;
 
-//         for (paramIdx = ctx.ir.parameters.length - 1; paramIdx >= 0; paramIdx--) {
-//             if (ctx.ir.parameters[paramIdx].name === inputs.argName) break;
-//         }
+            if (!(scriptTrigger instanceof IR0TriggerProcedure)) {
+                return -1;
+            }
 
-//         if (paramIdx === -1) {
-//             CatnipCompilerLogger.warn(`Can't find parameter with name '${inputs.argName}' in script ${ctx.ir.entrypoint.name}`);
+            for (let paramIdx = scriptTrigger.args.length - 1; paramIdx >= 0; paramIdx--) {
+                if (scriptTrigger.args[paramIdx].name === inputs.argName)
+                    return paramIdx;
+            }
 
-//             if (inputs.format === CatnipValueFormat.I32_BOOLEAN) {
-//                 ctx.emitIrConst(false, CatnipValueFormat.I32_BOOLEAN);
-//             } else {
-//                 SB3ReadLogger.assert(inputs.format === CatnipValueFormat.F64);
-//                 ctx.emitIrConst("", CatnipValueFormat.F64);
-//             }
-//         } else {
-//             ctx.emitIr(ir_procedure_arg_get, { paramIndex: paramIdx }, {});
-//         }
-//     }
-// }
+            return -1;
+        }
 
-// registerSB3InputBlock("argument_reporter_string_number", (ctx, block) => op_procedure_arg_get.create({
-//     argName: "" + block.fields.VALUE[0],
-//     format: CatnipValueFormat.F64
-// }));
+        const paramIdx = findParameterIndex();
 
-// registerSB3InputBlock("argument_reporter_boolean", (ctx, block) => op_procedure_arg_get.create({
-//     argName: "" + block.fields.VALUE[0],
-//     format: CatnipValueFormat.I32_BOOLEAN
-// }));
+        if (paramIdx === -1) {
+            CatnipCompilerLogger.warn(`Can't find parameter with name '${inputs.argName}' in script.`);
+
+            if (inputs.format === CatnipValueFormat.I32_BOOLEAN) {
+                return new IR0InputConst(false, CatnipValueFormat.I32_BOOLEAN);
+            } else {
+                return new IR0InputConst("", CatnipValueFormat.F64);
+            }
+        }
+
+        return new IR0InputProcedureArgument(paramIdx);
+    }
+}
+
+registerSB3InputBlock("argument_reporter_string_number", (ctx, block) => op_procedure_arg_get.create({
+    argName: "" + block.fields.VALUE[0],
+    format: CatnipValueFormat.F64
+}));
+
+registerSB3InputBlock("argument_reporter_boolean", (ctx, block) => op_procedure_arg_get.create({
+    argName: "" + block.fields.VALUE[0],
+    format: CatnipValueFormat.I32_BOOLEAN
+}));

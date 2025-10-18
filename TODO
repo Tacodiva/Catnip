@@ -1,0 +1,6 @@
+TODO:
+
+- Figure out how to represent and propogate functions inputs
+
+Okay so transients are variables which can be represented in IR0, but then I think in IR1 we need a more robust definition.
+

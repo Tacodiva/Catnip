@@ -11,10 +11,10 @@ export class IR0InputConst extends IR0Input<[]> {
     public value: catnip_compiler_constant;
     public format: CatnipValueFormat | null;
 
-    public constructor(value: catnip_compiler_constant) {
+    public constructor(value: catnip_compiler_constant, format?: CatnipValueFormat) {
         super("const", {});
         this.value = value;
-        this.format = null;
+        this.format = format ?? null;
     }
 
     private _isValidNumber(): boolean {

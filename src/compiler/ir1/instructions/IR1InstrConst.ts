@@ -54,7 +54,11 @@ export class IR1InstrConst extends IR1Instruction {
     }
 
     public stringify(ctx: IR1StringificationContext): void {
-        ctx.writeLine(`const ${JSON.stringify(this.value)}`);
+        if (this.format === null) {
+            ctx.writeLine(`const ${JSON.stringify(this.value)}`);
+        } else {
+            ctx.writeLine(`const ${JSON.stringify(this.value)} (${CatnipValueFormatUtils.stringify(this.format)})`);
+        }
     }
 
 }
