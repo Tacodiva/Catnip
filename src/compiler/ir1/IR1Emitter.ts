@@ -2,9 +2,9 @@ import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThr
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
+import { IR0ControlFlowType } from "../ir0/IR0ControlFlow";
 import { IR0Input, IR0Node } from "../ir0/IR0Node";
 import { IR0Script } from "../ir0/IR0Script";
-import { IR0ControlFlowType } from "../ir0/IR0ControlFlow";
 import { BasicBlockInfo, FunctionInfo, IR0ToIR1Info, ScriptInfo } from "../ir0/IR0ToIR1Info";
 import { IR1InstrBlock } from "./core/IR1InstrBlock";
 import { IR1InstrBr } from "./core/IR1InstrBr";
@@ -19,9 +19,9 @@ import { IR1InstrReturnTo } from "./core/IR1InstrReturnTo";
 import { IR1InstrStackFrame } from "./core/IR1InstrStackFrame";
 import { IR1InstrTerminate } from "./core/IR1InstrTerminate";
 import { IR1InstrYield } from "./core/IR1InstrYield";
-import { IR1Instruction } from "./IR1Instruction";
 import { IR1ExternalValue, IR1ExternalValueType } from "./IR1ExternalValue";
 import { IR1ExternalValueSourceType, IR1Function } from "./IR1Function";
+import { IR1Instruction } from "./IR1Instruction";
 import { IR1Logger } from "./IR1Logger";
 
 export class IR1Emitter {
@@ -247,6 +247,8 @@ export class IR1Emitter {
                                     IR1Logger.assert(calledProcedureInfo.isYielding);
                                     body.push(new IR1InstrPushFunctionIndex(nextBlockInfo.func.ir1));
                                     break;
+                                case IR1ExternalValueType.TRANSIENT_VARIABLE:
+                                    throw new Error("Procedure call should not have a transient variable as an argument.");
                             }
                         }
 

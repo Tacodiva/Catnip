@@ -7,7 +7,8 @@ import { CatnipRuntimeModuleFunctionName } from "../../runtime/CatnipRuntimeModu
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { IR1Trigger } from "../ir1/IR1Trigger";
 import { CatnipWasmStructThread } from "../../wasm-interop/CatnipWasmStructThread";
-import { IR1ExternalValue } from "../ir1/IR1ExternalValue";
+import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
+import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 
 export class CatnipCompilerWasmEmitter {
 
@@ -24,8 +25,9 @@ export class CatnipCompilerWasmEmitter {
 
     public get spriteID() { return this.ir1Function.script.spriteID; }
 
-    public readonly threadParameter: SpiderLocalParameterReference;
-    public readonly externalValueReferences: SpiderLocalReference[];
+    private readonly _threadParameter: SpiderLocalParameterReference;
+    private readonly _externalValueReferences: readonly SpiderLocalReference[];
+    private readonly _createdTransients: readonly SpiderLocalVariableReference[];
 
     private _expression: SpiderExpression;
 
@@ -43,15 +45,15 @@ export class CatnipCompilerWasmEmitter {
 
         CatnipCompilerLogger.assert(this.spiderFunction.parameters.length === 0);
 
-        this.externalValueReferences = [];
+        const externalValueReferences: SpiderLocalReference[] = [];
 
         if (this.ir1Function.externalValueSource === IR1ExternalValueSourceType.PARAMETERS) {
             for (const externalValue of this.ir1Function.externalValues) {
-                this.externalValueReferences.push(this.spiderFunction.addParameter(IR1ExternalValue.getSpiderType(externalValue)));
+                externalValueReferences.push(this.spiderFunction.addParameter(IR1ExternalValue.getSpiderType(externalValue)));
             }
         }
 
-        this.threadParameter = this.spiderFunction.addParameter(SpiderNumberType.i32);
+        this._threadParameter = this.spiderFunction.addParameter(SpiderNumberType.i32);
 
         if (this.ir1Function.externalValueSource === IR1ExternalValueSourceType.STACK) {
             const frameSizeBytes = this.ir1Function.externalValues.length * 8;
@@ -61,7 +63,6 @@ export class CatnipCompilerWasmEmitter {
                 this.emitWasmPushStackPtr();
                 this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
                 this.emitWasm(SpiderOpcodes.i32_sub);
-
 
                 const stackPointer = this.borrowLocal(SpiderNumberType.i32);
                 this.emitWasm(SpiderOpcodes.local_set, stackPointer);
@@ -83,13 +84,13 @@ export class CatnipCompilerWasmEmitter {
 
                     const local = this.spiderFunction.addLocalVariable(spiderType);
                     this.emitWasm(SpiderOpcodes.local_set, local);
-                    this.externalValueReferences.push(local);
+                    externalValueReferences.push(local);
 
                     stackOffset += 8;
                 }
 
                 // Reverse again to go back to the correct order
-                this.externalValueReferences.reverse();
+                externalValueReferences.reverse();
 
                 // Now that we've read everything, store the new stack pointer
                 this.emitWasmPushThread();
@@ -99,6 +100,21 @@ export class CatnipCompilerWasmEmitter {
                 this.returnLocal(stackPointer);
             }
         }
+
+        this._externalValueReferences = externalValueReferences;
+
+        // Create the locals for transient variables this function creates
+        const createdTransients: SpiderLocalVariableReference[] = [];
+
+        for (const transient of this.ir1Function.createdTransients) {
+            createdTransients.push(
+                this.spiderFunction.addLocalVariable(
+                    CatnipValueFormatUtils.getFormatSpiderType(transient.format)
+                )
+            );
+        }
+
+        this._createdTransients = createdTransients;
 
     }
 
@@ -136,7 +152,7 @@ export class CatnipCompilerWasmEmitter {
     }
 
     public emitWasmPushThread() {
-        this.emitWasm(SpiderOpcodes.local_get, this.threadParameter);
+        this.emitWasm(SpiderOpcodes.local_get, this._threadParameter);
     }
 
     public emitWasmPushStackPtr() {
@@ -149,17 +165,26 @@ export class CatnipCompilerWasmEmitter {
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_end"));
     }
 
-    public emitWasmPushExternalValue(value: IR1ExternalValue) {
+    public getExternalValueLocal(value: IR1ExternalValue): SpiderLocalReference {
+        if (value.type === IR1ExternalValueType.TRANSIENT_VARIABLE) {
+            // If this function creates the transient, then it is in the created transients array
+            //   not the external values array.
+            const createdTransientIndex = this.ir1Function.createdTransients.indexOf(value.var);
+
+            if (createdTransientIndex !== -1) {
+                return this._createdTransients[createdTransientIndex];
+            }
+        }
+
         for (let i = 0; i < this.ir1Function.externalValues.length; i++) {
             const externalValue = this.ir1Function.externalValues[i];
 
             if (IR1ExternalValue.areEquivalent(value, externalValue)) {
-                this.emitWasm(SpiderOpcodes.local_get, this.externalValueReferences[i]);
-                return;
+                return this._externalValueReferences[i];
             }
         }
 
-        throw new Error("Function does not have required external value.");
+        throw new Error(`Function does not have required external value ${IR1ExternalValue.stringify(value)}.`);
     }
 
     public emitExpression(emitter: ((emitter: CatnipCompilerWasmEmitter) => void) | IR1Instruction[]): SpiderExpression {

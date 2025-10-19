@@ -71,7 +71,6 @@ struct catnip_runtime {
     catnip_target *targets; // head of linked list
     
     catnip_list threads; // list of catnip_thread*
-    catnip_ui32_t num_active_threads;
     catnip_bool_t redraw_requested;
 
     catnip_runtime_gc_stats *gc_stats; // Only if CATNIP_GC_STATS is defined, updated after a GC
@@ -93,6 +92,7 @@ struct catnip_runtime {
 catnip_runtime *catnip_runtime_new();
 void catnip_runtime_tick(catnip_runtime *runtime);
 void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList);
+catnip_bool_t catnip_runtime_has_running_threads(catnip_runtime *runtime);
 catnip_obj_head *catnip_runtime_gc_new_obj(catnip_runtime *runtime, catnip_ui32_t size);
 catnip_obj_head *catnip_gc_new_immortal(catnip_ui32_t size);
 void catnip_runtime_gc(catnip_runtime *runtime);

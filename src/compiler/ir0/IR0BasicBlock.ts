@@ -3,11 +3,15 @@ import { IR0Command, IR0Node } from "./IR0Node";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
+import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
 
 
 
 export class IR0BasicBlock {
     public commands: IR0Command[];
+
+    // A list of transient variables that this block "creates"
+    public createdTransients: CatnipCompilerTransientVariable[];
 
     private _flow: IR0ControlFlow | null;
 
@@ -27,6 +31,7 @@ export class IR0BasicBlock {
     public constructor(instructions: IR0Command[] = [], flow: IR0ControlFlow | null = null) {
         this.commands = instructions;
         this._flow = flow;
+        this.createdTransients = [];
     }
 
     public forEachNode(iterator: (node: IR0Node) => void): void {
@@ -112,7 +117,7 @@ export class IR0BasicBlock {
                     generator.writeLine(`${info.finalNode} [shape=diamond, label="Next"]`);
                     const nextNodeName = getLink(flow.next);
                     if (flow.status !== CatnipWasmEnumThreadStatus.RUNNING) {
-                        generator.writeExecutionEdge(info.finalNode, nextNodeName, `Status = ${flow.status}`);
+                        generator.writeExecutionEdge(info.finalNode, nextNodeName, `${CatnipWasmEnumThreadStatus[flow.status]}`);
                     } else {
                         generator.writeExecutionEdge(info.finalNode, nextNodeName);
                     }

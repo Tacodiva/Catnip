@@ -13,12 +13,12 @@ export const op_forever = new class extends CatnipCommandOpType<forever_inputs> 
     public generateIr(ctx: IR0Emitter, inputs: forever_inputs): void {
 
         ctx.emitInlineBlock(ctx => {
-            const loopBlock = ctx.block;
+            const loopHead = ctx.block;
 
             ctx.emitCommands(inputs.loop);
             // ctx.emitLoopYield();
 
-            ctx.emitFlow(loopBlock);
+            ctx.emitFlow(loopHead);
         });
     }
 }

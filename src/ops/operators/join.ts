@@ -1,9 +1,9 @@
-import { IR0InputJoin } from "../../compiler/ir0/operators/IR0InputJoin";
+import { IR0InputOperatorJoin } from "../../compiler/ir0/operators/IR0InputOperatorJoin";
 import { registerSB3InputBlock } from "../../sb3_ops";
 import { CatnipInputBinaryOpType } from "./BinaryOperator";
 
 export const op_join = new CatnipInputBinaryOpType((ctx, inputs) => {
-    return new IR0InputJoin(
+    return new IR0InputOperatorJoin(
         ctx.emitInput(inputs.left),  
         ctx.emitInput(inputs.right)
     );

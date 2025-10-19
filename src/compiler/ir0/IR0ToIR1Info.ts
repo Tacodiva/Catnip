@@ -5,13 +5,13 @@ import { IR1Script } from "../ir1/IR1Script";
 import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
 import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
 import { IR1Logger } from "../ir1/IR1Logger";
-import { IR0ScriptInfo } from "./IR0Node";
 import { IR0 } from "./IR0";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { IR0Script } from "./IR0Script";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0InputProcedureArgument } from "./procedure/IR0InputProcedureArgument";
+import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
 
 // Holds additional info we need about each basic block for translating it to IR1
 export interface BasicBlockInfo {
@@ -22,7 +22,7 @@ export interface BasicBlockInfo {
     isMerge: boolean;
     isLoopHead: boolean;
 
-    // These array do not include blocks called with the `call` flow type, so these are isolated to a single script
+    // These arrays do not include blocks called with the `call` flow type, so these are isolated to a single script
     in: BasicBlockInfo[];
     out: BasicBlockInfo[];
 
@@ -303,6 +303,7 @@ export class IR0ToIR1Info {
             // In this pass we:
             //  - Assign a reverse postorder index to each block.
             //  - Figure out which blocks are merges and which are loop heads.
+            //  - Add each block's created transients to its corresponding function.
             //  - Create the dominator tree for each function.
             for (const func of script.functions) {
                 const entrypoint = this.getBasicBlockInfo(func.ir0);
@@ -339,7 +340,8 @@ export class IR0ToIR1Info {
 
                 IR1Logger.assert(reversePostorder[0] === entrypoint);
 
-                // Now we've got the reverse postorder index, we can cateogrize each block in the function
+                // Now we've got the reverse postorder index, we can cateogrize each block in the function and
+                //   add the created transients
                 for (const block of reversePostorder) {
                     IR1Logger.assert(!block.isLoopHead);
                     IR1Logger.assert(!block.isMerge);
@@ -367,6 +369,8 @@ export class IR0ToIR1Info {
                         foundForwardEdge = true;
                     }
 
+                    // Add the created transients
+                    block.func.ir1.createdTransients.push(...block.block.createdTransients);
                 }
 
                 // Figure out the dominator tree. Code and comments below stolen from
@@ -470,27 +474,53 @@ export class IR0ToIR1Info {
         // Okay so we've figured out every IR1 function we're going emit
         // Now we need to figure out what the inputs to each of these functions is going to be
         {
-            const sourceExternalValue = (func: FunctionInfo, value: IR1ExternalValue): void => {
-                // Firsly, check to see if this function already has sources this value
-                for (const existingExtern of func.ir1.externalValues) {
+            const sourceExternalValue = (block: BasicBlockInfo, value: IR1ExternalValue): void => {
+
+                // Firstly, check to see if this function already sources this value
+                for (const existingExtern of block.func.ir1.externalValues) {
                     // If we already source this external value, bail
                     if (IR1ExternalValue.areEquivalent(existingExtern, value))
                         return;
                 }
 
+                if (value.type === IR1ExternalValueType.TRANSIENT_VARIABLE) {
+                    // We only need to source the transient if it has not already been created in this function.
+                    // If it has been created, then the block which creates it must dominate this block, so we can
+                    //   just check the blocks in the dominator tree to look for the creation.
+
+                    let dominatorInfo: BasicBlockInfo | null = block;
+
+                    while (dominatorInfo !== null) {
+                        if (dominatorInfo.block.createdTransients.indexOf(value.var) !== -1) {
+                            // If a dominator has created the transient, we don't need to source it.
+                            return;
+                        }
+
+                        dominatorInfo = dominatorInfo.immediateDominator;
+                    }
+
+                    // Otherwise, we need to source the value. Because each transient should be limited to a single
+                    //   script, we can check here that we are not trying to source the transient from the script's entrypoint.
+                    if (block.func === block.func.script.entrypoint) {
+                        // We are trying to source the transient from the script's entrypoint :c
+                        // This means that we tried to use the transient without creating it first.
+                        throw new Error(`Invalid usage of transient '${value.var.name}'. Transient was not created before use.`);
+                    }
+                }
+
                 // The function doesn't source the value. Let's add it
-                func.ir1.addExternalValue(value);
+                block.func.ir1.addExternalValue(value);
 
                 // Whoever calls us from within this script also needs to be able to source the external value.
-                for (const inBlock of this.getBasicBlockInfo(func.ir0).in) {
-                    sourceExternalValue(inBlock.func, value);
+                for (const inBlock of this.getBasicBlockInfo(block.func.ir0).in) {
+                    sourceExternalValue(inBlock, value);
                 }
             };
 
             for (const blockInfo of this._blocks.values()) {
                 blockInfo.block.forEachNode(node => {
                     for (const externalValue of node.getExternalValues())
-                        sourceExternalValue(blockInfo.func, externalValue);
+                        sourceExternalValue(blockInfo, externalValue);
                 });
 
                 // We need an explicit return location if the script is not top level, and the script is yielding.
@@ -499,7 +529,7 @@ export class IR0ToIR1Info {
                 const needsReturnLocation = !blockInfo.func.script.ir1.trigger.isTopLevel && blockInfo.func.script.isYielding;
 
                 if (needsReturnLocation && blockInfo.block.flow.type === IR0ControlFlowType.Return) {
-                    sourceExternalValue(blockInfo.func, { type: IR1ExternalValueType.RETURN_LOCATION });
+                    sourceExternalValue(blockInfo, { type: IR1ExternalValueType.RETURN_LOCATION });
                 }
             }
         }

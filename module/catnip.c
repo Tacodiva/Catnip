@@ -37,6 +37,10 @@ void CATNIP_EXPORT(catnip_runtime_start_threads)(catnip_runtime *runtime, catnip
   return catnip_runtime_start_threads(runtime, sprite, entrypoint, threadList);
 }
 
+catnip_i32_t CATNIP_EXPORT(catnip_runtime_has_running_threads)(catnip_runtime *runtime) {
+  return catnip_runtime_has_running_threads(runtime);
+}
+
 void CATNIP_EXPORT(catnip_runtime_render_pen_flush)(catnip_runtime *runtime) {
   catnip_runtime_render_pen_flush(runtime);
 }

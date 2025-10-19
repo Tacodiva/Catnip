@@ -8,11 +8,9 @@ import { IR1ExternalValueType } from "../IR1ExternalValue";
 
 export class IR1InstrReturnTo extends IR1Instruction {
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-
         emitter.emitWasmPushThread();
-        emitter.emitWasmPushExternalValue({ type: IR1ExternalValueType.RETURN_LOCATION });
+        emitter.emitWasm(SpiderOpcodes.local_get, emitter.getExternalValueLocal({ type: IR1ExternalValueType.RETURN_LOCATION }));
         emitter.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("function"));
-
 
         emitter.emitWasm(SpiderOpcodes.return);
     }

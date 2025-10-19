@@ -1,14 +1,16 @@
+import { CatnipCommandList, CatnipInputOp } from "../../ops";
+import { CatnipScript } from "../../runtime/CatnipScript";
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
+import { catnip_compiler_callback } from "../CatnipCompiler";
+import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
+import { CatnipValueFormat } from "../CatnipValueFormat";
+import { IR0CmdCallback } from "./core/IR0CmdCallback";
+import { IR0BasicBlock } from "./IR0BasicBlock";
+import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
+import { IR0Logger } from "./IR0Logger";
 import { IR0Command, IR0Input, IR0InstructionArguments } from "./IR0Node";
 import { IR0Script } from "./IR0Script";
-import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
-import { IR0BasicBlock } from "./IR0BasicBlock";
-import { IR0Logger } from "./IR0Logger";
-import { CatnipCommandList, CatnipInputOp } from "../../ops";
 import { SB3ToIR0Info } from "./SB3ToIR0Info";
-import { CatnipScript } from "../../runtime/CatnipScript";
-import { catnip_compiler_callback } from "../CatnipCompiler";
-import { IR0CmdCallback } from "./core/IR0CmdCallback";
 
 export type IR0EmitterFunc = (emitter: IR0Emitter) => void;
 
@@ -117,12 +119,12 @@ export class IR0Emitter {
         return this.block;
     }
 
-    public emitBlock(emitter: IR0EmitterFunc, fallbackFlow: IR0BasicBlock | IR0ControlFlow | null): IR0BasicBlock {
+    public emitBlock(emitter: IR0EmitterFunc | null, fallbackFlow: IR0BasicBlock | IR0ControlFlow | null): IR0BasicBlock {
         const oldBlock = this.block;
 
         const newBlock = this.block = new IR0BasicBlock();
 
-        emitter(this);
+        if (emitter !== null) emitter(this);
 
         if (fallbackFlow !== null) {
             this.completeBlock(fallbackFlow);
@@ -147,13 +149,13 @@ export class IR0Emitter {
         this.block = tailBlock;
     }
 
-    public emitCondition(condition: IR0Input, passEmitter: IR0EmitterFunc, failEmitter: IR0EmitterFunc) {
+    public emitCondition(condition: IR0Input, passEmitter: IR0EmitterFunc, failEmitter?: IR0EmitterFunc) {
         this.assertIncomplete();
 
         const tail = new IR0BasicBlock();
 
         const pass = this.emitBlock(passEmitter, tail);
-        const fail = this.emitBlock(failEmitter, tail);
+        const fail = this.emitBlock(failEmitter ?? null, tail);
 
         this.completeBlock({
             type: IR0ControlFlowType.Condition,
@@ -161,5 +163,11 @@ export class IR0Emitter {
         });
 
         this.block = tail;
+    }
+
+    public emitTransientCreate(name: string, format: CatnipValueFormat): CatnipCompilerTransientVariable {
+        const transient = new CatnipCompilerTransientVariable(name, format);
+        this.block.createdTransients.push(transient);
+        return transient;
     }
 }

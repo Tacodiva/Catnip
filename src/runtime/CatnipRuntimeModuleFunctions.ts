@@ -33,6 +33,8 @@ export const CatnipRuntimeModuleFunctions = {
         entrypoint: SpiderNumberType.i32,
         threadList: SpiderNumberType.i32
     ], undefined>([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
+    catnip_runtime_has_running_threads: fn<[runtime: SpiderNumberType.i32], SpiderNumberType.i32>
+        ([SpiderNumberType.i32], SpiderNumberType.i32),
     catnip_runtime_render_pen_flush: fn<[runtime: SpiderNumberType.i32]>([SpiderNumberType.i32], undefined),
     catnip_runtime_new_hstring: fn<[runtime: SpiderNumberType.i32, length: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),

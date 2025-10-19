@@ -18,7 +18,6 @@ catnip_runtime *catnip_runtime_new() {
   rt->targets = CATNIP_NULL;
 
   CATNIP_LIST_INIT(&rt->threads, catnip_thread *, 8);
-  rt->num_active_threads = 0;
 
   rt->gc_page_index = -1;
   rt->gc_page = CATNIP_NULL;
@@ -53,13 +52,13 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
   catnip_bool_t ranFirstTick = CATNIP_FALSE;
 
   runtime->redraw_requested = CATNIP_FALSE;
-  runtime->num_active_threads = CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *);
+  catnip_i32_t numActiveThreads = CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *);
   
-  while ((runtime->num_active_threads != 0) &&
+  while ((numActiveThreads != 0) &&
         (!runtime->redraw_requested || runtime->cfg_turbomode) && 
         ((catnip_import_time() - tickStartTime) < runtime->cfg_tick_time)) {
 
-    runtime->num_active_threads = 0;
+    numActiveThreads = 0;
 
     for (catnip_i32_t i = 0; i < CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *); i++) {
 
@@ -78,12 +77,19 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
       while (thread->status == CATNIP_THREAD_STATUS_RUNNING) {
         thread->function(thread);
 
+        if (runtime->cfg_turbomode && thread->status == CATNIP_THREAD_STATUS_YIELD) {
+          // If the warp timer is not up, we keep running the thread
+          if ((catnip_import_time() - tickStartTime) < runtime->cfg_tick_time) {
+            thread->status = CATNIP_THREAD_STATUS_RUNNING;
+          }
+        }
+
         if (++lc > 100000000)
           CATNIP_ASSERT(CATNIP_FALSE);
       }
 
-      if (thread->status != CATNIP_THREAD_STATUS_TERMINATED) 
-        ++runtime->num_active_threads;
+      if (thread->status != CATNIP_THREAD_STATUS_TERMINATED && thread->status != CATNIP_THREAD_STATUS_YIELD_TICK) 
+        ++numActiveThreads;
     }
 
     ranFirstTick = CATNIP_TRUE;
@@ -106,3 +112,15 @@ void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite
   }
 }
 
+catnip_bool_t catnip_runtime_has_running_threads(catnip_runtime *runtime) {
+  for (catnip_i32_t i = 0; i < CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *); i++) {
+  
+    catnip_thread *thread = CATNIP_LIST_GET(&runtime->threads, catnip_thread *, i);
+
+    if (thread->status != CATNIP_THREAD_STATUS_TERMINATED) {
+      return CATNIP_TRUE;
+    }
+  }
+
+  return CATNIP_FALSE;
+}

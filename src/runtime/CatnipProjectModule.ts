@@ -109,7 +109,7 @@ export class CatnipProjectModule {
     }
 
     public hasRunningThreads(): boolean {
-        return this.runtimeInstance.getMember("num_active_threads") !== 0;
+        return this.runtimeModule.functions.catnip_runtime_has_running_threads(this.runtimeInstance.ptr) !== 0;
     }
 
     public getGcStats(): CatnipRuntimeGcStats {
