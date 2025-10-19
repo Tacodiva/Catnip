@@ -1,4 +1,5 @@
 import { CatnipCompilerTransientVariable } from "../../CatnipCompilerTransientVariable";
+import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1InstrPushExternalValue } from "../../ir1/core/IR1InstrPushExternalValue";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
@@ -26,8 +27,8 @@ export class IR0InputTransientGet extends IR0Input {
         return [this._getExternalValue()];
     }
 
-    public getResultFormat(): CatnipValueFormat {
-        return this.transient.format;
+    public getResult(): CatnipValue {
+        return CatnipValue.dynamic(this.transient.format);
     }
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction {

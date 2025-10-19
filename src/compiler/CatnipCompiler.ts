@@ -14,8 +14,10 @@ import { SB3ToIR0Info } from "./ir0/SB3ToIR0Info";
 import { IR1 } from "./ir1/IR1";
 import { IR1Emitter } from "./ir1/IR1Emitter";
 import { IR1ToWasmInfo } from "./ir1/IR1ToWasmInfo";
+import { IR0Pass, IR1Pass, IRPass, IRType } from "./IRPass";
 import { CatnipCompilerWasmEmitter } from "./wasm/CatnipCompilerWasmEmitter";
 import { CatnipCompilerWasmModule } from "./wasm/CatnipCompilerWasmModule";
+import { IR0PassConstantFolding } from "./ir0/passes/IR0PassConstantFolding";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 export type catnip_compiler_raw_callback = (...args: number[]) => void | number;
@@ -37,15 +39,35 @@ export class CatnipCompiler {
     public readonly config: Readonly<CatnipCompilerConfig>;
 
     private _stage: CatnipCompilerStage | null;
-
     public get stage() { return this._stage; }
+
+    private readonly _ir0Passes: IR0Pass[];
+    private readonly _ir1Passes: IR1Pass[];
 
     constructor(project: CatnipProject, config?: Partial<CatnipCompilerConfig>) {
         this.project = project;
         this.config = catnipCompilerConfigPoppulate(config);
-        // this._passes = new Map();
         this._stage = null;
 
+        this._ir0Passes = [];
+        this._ir1Passes = [];
+
+        if (this.config.enable_optimization_constant_folding) {
+            this.addPass(IR0PassConstantFolding);
+        }
+    }
+
+    private static addPass<T extends IRPass>(passes: T[], pass: T) {
+        passes.push(pass);
+        passes.sort((a, b) => a.priority - b.priority);
+    }
+
+    public addPass(pass: IRPass) {
+        if (pass.type === IRType.IR0) {
+            CatnipCompiler.addPass(this._ir0Passes, pass);
+        } else {
+            CatnipCompiler.addPass(this._ir1Passes, pass);
+        }
     }
 
     public assertStageBefore(arg: CatnipCompilerStage) {
@@ -94,6 +116,20 @@ export class CatnipCompiler {
             emitter.emitAll();
         }
 
+        this._transitionStage(CatnipCompilerStage.IR0_OPTIMIZATION);
+
+        {
+            let modified;
+            do {
+                modified = false;
+                for (const pass of this._ir0Passes) {
+                    if (pass.execute(ir0)) {
+                        modified = true;
+                    }
+                }
+            } while (modified);
+        }
+
         let graphVisGenerator: IR0GraphVisDotGenerator;
 
         if (this.config.dump_ir0) {
@@ -123,6 +159,20 @@ export class CatnipCompiler {
 
 
             emitter.emitAll();
+        }
+
+        this._transitionStage(CatnipCompilerStage.IR1_OPTIMIZATION);
+
+        {
+            let modified;
+            do {
+                modified = false;
+                for (const pass of this._ir1Passes) {
+                    if (pass.execute(ir1)) {
+                        modified = true;
+                    }
+                }
+            } while (modified);
         }
 
         if (this.config.dump_ir1)

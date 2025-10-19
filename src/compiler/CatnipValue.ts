@@ -2,17 +2,17 @@ import { Cast, catnip_compiler_constant } from "./cast";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
-export class CatnipCompilerValue {
-    public static none(): CatnipCompilerValue {
-        return CatnipCompilerValue.dynamic(CatnipValueFormat.NONE);
+export class CatnipValue {
+    public static none(): CatnipValue {
+        return CatnipValue.dynamic(CatnipValueFormat.NONE);
     }
 
-    public static constant(value: catnip_compiler_constant, format: CatnipValueFormat): CatnipCompilerValue {
-        return new CatnipCompilerValue(format, value);
+    public static constant(value: catnip_compiler_constant, format: CatnipValueFormat): CatnipValue {
+        return new CatnipValue(format, value);
     }
 
-    public static dynamic(format: CatnipValueFormat): CatnipCompilerValue {
-        return new CatnipCompilerValue(format, null);
+    public static dynamic(format: CatnipValueFormat): CatnipValue {
+        return new CatnipValue(format, null);
     }
 
     public readonly format: CatnipValueFormat;
@@ -54,19 +54,31 @@ export class CatnipCompilerValue {
         return Cast.toString(this.constantValue);
     }
 
-    public or(other: CatnipCompilerValue): CatnipCompilerValue {
+    public castTo(format: CatnipValueFormat): CatnipValue {
+        return new CatnipValue(format, this._constantValue);
+    }
+
+    public isAlwaysFormat(format: CatnipValueFormat): boolean {
+        return CatnipValueFormatUtils.isAlways(this.format, format);
+    }
+
+    public isSometimesFormat(format: CatnipValueFormat): boolean {
+        return CatnipValueFormatUtils.isSometimes(this.format, format);
+    }
+
+    public or(other: CatnipValue): CatnipValue {
         if (this.isConstant && other.isConstant) { // TODO Check format and value?
             if (this._constantValue === other._constantValue)
                 return this;
         }
-        
+
         if (other.isNone) return this;
         if (this.isNone) return other;
 
-        return new CatnipCompilerValue(this.format | other.format, null);
+        return new CatnipValue(this.format | other.format, null);
     }
 
-    public equals(other: CatnipCompilerValue): boolean {
+    public equals(other: CatnipValue): boolean {
         if (this.format !== other.format)
             return false;
 
@@ -76,10 +88,10 @@ export class CatnipCompilerValue {
         return this.isConstant === other.isConstant;
     }
 
-    public isSubsetOf(other: CatnipCompilerValue): boolean {
+    public isSubsetOf(other: CatnipValue): boolean {
         // None is a subset of everything
         if (this.isNone) return true;
-        
+
         // If the other is a constant, to be a subset we must be the same constant
         if (other.isConstant) {
             if (!this.isConstant) return false;

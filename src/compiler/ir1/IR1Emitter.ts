@@ -322,26 +322,21 @@ export class IR1Emitter {
         }
     }
 
-    private emitIR0Input(input: IR0Input, expectedFormat: CatnipValueFormat, body: IR1Instruction[]): CatnipValueFormat {
+    private emitIR0Input(input: IR0Input, expectedFormat: CatnipValueFormat, body: IR1Instruction[]) {
         input.requestResultFormat(expectedFormat);
 
         this.emitIR0(input, body);
 
-        const resultFormat = input.getResultFormat();
+        const result = input.getResult();
 
-        if (CatnipValueFormatUtils.isAlways(resultFormat, expectedFormat))
-            return resultFormat;
-
-        const cast = new IR1InstrCast(resultFormat, expectedFormat);
-        body.push(cast);
-
-        return cast.getResultFormat();
+        if (!result.isAlwaysFormat(expectedFormat))
+            body.push(new IR1InstrCast(result.format, expectedFormat));
     }
 
     private emitIR0(node: IR0Node, body: IR1Instruction[]): void {
         for (const argName in node.args) {
             const arg = node.args[argName];
-            arg.format = this.emitIR0Input(arg.value, arg.format, body);
+            this.emitIR0Input(arg.value, arg.format, body);
         }
 
         const emitted = node.emitIR1(this);

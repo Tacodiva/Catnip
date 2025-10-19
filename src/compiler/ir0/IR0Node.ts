@@ -3,10 +3,12 @@ import { IR1Instruction } from "../ir1/IR1Instruction";
 import { IR1Emitter } from "../ir1/IR1Emitter";
 import { IR1ExternalValue } from "../ir1/IR1ExternalValue";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
+import { CatnipValue } from "../CatnipValue";
+import { IR1InstrCast } from "../ir1/core/IR1InstrCast";
 
 interface IR0InstructionArgument {
     value: IR0Input;
-    format: CatnipValueFormat;
+    readonly format: CatnipValueFormat;
 }
 
 export type IR0InstructionArguments<TArgs extends string[] = string[]> = {
@@ -36,6 +38,18 @@ export abstract class IR0Node<TArgs extends string[] = string[]> {
         return nodeName;
     }
 
+    protected getInputResult(input: TArgs[number]): CatnipValue {
+        const arg = this.args[input];
+
+        arg.value.requestResultFormat(arg.format);
+        const result = arg.value.getResult();
+
+        if (result.isAlwaysFormat(arg.format))
+            return result;
+
+        return result.castTo(IR1InstrCast.emitConversion(null, result.format, arg.format));
+    }
+
     public getGraphVisNodeProperties(): string {
         return `[label="${this.name}"]`;
     }
@@ -55,7 +69,7 @@ export abstract class IR0Command<TArgs extends string[] = string[]> extends IR0N
 // Inputs must not have side effects
 export abstract class IR0Input<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
 
-    public abstract getResultFormat(): CatnipValueFormat;
+    public abstract getResult(): CatnipValue;
 
     public requestResultFormat(dest: CatnipValueFormat): void {
     }

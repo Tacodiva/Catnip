@@ -7,7 +7,9 @@ export interface CatnipCompilerConfig {
     dump_wasm_blob: boolean;
     enable_compiler_timing: boolean;
     enable_tail_call: boolean;
+
     enable_optimization_binaryen: boolean | number;
+    enable_optimization_constant_folding: boolean;
 
     enable_warp_timer: boolean;
 
@@ -27,7 +29,10 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         dump_wasm_blob: false,
         enable_compiler_timing: false,
         enable_tail_call: true,
+        
         enable_optimization_binaryen: true,
+        enable_optimization_constant_folding: true,
+
         enable_warp_timer: false,
 
         events: {}

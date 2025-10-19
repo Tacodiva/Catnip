@@ -1,4 +1,5 @@
 import { catnip_compiler_constant, Cast } from "../../cast";
+import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { IR1InstrConst } from "../../ir1/core/IR1InstrConst";
@@ -35,6 +36,10 @@ export class IR0InputConst extends IR0Input<[]> {
         } else {
             return this.format;
         }
+    }
+
+    public getResult(): CatnipValue {
+        return CatnipValue.constant(this.value, this.getResultFormat());
     }
 
     public requestResultFormat(format: CatnipValueFormat): void {

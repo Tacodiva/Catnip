@@ -1,5 +1,6 @@
 import { CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
+import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { IR0Script } from "./IR0Script";
 
@@ -13,6 +14,10 @@ export class IR0 {
         this.compiler.assertStage(CatnipCompilerStage.SB3_IR0_PREPASS);
 
         this.scripts = [];
+    }
+
+    public forEachBasicBlock(iterator: (block: IR0BasicBlock) => void) {
+        for (const script of this.scripts) script.forEachBasicBlock(iterator);
     }
 
     public createGraphVis(): string;

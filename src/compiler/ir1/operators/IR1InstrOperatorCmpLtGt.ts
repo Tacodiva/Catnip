@@ -39,7 +39,6 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
             emitter.emitWasmPushNumber(SpiderNumberType.i32, 0);
 
             if (this.type === IR1InstrOperatorCmpLtGtType.GREATER_THAN) {
-                // TODO Do these need to be signed? Is unsigned faster?
                 emitter.emitWasm(SpiderOpcodes.i32_gt_s);
             } else {
                 emitter.emitWasm(SpiderOpcodes.i32_lt_s);
