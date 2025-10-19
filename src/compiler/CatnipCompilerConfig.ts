@@ -8,10 +8,6 @@ export interface CatnipCompilerConfig {
     enable_compiler_timing: boolean;
     enable_tail_call: boolean;
     enable_optimization_binaryen: boolean | number;
-    enable_optimization_variable_inlining: boolean;
-    /** Slows execution down, but useful for testing variable inlining */
-    enable_optimization_variable_inlining_force: boolean;
-    enable_optimization_type_analysis: boolean;
 
     enable_warp_timer: boolean;
 
@@ -32,9 +28,6 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         enable_compiler_timing: false,
         enable_tail_call: true,
         enable_optimization_binaryen: true,
-        enable_optimization_variable_inlining: true,
-        enable_optimization_variable_inlining_force: false,
-        enable_optimization_type_analysis: true,
         enable_warp_timer: false,
 
         events: {}

@@ -1,5 +1,5 @@
 import { CatnipEventID } from "../../CatnipEvents";
-import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerModuleSubsystem";
 import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";
 import { CatnipIrScriptEventTrigger } from "../ir/core/event_trigger";
 import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";

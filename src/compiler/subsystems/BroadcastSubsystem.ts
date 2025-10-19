@@ -1,4 +1,4 @@
-import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerModuleSubsystem";
 import { CatnipIrScriptBroadcastTrigger } from "../ir/event/broadcast_trigger";
 import { SpiderFunction, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";

@@ -2,7 +2,7 @@ import { CatnipProcedureID } from "../../ops/procedure/procedure_definition";
 import { CatnipScript } from "../../runtime/CatnipScript";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompiler } from "../CatnipCompiler";
-import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerModuleSubsystem";
 import { CatnipIrScriptProcedureTrigger } from "../ir/procedure/procedure_trigger";
 
 

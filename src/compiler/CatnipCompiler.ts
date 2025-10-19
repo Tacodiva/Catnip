@@ -5,30 +5,17 @@ import { CatnipProjectModule, CatnipProjectModuleEvent } from "../runtime/Catnip
 import { CatnipCompilerConfig, catnipCompilerConfigPoppulate } from "./CatnipCompilerConfig";
 import { CatnipCompilerLogger } from "./CatnipCompilerLogger";
 import { CatnipCompilerStage } from "./CatnipCompilerStage";
-import { CatnipIrExternalBranch } from "./CatnipIrBranch";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { IR0 } from "./ir0/IR0";
+import { IR0Emitter } from "./ir0/IR0Emitter";
 import { IR0GraphVisDotGenerator } from "./ir0/IR0GraphVisDotGenerator";
-import { IR0Script } from "./ir0/IR0Script";
+import { IR0ToIR1Info } from "./ir0/IR0ToIR1Info";
+import { SB3ToIR0Info } from "./ir0/SB3ToIR0Info";
 import { IR1 } from "./ir1/IR1";
 import { IR1Emitter } from "./ir1/IR1Emitter";
 import { IR1ToWasmInfo } from "./ir1/IR1ToWasmInfo";
-import { LoopPassTypeAnalysis } from "./passes/analysis/AnalysisPassTypeAnalysis";
-import { CatnipCompilerPass } from "./passes/CatnipCompilerPass";
-import { PassVariableInlining } from "./passes/post-analysis/PassVariableInlining";
-import { PassAnalyzeFunctionCallers } from "./passes/pre-analysis/PassAnalyzeFunctionCallers";
-import { PassFunctionIndexAllocation } from "./passes/pre-analysis/PassFunctionIndexAllocation";
-import { PassTransientVariablePropagation } from "./passes/pre-wasm/PassTransientVariablePropagation";
 import { CatnipCompilerWasmEmitter } from "./wasm/CatnipCompilerWasmEmitter";
 import { CatnipCompilerWasmModule } from "./wasm/CatnipCompilerWasmModule";
-import { SB3ToIR0Info } from "./ir0/SB3ToIR0Info";
-import { IR0Emitter } from "./ir0/IR0Emitter";
-import { IR0ToIR1Info } from "./ir0/IR0ToIR1Info";
-
-export interface CatnipIrPreAnalysis {
-    isYielding: boolean;
-    externalBranches: CatnipIrExternalBranch[];
-}
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 export type catnip_compiler_raw_callback = (...args: number[]) => void | number;
@@ -49,7 +36,6 @@ export class CatnipCompiler {
 
     public readonly config: Readonly<CatnipCompilerConfig>;
 
-    // private readonly _passes: Map<CatnipCompilerPassStage, CatnipCompilerPass[]>;
     private _stage: CatnipCompilerStage | null;
 
     public get stage() { return this._stage; }
@@ -60,31 +46,6 @@ export class CatnipCompiler {
         // this._passes = new Map();
         this._stage = null;
 
-        this.addPass(PassAnalyzeFunctionCallers);
-
-        if (this.config.enable_optimization_variable_inlining)
-            this.addPass(PassVariableInlining);
-
-        if (this.config.enable_optimization_type_analysis)
-            this.addPass(LoopPassTypeAnalysis)
-
-        this.addPass(PassTransientVariablePropagation);
-        this.addPass(PassFunctionIndexAllocation);
-    }
-
-    public addPass(pass: CatnipCompilerPass) {
-        // CatnipCompilerLogger.assert(this._stage === null);
-
-        // const stage = pass.stage;
-        // let passes = this._passes.get(stage);
-
-        // if (passes === undefined) {
-        //     passes = [];
-        //     this._passes.set(stage, passes);
-        // }
-
-        // passes.push(pass);
-        // passes.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
     }
 
     public assertStageBefore(arg: CatnipCompilerStage) {

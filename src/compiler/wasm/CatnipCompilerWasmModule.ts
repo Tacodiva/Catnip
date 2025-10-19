@@ -9,7 +9,7 @@ import { CatnipEventID } from "../../CatnipEvents";
 import { CatnipCompilerWasmEvent } from "./CatnipCompilerWasmEvent";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipProjectModuleEvent } from "../../runtime/CatnipProjectModule";
-import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "../CatnipCompilerSubsystem";
+import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "../CatnipCompilerModuleSubsystem";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 
