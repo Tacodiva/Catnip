@@ -1,6 +1,6 @@
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR1InstrOperatorCmpGt } from "../../ir1/operators/IR1InstrOperatorCmpGt";
+import { IR1InstrOperatorCmpLtGt } from "../../ir1/operators/IR1InstrOperatorCmpLtGt";
 import { IR1InstrOperatorSub } from "../../ir1/operators/IR1InstrOperatorSub";
 import { IR0Input } from "../IR0Node";
 import { IR0InputOperatorGenericBinary } from "./IR0InputOperatorGenericBinary";

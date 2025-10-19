@@ -449,6 +449,10 @@ export class IR1InstrCast extends IR1Instruction {
         notSupported();
     }
 
+    public getResultFormat(): CatnipValueFormat {
+        return IR1InstrCast.emitConversion(null, this.src, this.dst);
+    }
+
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         IR1InstrCast.emitConversion(emitter, this.src, this.dst);
     }

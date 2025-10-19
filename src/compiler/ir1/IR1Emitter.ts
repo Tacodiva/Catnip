@@ -238,7 +238,7 @@ export class IR1Emitter {
                                 case IR1ExternalValueType.PROCEDURE_ARGUMENT:
                                     this.emitIR0Input(
                                         flow.args[calledExternalValue.index],
-                                        IR1ExternalValue.getFormat(calledExternalValue), 
+                                        IR1ExternalValue.getFormat(calledExternalValue),
                                         body
                                     );
                                     break;
@@ -322,22 +322,26 @@ export class IR1Emitter {
         }
     }
 
-    private emitIR0Input(input: IR0Input, expectedFormat: CatnipValueFormat, body: IR1Instruction[]): void {
+    private emitIR0Input(input: IR0Input, expectedFormat: CatnipValueFormat, body: IR1Instruction[]): CatnipValueFormat {
         input.requestResultFormat(expectedFormat);
 
         this.emitIR0(input, body);
 
         const resultFormat = input.getResultFormat();
 
-        if (!CatnipValueFormatUtils.isAlways(resultFormat, expectedFormat)) {
-            body.push(new IR1InstrCast(resultFormat, expectedFormat));
-        }
+        if (CatnipValueFormatUtils.isAlways(resultFormat, expectedFormat))
+            return resultFormat;
+
+        const cast = new IR1InstrCast(resultFormat, expectedFormat);
+        body.push(cast);
+
+        return cast.getResultFormat();
     }
 
     private emitIR0(node: IR0Node, body: IR1Instruction[]): void {
         for (const argName in node.args) {
             const arg = node.args[argName];
-            this.emitIR0Input(arg.value, arg.format, body);
+            arg.format = this.emitIR0Input(arg.value, arg.format, body);
         }
 
         const emitted = node.emitIR1(this);

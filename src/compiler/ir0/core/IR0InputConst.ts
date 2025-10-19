@@ -18,7 +18,7 @@ export class IR0InputConst extends IR0Input<[]> {
     }
 
     private _isValidNumber(): boolean {
-        return Cast.toString(Cast.toNumber(this.value)) === this.value;
+        return Cast.toString(Cast.toNumber(this.value)) === "" + this.value;
     }
 
     public getResultFormat(): CatnipValueFormat {

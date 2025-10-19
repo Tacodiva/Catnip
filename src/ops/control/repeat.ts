@@ -49,43 +49,6 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
             );
         });
     }
-
-    // public *getInputsAndSubstacks(ir: CatnipIr, inputs: repeat_inputs): IterableIterator<CatnipOp | CatnipCommandList> {
-    //     yield inputs.count;
-    //     yield inputs.loop;
-    // }
-
-    // public isYielding(ir: CatnipIr): boolean {
-    //     return ir.compiler.config.enable_warp_timer || !ir.isWarp;
-    // }
-
-    // public generateIr(ctx: CatnipCompilerIrGenContext, inputs: repeat_inputs): void {
-    //     const loopCount = ctx.emitTransientCreate(CatnipValueFormat.I32_NUMBER, "Loop Count");
-
-    //     ctx.emitInput(inputs.count, CatnipValueFormat.I32_NUMBER);
-    //     ctx.emitIr(ir_transient_tee, { transient: loopCount }, {});
-    //     ctx.emitIrConst(0, CatnipValueFormat.I32_NUMBER);
-    //     ctx.emitIr(ir_i32_cmp_gt, {}, {});
-
-    //     ctx.emitIr(
-    //         ir_if_else, {},
-    //         {
-    //             true_branch: ctx.emitBranch((loopHead) => {
-    //                 ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
-    //                 ctx.emitIrConst(1, CatnipValueFormat.I32_NUMBER);
-    //                 ctx.emitIr(ir_i32_sub, {}, {});
-    //                 ctx.emitIr(ir_transient_store, { transient: loopCount }, {});
-
-    //                 ctx.emitCommands(inputs.loop);
-    //                 ctx.emitLoopYield();
-
-    //                 ctx.emitIr(ir_transient_load, { transient: loopCount }, {});
-    //                 ctx.emitConditionalJump(loopHead);
-    //             }),
-    //             false_branch: ctx.emitBranch(),
-    //         }
-    //     )
-    // }
 }
 
 registerSB3CommandBlock("control_repeat", (ctx, block) => op_repeat.create({
