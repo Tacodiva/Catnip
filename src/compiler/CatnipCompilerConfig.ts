@@ -13,6 +13,7 @@ export interface CatnipCompilerConfig {
     enable_optimization_graph_reduction: boolean;
     enable_optimization_variable_analysis: boolean;
     enable_optimization_dead_branch_elimination: boolean;
+    enable_optimization_dead_script_elimination: boolean;
 
     events: Partial<Record<CatnipEventID, Partial<CatnipCompilerEventConfig>>>;
 }
@@ -36,6 +37,7 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         enable_optimization_graph_reduction: true,
         enable_optimization_variable_analysis: true,
         enable_optimization_dead_branch_elimination: true,
+        enable_optimization_dead_script_elimination: true,
 
         events: {}
     };
