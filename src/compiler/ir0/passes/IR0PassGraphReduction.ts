@@ -51,7 +51,9 @@ export const IR0PassGraphReduction: IR0Pass = {
             }
 
             // Update graph
-            dst.in.push(...src.in);
+            for (const inBlock of src.in) {
+                if (inBlock !== dst) dst.in.push(inBlock);
+            }
 
             // Update outbound connections
             dst.block.flow = src.block.flow;

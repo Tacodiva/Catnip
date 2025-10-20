@@ -12,6 +12,12 @@ export class IR0InputOperatorCmpGt extends IR0InputOperatorGenericBinary {
     }
 
     public getResult(): CatnipValue {
+        const left = this.args.left.getResult();
+        const right = this.args.right.getResult();
+
+        if (left.isConstant && right.isConstant)
+            return CatnipValue.constant(left.asConstantNumber() > right.asConstantNumber(), CatnipValueFormat.I32_BOOLEAN);
+
         return CatnipValue.dynamic(CatnipValueFormat.I32_BOOLEAN);
     }
 

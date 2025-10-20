@@ -2,7 +2,7 @@
 // import { op_add } from "./add";
 // import { op_sub } from "./sub"
 // import { op_lt } from "./lt";
-// import { op_gt } from "./gt";
+import { op_gt } from "./gt";
 // import { op_equals } from "./equals";
 // import { op_mul } from "./mul";
 // import { op_or } from "./or";
@@ -26,7 +26,7 @@ export default {
 //     operators_mod: op_mod,
 //     operators_round: op_round,
 //     operators_lt: op_lt,
-//     operators_gt: op_gt,
+    operators_gt: op_gt,
 //     operators_equals: op_equals,
 //     operators_or: op_or,
 //     operators_and: op_and,

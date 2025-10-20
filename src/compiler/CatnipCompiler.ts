@@ -20,6 +20,7 @@ import { CatnipCompilerWasmModule } from "./wasm/CatnipCompilerWasmModule";
 import { IR0PassConstantFolding } from "./ir0/passes/IR0PassConstantFolding";
 import { IR0PassGraphReduction } from "./ir0/passes/IR0PassGraphReduction";
 import { IR0PassVariableAnalysis } from "./ir0/passes/IR0PassVariableAnalysis";
+import { IR0PassDeadBranchElimination } from "./ir0/passes/IR0PassDeadBranchElimination";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 export type catnip_compiler_raw_callback = (...args: number[]) => void | number;
@@ -56,9 +57,12 @@ export class CatnipCompiler {
         
         if (this.config.enable_optimization_variable_analysis)
             this.addPass(IR0PassVariableAnalysis);
-        
+
         if (this.config.enable_optimization_constant_folding) 
             this.addPass(IR0PassConstantFolding);
+
+        if (this.config.enable_optimization_dead_branch_elimination)
+            this.addPass(IR0PassDeadBranchElimination);
 
         if (this.config.enable_optimization_graph_reduction)
             this.addPass(IR0PassGraphReduction);

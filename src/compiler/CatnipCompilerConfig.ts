@@ -12,6 +12,7 @@ export interface CatnipCompilerConfig {
     enable_optimization_constant_folding: boolean;
     enable_optimization_graph_reduction: boolean;
     enable_optimization_variable_analysis: boolean;
+    enable_optimization_dead_branch_elimination: boolean;
 
     events: Partial<Record<CatnipEventID, Partial<CatnipCompilerEventConfig>>>;
 }
@@ -34,6 +35,7 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         enable_optimization_constant_folding: true,
         enable_optimization_graph_reduction: true,
         enable_optimization_variable_analysis: true,
+        enable_optimization_dead_branch_elimination: true,
 
         events: {}
     };
