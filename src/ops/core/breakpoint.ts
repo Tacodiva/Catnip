@@ -1,7 +1,5 @@
-import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
-import { CatnipIr } from "../../compiler/CatnipIr";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { CatnipCommandOpType } from "../CatnipOp";
 
 
 export const op_breakpoint = new class extends CatnipCommandOpType<{}> {

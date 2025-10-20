@@ -1,5 +1,5 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0Command, IR0Input, IR0Node } from "./IR0Node";
+import { IR0Command, IR0Input, IR0InputReference, IR0Node } from "./IR0Node";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
@@ -39,23 +39,11 @@ export class IR0BasicBlock {
     }
 
     public forEachRootNode(
-        iterateCommand: (node: IR0Command) => (IR0Command | void),
-        iterateInput: (node: IR0Input) => (IR0Input | void)
+        iterateCommand: (node: IR0Command) => void,
+        iterateInput: (node: IR0InputReference) => void
     ): void {
-        for (let i = 0; i < this.commands.length; i++) {
-            this.commands[i] = iterateCommand(this.commands[i]) ?? this.commands[i];
-        }
-
-        switch (this.flow.type) {
-            case IR0ControlFlowType.Call:
-                for (let i = 0; i < this.flow.args.length; i++) {
-                    this.flow.args[i] = iterateInput(this.flow.args[i]) ?? this.flow.args[i];
-                }
-                break;
-            case IR0ControlFlowType.Condition:
-                this.flow.condition = iterateInput(this.flow.condition) ?? this.flow.condition;
-                break;
-        }
+        this.commands.forEach(iterateCommand);
+        IR0ControlFlow.forEachInput(this.flow, iterateInput);
     }
 
     public forEachNode(iterator: (node: IR0Node) => void): void {
@@ -63,10 +51,10 @@ export class IR0BasicBlock {
             iterator(node);
 
             for (const arg of Object.values(node.args))
-                iterate(arg.value);
+                iterate(arg.input);
         }
 
-        this.forEachRootNode(iterate, iterate);
+        this.forEachRootNode(iterate, inputRef => iterate(inputRef.input));
     }
 
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
@@ -146,16 +134,16 @@ export class IR0BasicBlock {
                     generator.writeExecutionEdge(info.finalNode, passNodeName, "Pass");
                     generator.writeExecutionEdge(info.finalNode, failNodeName, "Fail");
 
-                    const conditionNodeName = flow.condition.createGraphVisNode(generator);
-                    generator.writeValueEdge(conditionNodeName, info.finalNode, "condition");
+                    const conditionNodeName = flow.condition.input.createGraphVisNode(generator);
+                    generator.writeValueEdge(conditionNodeName, info.finalNode, flow.condition.name);
                     break;
                 }
                 case IR0ControlFlowType.Call: {
                     generator.writeLine(`${info.finalNode} [shape=diamond, label="Call"]`);
 
                     for (const arg of flow.args) {
-                        const argNodeName = arg.createGraphVisNode(generator);
-                        generator.writeValueEdge(argNodeName, info.finalNode, "condition");
+                        const argNodeName = arg.input.createGraphVisNode(generator);
+                        generator.writeValueEdge(argNodeName, info.finalNode, arg.name);
                     }
 
                     const nextNodeName = getLink(flow.next);

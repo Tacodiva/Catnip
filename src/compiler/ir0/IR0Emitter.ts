@@ -2,14 +2,16 @@ import { CatnipCommandList, CatnipInputOp } from "../../ops";
 import { CatnipScript } from "../../runtime/CatnipScript";
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { catnip_compiler_callback } from "../CatnipCompiler";
+import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { IR0CmdCallback } from "./core/IR0CmdCallback";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
-import { IR0Command, IR0Input, IR0InstructionArguments } from "./IR0Node";
+import { IR0Command, IR0Input, IR0InputReference, IR0NodeArgument, IR0NodeArguments } from "./IR0Node";
 import { IR0Script } from "./IR0Script";
+import { IR0TriggerProcedure } from "./procedure/IR0TriggerProcedure";
 import { SB3ToIR0Info } from "./SB3ToIR0Info";
 
 export type IR0EmitterFunc = (emitter: IR0Emitter) => void;
@@ -65,7 +67,7 @@ export class IR0Emitter {
         this.block.commands.push(inst);
     }
 
-    public emitCallbackCommand(name: string, callback: catnip_compiler_callback, args: IR0InstructionArguments) {
+    public emitCallbackCommand(name: string, callback: catnip_compiler_callback, args: IR0NodeArguments<IR0NodeArgument>) {
         this.emitCommand(new IR0CmdCallback(name, callback, args));
     }
 
@@ -89,8 +91,6 @@ export class IR0Emitter {
     public emitLoopYield() {
         if (!this.ir0Script.isWarp) {
             this.emitYield();
-        } else if (this.compiler.config.enable_warp_timer) {
-            // TODO Warp timer
         }
     }
 
@@ -99,10 +99,22 @@ export class IR0Emitter {
 
         const nextBlock = new IR0BasicBlock(this.ir0Script);
 
+        const procedureTrigger = procedure.trigger;
+        CatnipCompilerLogger.assert(procedureTrigger instanceof IR0TriggerProcedure);
+        CatnipCompilerLogger.assert(args.length === procedureTrigger.args.length);
+
+        const argReferences: IR0InputReference[] = [];
+
+        for (let i = 0; i < args.length; i++) {
+            const procedureArg = procedureTrigger.args[i];
+            argReferences[i] = new IR0InputReference(procedureArg.name, procedureArg.format, args[i]);
+        }
+
         this.completeBlock({
             type: IR0ControlFlowType.Call,
             next: nextBlock,
-            procedure, args
+            args: argReferences,
+            procedure, 
         });
 
         this.block = nextBlock;
@@ -160,7 +172,8 @@ export class IR0Emitter {
 
         this.completeBlock({
             type: IR0ControlFlowType.Condition,
-            condition, pass, fail
+            condition: new IR0InputReference("condition", CatnipValueFormat.I32_BOOLEAN, condition),
+            pass, fail
         });
 
         this.block = tail;

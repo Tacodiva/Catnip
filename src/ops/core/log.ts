@@ -1,7 +1,7 @@
-import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
+import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
 import { createLogger } from "../../log";
-import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
+import { CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
 type log_inputs = { msg: CatnipInputOp, type: "info" | "warn" | "error" };
 

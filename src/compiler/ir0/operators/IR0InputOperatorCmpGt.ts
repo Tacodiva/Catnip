@@ -18,8 +18,8 @@ export class IR0InputOperatorCmpGt extends IR0InputOperatorGenericBinary {
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrOperatorCmpLtGt(
             IR1InstrOperatorCmpLtGtType.GREATER_THAN,
-            this.getInputResult("left").format,
-            this.getInputResult("right").format
+            this.args.left.getResult().format,
+            this.args.right.getResult().format
         );
     }
 }

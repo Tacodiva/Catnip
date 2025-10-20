@@ -3,7 +3,7 @@ import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 import { IR0ControlFlowType } from "../ir0/IR0ControlFlow";
-import { IR0Input, IR0Node } from "../ir0/IR0Node";
+import { IR0Input, IR0InputReference, IR0Node } from "../ir0/IR0Node";
 import { IR0Script } from "../ir0/IR0Script";
 import { BasicBlockInfo, FunctionInfo, IR0ToIR1Info, ScriptInfo } from "../ir0/IR0ToIR1Info";
 import { IR1InstrBlock } from "./core/IR1InstrBlock";
@@ -190,7 +190,7 @@ export class IR1Emitter {
 
                 case IR0ControlFlowType.Condition: {
 
-                    this.emitIR0Input(flow.condition, CatnipValueFormat.I32_BOOLEAN, body);
+                    this.emitIR0Input(flow.condition, body);
 
                     const branchCtx = ctx.inside({
                         type: ContainingSyntaxType.IfElseThen,
@@ -236,11 +236,7 @@ export class IR1Emitter {
                         for (const calledExternalValue of calledFunction.externalValues) {
                             switch (calledExternalValue.type) {
                                 case IR1ExternalValueType.PROCEDURE_ARGUMENT:
-                                    this.emitIR0Input(
-                                        flow.args[calledExternalValue.index],
-                                        IR1ExternalValue.getFormat(calledExternalValue),
-                                        body
-                                    );
+                                    this.emitIR0Input(flow.args[calledExternalValue.index], body);
                                     break;
                                 case IR1ExternalValueType.RETURN_LOCATION:
                                     IR1Logger.assert(nextBlockInfo.isEntrypoint);
@@ -322,21 +318,20 @@ export class IR1Emitter {
         }
     }
 
-    private emitIR0Input(input: IR0Input, expectedFormat: CatnipValueFormat, body: IR1Instruction[]) {
-        input.requestResultFormat(expectedFormat);
+    private emitIR0Input(inputRef: IR0InputReference, body: IR1Instruction[]) {
+        inputRef.input.requestResultFormat(inputRef.requiredFormat);
 
-        this.emitIR0(input, body);
+        this.emitIR0(inputRef.input, body);
 
-        const result = input.getResult();
+        const result = inputRef.input.getResult();
 
-        if (!result.isAlwaysFormat(expectedFormat))
-            body.push(new IR1InstrCast(result.format, expectedFormat));
+        if (!result.isAlwaysFormat(inputRef.requiredFormat))
+            body.push(new IR1InstrCast(result.format, inputRef.requiredFormat));
     }
 
     private emitIR0(node: IR0Node, body: IR1Instruction[]): void {
         for (const argName in node.args) {
-            const arg = node.args[argName];
-            this.emitIR0Input(arg.value, arg.format, body);
+            this.emitIR0Input(node.args[argName], body);
         }
 
         const emitted = node.emitIR1(this);

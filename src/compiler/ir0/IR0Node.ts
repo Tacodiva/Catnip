@@ -6,23 +6,56 @@ import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { CatnipValue } from "../CatnipValue";
 import { IR1InstrCast } from "../ir1/core/IR1InstrCast";
 
-interface IR0InstructionArgument {
+export class IR0InputReference {
+    public readonly name: string;
+    public readonly requiredFormat: CatnipValueFormat;
+    public input: IR0Input;
+
+    public constructor(name: string, format: CatnipValueFormat, input: IR0Input) {
+        this.name = name;
+        this.requiredFormat = format;
+        this.input = input;
+    }
+
+    public getResult(): CatnipValue {
+        this.input.requestResultFormat(this.requiredFormat);
+        const result = this.input.getResult();
+
+        if (result.isAlwaysFormat(this.requiredFormat))
+            return result;
+
+        return result.castTo(IR1InstrCast.emitConversion(null, result.format, this.requiredFormat));
+    }
+}
+
+export interface IR0NodeArgument {
     value: IR0Input;
     readonly format: CatnipValueFormat;
 }
 
-export type IR0InstructionArguments<TArgs extends string[] = string[]> = {
-    [K in TArgs[number]]: IR0InstructionArgument;
+export type IR0ParameterName<TParams extends string[] = string[]> = TParams[number];
+
+export type IR0NodeArguments<TValue, TParams extends string[] = string[]> = {
+    [K in IR0ParameterName<TParams>]: TValue;
 }
 
-export abstract class IR0Node<TArgs extends string[] = string[]> {
+export abstract class IR0Node<TParams extends string[] = string[]> {
     public readonly name: string;
 
-    public readonly args: Readonly<IR0InstructionArguments<TArgs>>;
+    public readonly args: Readonly<IR0NodeArguments<IR0InputReference, TParams>>;
 
-    constructor(name: string, args: IR0InstructionArguments<TArgs>) {
+    constructor(name: string, args: IR0NodeArguments<IR0NodeArgument, TParams>) {
         this.name = name;
-        this.args = args;
+        
+        const argReferences: Partial<IR0NodeArguments<IR0InputReference, TParams>> = {};
+
+        for (const paramName of Object.keys(args)) {
+            const paramNameCast = paramName as IR0ParameterName<TParams>;
+            const argument = args[paramNameCast];
+            argReferences[paramNameCast] = new IR0InputReference(paramName, argument.format, argument.value);
+        }
+
+        this.args = argReferences as IR0NodeArguments<IR0InputReference, TParams>;
     }
 
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {
@@ -30,24 +63,12 @@ export abstract class IR0Node<TArgs extends string[] = string[]> {
         generator.writeLine(`${nodeName} ${this.getGraphVisNodeProperties()}`);
 
         for (const argName of Object.keys(this.args)) {
-            const arg = (this.args as Record<string, IR0InstructionArgument>)[argName];
-            const argNodeName = arg.value.createGraphVisNode(generator);
+            const arg = this.args[argName as IR0ParameterName<TParams>];
+            const argNodeName = arg.input.createGraphVisNode(generator);
 
             generator.writeValueEdge(argNodeName, nodeName, argName);
         }
         return nodeName;
-    }
-
-    protected getInputResult(input: TArgs[number]): CatnipValue {
-        const arg = this.args[input];
-
-        arg.value.requestResultFormat(arg.format);
-        const result = arg.value.getResult();
-
-        if (result.isAlwaysFormat(arg.format))
-            return result;
-
-        return result.castTo(IR1InstrCast.emitConversion(null, result.format, arg.format));
     }
 
     public getGraphVisNodeProperties(): string {

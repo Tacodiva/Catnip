@@ -40,7 +40,7 @@ export class IR0 {
         return false;
     }
 
-    public forEachBasicBlockGraphEdges(iterateEdge: (from: IR0BasicBlock, to: IR0BasicBlock, type: IR0BasicBlockGraphEdgeType) => void, includeCalls: boolean): void {
+    public forEachBasicBlockGraphEdge(iterateEdge: (from: IR0BasicBlock, to: IR0BasicBlock, type: IR0BasicBlockGraphEdgeType) => void, includeCalls: boolean): void {
         const scriptReturnLocations: Map<IR0Script, IR0BasicBlock[]> = new Map();
 
         this.forEachBasicBlock(block => {
@@ -95,7 +95,7 @@ export class IR0 {
             return info;
         }
 
-        this.forEachBasicBlockGraphEdges((from, to) => {
+        this.forEachBasicBlockGraphEdge((from, to) => {
             const fromInfo = getBlockInfo(from);
             const toInfo = getBlockInfo(to);
 

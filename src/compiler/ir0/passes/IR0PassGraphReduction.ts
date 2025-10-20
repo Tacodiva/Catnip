@@ -2,7 +2,6 @@ import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnum
 import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
 import { IR0Pass, IRType } from "../../IRPass";
 import { IR0, IR0BasicBlockGraphNode } from "../IR0";
-import { IR0BasicBlock } from "../IR0BasicBlock";
 import { IR0ControlFlowType } from "../IR0ControlFlow";
 
 export const IR0PassGraphReduction: IR0Pass = {
