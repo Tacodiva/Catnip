@@ -11,6 +11,7 @@ export interface CatnipCompilerConfig {
     enable_optimization_binaryen: boolean | number;
     enable_optimization_constant_folding: boolean;
     enable_optimization_graph_reduction: boolean;
+    enable_optimization_variable_analysis: boolean;
 
     events: Partial<Record<CatnipEventID, Partial<CatnipCompilerEventConfig>>>;
 }
@@ -28,10 +29,11 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         dump_wasm_blob: false,
         enable_compiler_timing: false,
         enable_tail_call: true,
-        
+
         enable_optimization_binaryen: true,
         enable_optimization_constant_folding: true,
         enable_optimization_graph_reduction: true,
+        enable_optimization_variable_analysis: true,
 
         events: {}
     };
@@ -39,7 +41,7 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
     return def;
 }
 
-export function catnipCompilerConfigPoppulate(partialConfig?: Partial<CatnipCompilerConfig>) : CatnipCompilerConfig {
+export function catnipCompilerConfigPoppulate(partialConfig?: Partial<CatnipCompilerConfig>): CatnipCompilerConfig {
     const config = catnipCompilerConfigCreateDefault();
 
     if (partialConfig === undefined) return config;

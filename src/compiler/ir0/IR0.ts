@@ -17,6 +17,18 @@ export interface IR0BasicBlockGraphNode {
     out: IR0BasicBlockGraphNode[];
 }
 
+export interface IR0CallGraphNode {
+    readonly script: IR0Script;
+
+    readonly callers: {
+        readonly script: IR0CallGraphNode;
+        readonly callerBlock: IR0BasicBlock;
+        readonly returnBlock: IR0BasicBlock;
+    }[];
+
+    readonly calls: IR0CallGraphNode[];
+}
+
 export class IR0 {
 
     public readonly compiler: CatnipCompiler;
@@ -87,7 +99,7 @@ export class IR0 {
     public createBasicBlockGraph(includeCalls: boolean): Map<IR0BasicBlock, IR0BasicBlockGraphNode> {
         const blocks: Map<IR0BasicBlock, IR0BasicBlockGraphNode> = new Map();
 
-        function getBlockInfo(block: IR0BasicBlock): IR0BasicBlockGraphNode {
+        function getNode(block: IR0BasicBlock): IR0BasicBlockGraphNode {
             let info = blocks.get(block);
             if (info === undefined) {
                 blocks.set(block, info = { block, in: [], out: [] });
@@ -96,14 +108,45 @@ export class IR0 {
         }
 
         this.forEachBasicBlockGraphEdge((from, to) => {
-            const fromInfo = getBlockInfo(from);
-            const toInfo = getBlockInfo(to);
+            const fromNode = getNode(from);
+            const toNode = getNode(to);
 
-            fromInfo.out.push(toInfo);
-            toInfo.in.push(fromInfo);
+            fromNode.out.push(toNode);
+            toNode.in.push(fromNode);
         }, includeCalls);
 
         return blocks;
+    }
+
+    public createCallGraph(): Map<IR0Script, IR0CallGraphNode> {
+        const scripts: Map<IR0Script, IR0CallGraphNode> = new Map();
+
+        function getNode(script: IR0Script): IR0CallGraphNode {
+            let info = scripts.get(script);
+            if (info === undefined) {
+                scripts.set(script, info = {
+                    script, callers: [], calls: []
+                });
+            }
+            return info;
+        }
+
+        this.forEachBasicBlock((block, script) => {
+            if (block.flow.type !== IR0ControlFlowType.Call) return;
+
+            const callerScriptNode = getNode(script);
+            const calledScriptNode = getNode(block.flow.procedure);
+
+            callerScriptNode.calls.push(calledScriptNode);
+            
+            calledScriptNode.callers.push({
+                script: callerScriptNode,
+                callerBlock: block,
+                returnBlock: block.flow.next
+            });
+        });
+
+        return scripts;
     }
 
     public createGraphVis(): string;

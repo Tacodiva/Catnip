@@ -12,8 +12,8 @@ export class IR0InputOperatorJoin extends IR0InputOperatorGenericBinary {
     }
 
     public getResult(): CatnipValue {
-        const left = this.getInputResult("left");
-        const right = this.getInputResult("right");
+        const left = this.args.left.getResult();
+        const right = this.args.right.getResult();
 
         if (left.isConstant && right.isConstant) {
             return CatnipValue.constant(left.asConstantString() + right.asConstantString(), CatnipValueFormat.I32_HSTRING);
