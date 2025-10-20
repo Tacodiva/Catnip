@@ -23,6 +23,7 @@ export class IR0Emitter {
     public readonly conversionInfo: SB3ToIR0Info;
 
     public get compiler() { return this.ir0Script.ir.compiler; }
+    public get project() { return this.compiler.project; }
 
     public constructor(conversionInfo: SB3ToIR0Info, script: IR0Script) {
         this.conversionInfo = conversionInfo;

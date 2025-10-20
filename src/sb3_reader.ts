@@ -284,16 +284,11 @@ export class SB3ScriptReader {
             case ProjectSB3InputValueType.BROADCAST:
                 return CatnipOps.core_const.create({ value: array[1] });
             case ProjectSB3InputValueType.VARIABLE: {
-                // const variableInfo = this.meta.getVariable(array[2]);
-                // return CatnipOps.data_get_var.create({
-                //     sprite: variableInfo.spriteID,
-                //     variable: variableInfo.variableID
-                // });
-                if (this.meta.config.allow_unknown_opcodes) {
-                    SB3ReadLogger.warn("Unsupported variable reporter.");
-                    return CatnipOps.core_const.create({ value: "" });
-                }
-                throw new Error("Not supported.");
+                const variableInfo = this.meta.getVariable(array[2]);
+                return CatnipOps.data_get_var.create({
+                    sprite: variableInfo.spriteID,
+                    variable: variableInfo.variableID
+                });
             }
             case ProjectSB3InputValueType.LIST:
                 if (this.meta.config.allow_unknown_opcodes) {
