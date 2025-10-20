@@ -4,7 +4,7 @@ import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { IR0 } from "./IR0";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { IR0BasicBlock } from "./IR0BasicBlock";
-import { IR0ControlFlowType } from "./IR0ControlFlow";
+import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Trigger } from "./IR0Trigger";
 
 export interface IR0ScriptInfo {
@@ -20,8 +20,6 @@ export class IR0Script {
     public readonly spriteID: CatnipSpriteID;
 
     public head: IR0BasicBlock;
-
-    public get isWarp() { return this.trigger.isWarp; }
 
     public constructor(ir: IR0, info: IR0ScriptInfo) {
         this.ir = ir;
@@ -82,23 +80,8 @@ export class IR0Script {
             if (iterator(block)) return true;
 
             if (!block.isComplete) continue;
-            const flow = block.flow;
 
-            switch (flow.type) { // We don't need Loop because it should have already been covered.
-                case IR0ControlFlowType.Next: {
-                    descend(flow.next);
-                    break;
-                }
-                case IR0ControlFlowType.Condition: {
-                    descend(flow.pass);
-                    descend(flow.fail);
-                    break;
-                }
-                case IR0ControlFlowType.Call: {
-                    descend(flow.next);
-                    break;
-                }
-            }
+            IR0ControlFlow.forEachBlock(block.flow, descend);
         }
 
         return false;

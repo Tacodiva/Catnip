@@ -22,6 +22,7 @@ import { IR0PassGraphReduction } from "./ir0/passes/IR0PassGraphReduction";
 import { IR0PassVariableAnalysis } from "./ir0/passes/IR0PassVariableAnalysis";
 import { IR0PassDeadBranchElimination } from "./ir0/passes/IR0PassDeadBranchElimination";
 import { IR0PassDeadScriptElimination } from "./ir0/passes/IR0PassDeadScriptElimination";
+import { IR0PassProcedureInlining } from "./ir0/passes/IR0PassProcedureInlining";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 export type catnip_compiler_raw_callback = (...args: number[]) => void | number;
@@ -55,6 +56,9 @@ export class CatnipCompiler {
 
         this._ir0Passes = [];
         this._ir1Passes = [];
+
+        if (this.config.enable_optimization_procedure_inlinling)
+            this.addPass(IR0PassProcedureInlining);
 
         if (this.config.enable_optimization_variable_analysis)
             this.addPass(IR0PassVariableAnalysis);
@@ -251,6 +255,32 @@ export class CatnipCompiler {
                         break;
                 }
             }
+        }
+
+        if (globalThis.window && this.config.dump_wasm_blob) {
+            const downloadURL = (data: string, fileName: string) => {
+                const a = document.createElement('a')
+                a.href = data
+                a.download = fileName
+                document.body.appendChild(a)
+                a.style.display = 'none'
+                a.click()
+                a.remove()
+            }
+
+            const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
+
+                const blob = new Blob([data] as any, {
+                    type: mimeType
+                })
+
+                const url = window.URL.createObjectURL(blob)
+
+                downloadURL(url, fileName)
+
+                setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+            }
+            downloadBlob(moduleSource, "catnip_output.wasm", "application/wasm");
         }
 
         this._transitionStage(CatnipCompilerStage.MODULE_INSTANTIATE);

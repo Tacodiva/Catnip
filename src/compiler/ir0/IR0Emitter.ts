@@ -89,7 +89,7 @@ export class IR0Emitter {
     }
 
     public emitLoopYield() {
-        if (!this.ir0Script.isWarp) {
+        if (!this.ir0Script.trigger.isWarp) {
             this.emitYield();
         }
     }

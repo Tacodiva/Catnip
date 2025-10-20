@@ -24,11 +24,13 @@ async function main() {
         // dump_ir1: true,
         // dump_binaryen: "stack",
         // enable_compiler_timing: true,
+        // dump_wasm_blob: true,
         
         enable_optimization_binaryen: false,
         // enable_optimization_constant_folding: false,
         // enable_optimization_graph_reduction: false,
         // enable_optimization_dead_script_elimination: false,
+        // enable_optimization_procedure_inlinling: false,
     });
 
     projectModule.start();

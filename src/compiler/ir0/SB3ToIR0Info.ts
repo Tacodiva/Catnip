@@ -61,7 +61,7 @@ export class SB3ToIR0Info {
 
         if (ir0.trigger instanceof IR0TriggerProcedure) {
             const varients = this._getProcedureVarients(ir0.spriteID, ir0.trigger.procedureID);
-            if (ir0.isWarp) varients.warp = ir0;
+            if (ir0.trigger.isWarp) varients.warp = ir0;
             else varients.noWarp = ir0;
         }
 

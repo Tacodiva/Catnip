@@ -18,6 +18,9 @@ export class IR1InstrDataVariableSet extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
+        const valueLocal = emitter.borrowLocal(SpiderNumberType.f64);
+        emitter.emitWasm(SpiderOpcodes.local_set, valueLocal);
+
         const variable = this.variable;
         const target = this.target;
 
@@ -25,7 +28,11 @@ export class IR1InstrDataVariableSet extends IR1Instruction {
 
         emitter.emitWasmPushNumber(SpiderNumberType.i32, target.structWrapper.ptr);
         emitter.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("variable_table"));
-        emitter.emitWasm(SpiderOpcodes.f64_load, 3, variableOffset);
+
+        emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+        emitter.emitWasm(SpiderOpcodes.f64_store, 3, variableOffset);
+
+        emitter.returnLocal(valueLocal);
     }
 
     public stringify(ctx: IR1StringificationContext): void {

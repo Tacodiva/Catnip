@@ -20,7 +20,7 @@ async function main() {
     const project = await run(module, new Uint8Array(sb3File), renderer);
     const projectModule = await project.compile({
         enable_optimization_binaryen: false,
-        enable_optimization_variable_inlining: false,
+        dump_wasm_blob: true,
     });
 
     document.addEventListener("keydown", (event) => {

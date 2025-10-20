@@ -56,6 +56,24 @@ export const IR0ControlFlow = new class {
         }
     }
 
+    public forEachBlock(flow: IR0ControlFlow, iterator: (block: IR0BasicBlock) => void) {
+        switch (flow.type) {
+            case IR0ControlFlowType.Next: {
+                iterator(flow.next);
+                break;
+            }
+            case IR0ControlFlowType.Condition: {
+                iterator(flow.pass);
+                iterator(flow.fail);
+                break;
+            }
+            case IR0ControlFlowType.Call: {
+                iterator(flow.next);
+                break;
+            }
+        }
+    }
+
     public clone(flow: IR0ControlFlow, ctx: IR0CloneContext): IR0ControlFlow {
         switch (flow.type) {
             case IR0ControlFlowType.Next:
