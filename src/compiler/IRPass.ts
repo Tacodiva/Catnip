@@ -13,7 +13,7 @@ export interface IR0Pass {
     /**
      * @returns If this pass modified the IR.
      */
-    execute(ir: IR0): boolean;
+    execute(ir: IR0, iteration: number): boolean;
 }
 
 
@@ -24,7 +24,7 @@ export interface IR1Pass {
     /**
      * @returns If this pass modified the IR.
      */
-    execute(ir: IR1): boolean;
+    execute(ir: IR1, iteration: number): boolean;
 }
 
 export type IRPass = IR0Pass | IR1Pass;

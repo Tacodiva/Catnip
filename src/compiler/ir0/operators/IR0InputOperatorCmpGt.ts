@@ -2,6 +2,7 @@ import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR1InstrOperatorCmpLtGt, IR1InstrOperatorCmpLtGtType } from "../../ir1/operators/IR1InstrOperatorCmpLtGt";
+import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Input } from "../IR0Node";
 import { IR0InputOperatorGenericBinary } from "./IR0InputOperatorGenericBinary";
 
@@ -28,4 +29,9 @@ export class IR0InputOperatorCmpGt extends IR0InputOperatorGenericBinary {
             this.args.right.getResult().format
         );
     }
+
+    public clone(ctx: IR0CloneContext) {
+        return new IR0InputOperatorCmpGt(this.args.left.input.clone(ctx), this.args.right.input.clone(ctx));
+    }
+
 }

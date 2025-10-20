@@ -27,7 +27,7 @@ async function main() {
         
         enable_optimization_binaryen: false,
         // enable_optimization_constant_folding: false,
-        // enable_optimization_graph_reduction: false,
+        enable_optimization_graph_reduction: false,
     });
 
     projectModule.start();

@@ -1,4 +1,5 @@
 import { IR1Trigger } from "../ir1/IR1Trigger";
+import { IR0CloneContext } from "./IR0CloneContext";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 
 export abstract class IR0Trigger {
@@ -10,6 +11,7 @@ export abstract class IR0Trigger {
         generator.writeLine(`${nodeName} [shape=rect, label="${this.name}"]`);
     }
 
+    public abstract clone(ctx: IR0CloneContext): IR0Trigger;
     public abstract toIR1(): IR1Trigger;
 
 }

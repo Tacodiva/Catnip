@@ -5,6 +5,7 @@ import { IR1ExternalValue } from "../ir1/IR1ExternalValue";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { CatnipValue } from "../CatnipValue";
 import { IR1InstrCast } from "../ir1/core/IR1InstrCast";
+import { IR0CloneContext } from "./IR0CloneContext";
 
 export class IR0InputReference {
     public readonly name: string;
@@ -25,6 +26,10 @@ export class IR0InputReference {
             return result;
 
         return result.castTo(IR1InstrCast.emitConversion(null, result.format, this.requiredFormat));
+    }
+
+    public clone(ctx: IR0CloneContext): IR0InputReference {
+        return new IR0InputReference(this.name, this.requiredFormat, this.input.clone(ctx));
     }
 }
 
@@ -80,18 +85,19 @@ export abstract class IR0Node<TParams extends string[] = string[]> {
     }
 
     public abstract emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[];
-
+    
 }
 
 export abstract class IR0Command<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
-
+    public abstract clone(ctx: IR0CloneContext): IR0Command<TArgs>;
 }
 
 // Inputs must not have side effects
 export abstract class IR0Input<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
-
     public abstract getResult(): CatnipValue;
-
+    
     public requestResultFormat(dest: CatnipValueFormat): void {
     }
+
+    public abstract clone(ctx: IR0CloneContext): IR0Input<TArgs>;
 }

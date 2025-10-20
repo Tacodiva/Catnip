@@ -6,8 +6,12 @@ import { IR0Trigger } from "../IR0Trigger";
 export class IR0TriggerEvent extends IR0Trigger {
     public name: string = "Green Flag";
     public isWarp: boolean = false;
-
+    
     public toIR1(): IR1Trigger {
         return new IR1TriggerEvent("PROJECT_START");
+    }
+
+    public clone(): IR0Trigger {
+        return new IR0TriggerEvent();
     }
 }

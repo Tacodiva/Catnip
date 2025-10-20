@@ -180,8 +180,6 @@ export class IR0Emitter {
     }
 
     public emitTransientCreate(name: string, format: CatnipValueFormat): CatnipCompilerTransientVariable {
-        const transient = new CatnipCompilerTransientVariable(name, format);
-        this.block.createdTransients.push(transient);
-        return transient;
+        return this.block.createTransient(name, format);
     }
 }

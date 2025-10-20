@@ -1,20 +1,22 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0Command, IR0Input, IR0InputReference, IR0Node } from "./IR0Node";
-import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
-import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
-import { IR0Logger } from "./IR0Logger";
+import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
+import { CatnipValueFormat } from "../CatnipValueFormat";
+import { IR0CloneContext } from "./IR0CloneContext";
+import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
+import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
+import { IR0Logger } from "./IR0Logger";
+import { IR0Command, IR0InputReference, IR0Node } from "./IR0Node";
 import { IR0Script } from "./IR0Script";
-
-
 
 export class IR0BasicBlock {
     public readonly script: IR0Script;
-    
+
     public commands: IR0Command[];
 
     // A list of transient variables that this block "creates"
-    public createdTransients: CatnipCompilerTransientVariable[];
+    private _createdTransients: CatnipCompilerTransientVariable[];
+    public get createdTransients(): readonly CatnipCompilerTransientVariable[] { return this._createdTransients; }
 
     private _flow: IR0ControlFlow | null;
 
@@ -35,7 +37,14 @@ export class IR0BasicBlock {
         this.script = script;
         this.commands = instructions;
         this._flow = flow;
-        this.createdTransients = [];
+        this._createdTransients = [];
+    }
+
+    public createTransient(name: string, format: CatnipValueFormat): CatnipCompilerTransientVariable {
+        this.script.ir.compiler.assertStageBefore(CatnipCompilerStage.IR0_IR1_PREPASS);
+        const transient = new CatnipCompilerTransientVariable(name, format);
+        this._createdTransients.push(transient);
+        return transient;
     }
 
     public forEachRootNode(
@@ -158,6 +167,23 @@ export class IR0BasicBlock {
 
         generator.decrementIndentation();
         generator.writeLine(`}`);
+    }
+
+    public clone(ctx: IR0CloneContext): IR0BasicBlock {
+        const clone = new IR0BasicBlock(ctx.dstScript, [], null);
+
+        for (const command of this.commands) {
+            clone.commands.push(command.clone(ctx));
+        }
+
+        for (const transient of this._createdTransients) {
+            clone._createdTransients.push(ctx.getTransient(transient));
+        }
+
+        ctx.blocks.set(this, clone);
+
+        clone.flow = IR0ControlFlow.clone(this.flow, ctx);
+        return clone;
     }
 
 }

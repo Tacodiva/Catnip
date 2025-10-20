@@ -4,6 +4,7 @@ import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR0Input } from "../IR0Node";
 import { IR0InputOperatorGenericBinary } from "./IR0InputOperatorGenericBinary";
 import { CatnipValue } from "../../CatnipValue";
+import { IR0CloneContext } from "../IR0CloneContext";
 
 
 export class IR0InputOperatorJoin extends IR0InputOperatorGenericBinary {
@@ -24,5 +25,9 @@ export class IR0InputOperatorJoin extends IR0InputOperatorGenericBinary {
 
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrOperatorJoin();
+    }
+
+    public clone(ctx: IR0CloneContext) {
+        return new IR0InputOperatorJoin(this.args.left.input.clone(ctx), this.args.right.input.clone(ctx));
     }
 }

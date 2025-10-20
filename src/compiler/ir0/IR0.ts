@@ -21,12 +21,16 @@ export interface IR0CallGraphNode {
     readonly script: IR0Script;
 
     readonly callers: {
-        readonly script: IR0CallGraphNode;
+        readonly node: IR0CallGraphNode;
         readonly callerBlock: IR0BasicBlock;
         readonly returnBlock: IR0BasicBlock;
     }[];
 
-    readonly calls: IR0CallGraphNode[];
+    readonly calls: {
+        readonly node: IR0CallGraphNode;
+        readonly callerBlock: IR0BasicBlock;
+        readonly returnBlock: IR0BasicBlock;
+    }[];
 }
 
 export class IR0 {
@@ -45,9 +49,9 @@ export class IR0 {
      * @param iterator Return true to terminate iteration early.
      * @returns True if the iteration was exited early.
      */
-    public forEachBasicBlock(iterator: (block: IR0BasicBlock, script: IR0Script) => (boolean | void)): boolean {
+    public forEachBasicBlock(iterator: (block: IR0BasicBlock) => (boolean | void)): boolean {
         for (const script of this.scripts) {
-            if (script.forEachBasicBlock(block => iterator(block, script))) return true;
+            if (script.forEachBasicBlock(iterator)) return true;
         }
         return false;
     }
@@ -86,9 +90,9 @@ export class IR0 {
 
         if (!includeCalls) return;
 
-        this.forEachBasicBlock((block, script) => {
+        this.forEachBasicBlock((block) => {
             if (block.flow.type !== IR0ControlFlowType.Return) return;
-            const returnLocations = scriptReturnLocations.get(script);
+            const returnLocations = scriptReturnLocations.get(block.script);
             if (returnLocations === undefined) return;
 
             for (const returnLocation of returnLocations)
@@ -131,16 +135,20 @@ export class IR0 {
             return info;
         }
 
-        this.forEachBasicBlock((block, script) => {
+        this.forEachBasicBlock((block) => {
             if (block.flow.type !== IR0ControlFlowType.Call) return;
 
-            const callerScriptNode = getNode(script);
+            const callerScriptNode = getNode(block.script);
             const calledScriptNode = getNode(block.flow.procedure);
 
-            callerScriptNode.calls.push(calledScriptNode);
-            
+            callerScriptNode.calls.push({
+                node: calledScriptNode,
+                callerBlock: block,
+                returnBlock: block.flow.next
+            });
+
             calledScriptNode.callers.push({
-                script: callerScriptNode,
+                node: callerScriptNode,
                 callerBlock: block,
                 returnBlock: block.flow.next
             });

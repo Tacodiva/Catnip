@@ -22,7 +22,7 @@ export class IR0InputProcedureArgument extends IR0Input {
     private _getExternalValue(): IR1ExternalValue {
         return {
             type: IR1ExternalValueType.PROCEDURE_ARGUMENT,
-            index: this.index 
+            index: this.index
         };
     }
 
@@ -34,4 +34,7 @@ export class IR0InputProcedureArgument extends IR0Input {
         return new IR1InstrPushExternalValue(this._getExternalValue());
     }
 
+    public clone() {
+        return new IR0InputProcedureArgument(this.index);
+    }
 }

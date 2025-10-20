@@ -8,11 +8,10 @@ import { IR0Input } from "../IR0Node";
 
 
 export class IR0InputConst extends IR0Input<[]> {
-
     public value: catnip_compiler_constant;
     public format: CatnipValueFormat | null;
 
-    public constructor(value: catnip_compiler_constant, format?: CatnipValueFormat) {
+    public constructor(value: catnip_compiler_constant, format?: CatnipValueFormat | null) {
         super("const", {});
         this.value = value;
         this.format = format ?? null;
@@ -56,5 +55,9 @@ export class IR0InputConst extends IR0Input<[]> {
 
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrConst(this.value, this.getResultFormat());
+    }
+
+    public clone() {
+        return new IR0InputConst(this.value, this.format);
     }
 }

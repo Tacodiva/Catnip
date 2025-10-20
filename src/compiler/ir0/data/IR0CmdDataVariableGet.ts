@@ -33,4 +33,8 @@ export class IR0CmdDataVariableGet extends IR0Input {
         return `[label="${this.name} '${this.variable.name}'"]`;
     }
 
+    public clone() {
+        return new IR0CmdDataVariableGet(this.target, this.variable);
+    }
+
 }

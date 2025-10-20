@@ -4,6 +4,7 @@ import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1InstrDataVariableSet } from "../../ir1/data/IR1InstrDataVariableSet";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR1Instruction } from "../../ir1/IR1Instruction";
+import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Command, IR0Input } from "../IR0Node";
 
 export class IR0CmdDataVariableSet extends IR0Command<["value"]> {
@@ -23,5 +24,9 @@ export class IR0CmdDataVariableSet extends IR0Command<["value"]> {
 
     public getGraphVisNodeProperties(): string {
         return `[label="${this.name} '${this.variable.name}'"]`;
+    }
+
+    public clone(ctx: IR0CloneContext) {
+        return new IR0CmdDataVariableSet(this.target, this.variable, this.args.value.input.clone(ctx));
     }
 }

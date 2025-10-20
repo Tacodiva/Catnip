@@ -2,6 +2,7 @@ import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThr
 import { IR0InputReference } from "./IR0Node";
 import { IR0Script } from "./IR0Script";
 import { IR0BasicBlock } from "./IR0BasicBlock";
+import { IR0CloneContext } from "./IR0CloneContext";
 
 
 export enum IR0ControlFlowType {
@@ -52,6 +53,33 @@ export const IR0ControlFlow = new class {
             case IR0ControlFlowType.Condition:
                 iterator(flow.condition);
                 break;
+        }
+    }
+
+    public clone(flow: IR0ControlFlow, ctx: IR0CloneContext): IR0ControlFlow {
+        switch (flow.type) {
+            case IR0ControlFlowType.Next:
+                return {
+                    type: IR0ControlFlowType.Next,
+                    status: flow.status,
+                    next: ctx.getBlock(flow.next)
+                };
+            case IR0ControlFlowType.Condition:
+                return {
+                    type: IR0ControlFlowType.Condition,
+                    condition: flow.condition.clone(ctx),
+                    pass: ctx.getBlock(flow.pass),
+                    fail: ctx.getBlock(flow.fail)
+                };
+            case IR0ControlFlowType.Return:
+                return { type: IR0ControlFlowType.Return };
+            case IR0ControlFlowType.Call:
+                return {
+                    type: IR0ControlFlowType.Call,
+                    args: flow.args.map(arg => arg.clone(ctx)),
+                    procedure: flow.procedure,
+                    next: ctx.getBlock(flow.next)
+                };
         }
     }
 };

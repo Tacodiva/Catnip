@@ -5,9 +5,9 @@ import { IR0Trigger } from "../IR0Trigger";
 
 export class IR0TriggerProcedure extends IR0Trigger {
 
-    public readonly isWarp: boolean;
-    public readonly args: readonly CatinpProcedureTriggerArg[];
     public readonly procedureID: CatnipProcedureID;
+    public readonly args: readonly CatinpProcedureTriggerArg[];
+    public readonly isWarp: boolean;
 
     public get name() { return this.procedureID; }
 
@@ -22,4 +22,9 @@ export class IR0TriggerProcedure extends IR0Trigger {
         return new IR1TriggerProcedure(this.procedureID, this.isWarp);
     }
 
+    public clone() {
+        const args: CatinpProcedureTriggerArg[] = [];
+        for (const arg of this.args) args.push({...arg});
+        return new IR0TriggerProcedure(this.procedureID, args, this.isWarp);
+    }
 }

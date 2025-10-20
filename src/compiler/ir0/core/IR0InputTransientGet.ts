@@ -1,10 +1,10 @@
 import { CatnipCompilerTransientVariable } from "../../CatnipCompilerTransientVariable";
 import { CatnipValue } from "../../CatnipValue";
-import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1InstrPushExternalValue } from "../../ir1/core/IR1InstrPushExternalValue";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR1ExternalValue, IR1ExternalValueType } from "../../ir1/IR1ExternalValue";
 import { IR1Instruction } from "../../ir1/IR1Instruction";
+import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Input } from "../IR0Node";
 
 export class IR0InputTransientGet extends IR0Input {
@@ -37,5 +37,9 @@ export class IR0InputTransientGet extends IR0Input {
 
     public getGraphVisNodeProperties(): string {
         return `[label="${this.name} '${this.transient.name}'"]`;
+    }
+
+    public clone(ctx: IR0CloneContext) {
+        return new IR0InputTransientGet(ctx.getTransient(this.transient));
     }
 }

@@ -54,11 +54,11 @@ export class CatnipCompiler {
 
         this._ir0Passes = [];
         this._ir1Passes = [];
-        
+
         if (this.config.enable_optimization_variable_analysis)
             this.addPass(IR0PassVariableAnalysis);
 
-        if (this.config.enable_optimization_constant_folding) 
+        if (this.config.enable_optimization_constant_folding)
             this.addPass(IR0PassConstantFolding);
 
         if (this.config.enable_optimization_dead_branch_elimination)
@@ -131,14 +131,15 @@ export class CatnipCompiler {
         this._transitionStage(CatnipCompilerStage.IR0_OPTIMIZATION);
 
         {
-            let modified;
+            let modified, iteration = 0;
             do {
                 modified = false;
                 for (const pass of this._ir0Passes) {
-                    if (pass.execute(ir0)) {
+                    if (pass.execute(ir0, iteration)) {
                         modified = true;
                     }
                 }
+                ++iteration;
             } while (modified);
         }
 
@@ -176,14 +177,15 @@ export class CatnipCompiler {
         this._transitionStage(CatnipCompilerStage.IR1_OPTIMIZATION);
 
         {
-            let modified;
+            let modified, iteration = 0;
             do {
                 modified = false;
                 for (const pass of this._ir1Passes) {
-                    if (pass.execute(ir1)) {
+                    if (pass.execute(ir1, iteration)) {
                         modified = true;
                     }
                 }
+                ++iteration;
             } while (modified);
         }
 
