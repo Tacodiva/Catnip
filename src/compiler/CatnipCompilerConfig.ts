@@ -10,6 +10,7 @@ export interface CatnipCompilerConfig {
 
     enable_optimization_binaryen: boolean | number;
     enable_optimization_constant_folding: boolean;
+    enable_optimization_graph_reduction: boolean;
 
     enable_warp_timer: boolean;
 
@@ -32,6 +33,7 @@ export function catnipCompilerConfigCreateDefault(): CatnipCompilerConfig {
         
         enable_optimization_binaryen: true,
         enable_optimization_constant_folding: true,
+        enable_optimization_graph_reduction: true,
 
         enable_warp_timer: false,
 

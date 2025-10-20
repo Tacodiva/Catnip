@@ -29,7 +29,7 @@ export class IR0Script {
 
         this.spriteID = info.spriteID;
 
-        this.head = new IR0BasicBlock();
+        this.head = new IR0BasicBlock(this);
 
         this.trigger = info.trigger.type.createIR(this, info.trigger.inputs);
 
@@ -44,7 +44,11 @@ export class IR0Script {
 
         this.trigger.createGraphVisNode(generator, scriptInfo.triggerNode);
 
-        this.forEachBasicBlock((block) => block.createGraphVisNode(generator));
+        this.forEachBasicBlock((block) => {
+            block.createGraphVisNode(generator);
+            return false;
+        });
+
         this.forEachBasicBlock((block) => block.linkGraphVisNode(generator));
 
         const firstNode = generator.blocks.get(this.head)!.firstNode;
@@ -57,7 +61,11 @@ export class IR0Script {
         return firstNode;
     }
 
-    public forEachBasicBlock(iterator: (block: IR0BasicBlock) => void) {
+    /**
+     * @param iterator Return true to terminate iteration early.
+     * @returns True if the iteration was exited early.
+     */
+    public forEachBasicBlock(iterator: (block: IR0BasicBlock) => (boolean | void)): boolean {
         const toDescend: IR0BasicBlock[] = [this.head];
         const alreadyIterated: Set<IR0BasicBlock> = new Set(toDescend);
 
@@ -71,7 +79,7 @@ export class IR0Script {
         while (toDescend.length !== 0) {
             const block = toDescend.pop()!;
 
-            iterator(block);
+            if (iterator(block)) return true;
 
             if (!block.isComplete) continue;
             const flow = block.flow;
@@ -92,5 +100,7 @@ export class IR0Script {
                 }
             }
         }
+
+        return false;
     }
 }

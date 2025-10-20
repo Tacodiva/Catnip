@@ -18,6 +18,7 @@ import { IR0Pass, IR1Pass, IRPass, IRType } from "./IRPass";
 import { CatnipCompilerWasmEmitter } from "./wasm/CatnipCompilerWasmEmitter";
 import { CatnipCompilerWasmModule } from "./wasm/CatnipCompilerWasmModule";
 import { IR0PassConstantFolding } from "./ir0/passes/IR0PassConstantFolding";
+import { IR0PassGraphReduction } from "./ir0/passes/IR0PassGraphReduction";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 export type catnip_compiler_raw_callback = (...args: number[]) => void | number;
@@ -52,9 +53,11 @@ export class CatnipCompiler {
         this._ir0Passes = [];
         this._ir1Passes = [];
 
-        if (this.config.enable_optimization_constant_folding) {
+        if (this.config.enable_optimization_constant_folding) 
             this.addPass(IR0PassConstantFolding);
-        }
+
+        if (this.config.enable_optimization_graph_reduction)
+            this.addPass(IR0PassGraphReduction);
     }
 
     private static addPass<T extends IRPass>(passes: T[], pass: T) {

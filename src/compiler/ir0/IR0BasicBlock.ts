@@ -1,13 +1,16 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
-import { IR0Command, IR0Node } from "./IR0Node";
+import { IR0Command, IR0Input, IR0Node } from "./IR0Node";
 import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
 import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
+import { IR0Script } from "./IR0Script";
 
 
 
 export class IR0BasicBlock {
+    public readonly script: IR0Script;
+    
     public commands: IR0Command[];
 
     // A list of transient variables that this block "creates"
@@ -28,10 +31,31 @@ export class IR0BasicBlock {
         return this._flow !== null;
     }
 
-    public constructor(instructions: IR0Command[] = [], flow: IR0ControlFlow | null = null) {
+    public constructor(script: IR0Script, instructions: IR0Command[] = [], flow: IR0ControlFlow | null = null) {
+        this.script = script;
         this.commands = instructions;
         this._flow = flow;
         this.createdTransients = [];
+    }
+
+    public forEachRootNode(
+        iterateCommand: (node: IR0Command) => (IR0Command | void),
+        iterateInput: (node: IR0Input) => (IR0Input | void)
+    ): void {
+        for (let i = 0; i < this.commands.length; i++) {
+            this.commands[i] = iterateCommand(this.commands[i]) ?? this.commands[i];
+        }
+
+        switch (this.flow.type) {
+            case IR0ControlFlowType.Call:
+                for (let i = 0; i < this.flow.args.length; i++) {
+                    this.flow.args[i] = iterateInput(this.flow.args[i]) ?? this.flow.args[i];
+                }
+                break;
+            case IR0ControlFlowType.Condition:
+                this.flow.condition = iterateInput(this.flow.condition) ?? this.flow.condition;
+                break;
+        }
     }
 
     public forEachNode(iterator: (node: IR0Node) => void): void {
@@ -42,16 +66,7 @@ export class IR0BasicBlock {
                 iterate(arg.value);
         }
 
-        this.commands.forEach(iterate);
-
-        switch (this.flow.type) {
-            case IR0ControlFlowType.Call:
-                this.flow.args.forEach(iterate);
-                break;
-            case IR0ControlFlowType.Condition:
-                iterate(this.flow.condition);
-                break;
-        }
+        this.forEachRootNode(iterate, iterate);
     }
 
     public createGraphVisNode(generator: IR0GraphVisDotGenerator): string {

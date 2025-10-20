@@ -75,7 +75,7 @@ export class IR0Emitter {
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD) {
         this.assertIncomplete();
-        const nextBlock = new IR0BasicBlock();
+        const nextBlock = new IR0BasicBlock(this.ir0Script);
         this.completeBlock({ type: IR0ControlFlowType.Next, status, next: nextBlock });
         this.block = nextBlock;
     }
@@ -96,7 +96,7 @@ export class IR0Emitter {
     public emitCall(procedure: IR0Script, args: IR0Input[]) {
         this.assertIncomplete();
 
-        const nextBlock = new IR0BasicBlock();
+        const nextBlock = new IR0BasicBlock(this.ir0Script);
 
         this.completeBlock({
             type: IR0ControlFlowType.Call,
@@ -122,7 +122,7 @@ export class IR0Emitter {
     public emitBlock(emitter: IR0EmitterFunc | null, fallbackFlow: IR0BasicBlock | IR0ControlFlow | null): IR0BasicBlock {
         const oldBlock = this.block;
 
-        const newBlock = this.block = new IR0BasicBlock();
+        const newBlock = this.block = new IR0BasicBlock(this.ir0Script);
 
         if (emitter !== null) emitter(this);
 
@@ -138,13 +138,13 @@ export class IR0Emitter {
     public emitInlineBlock(emitter: IR0EmitterFunc) {
         this.assertIncomplete();
 
-        const innerBlock = new IR0BasicBlock();
+        const innerBlock = new IR0BasicBlock(this.ir0Script);
         this.completeBlock(innerBlock);
         this.block = innerBlock;
 
         emitter(this);
 
-        const tailBlock = new IR0BasicBlock();
+        const tailBlock = new IR0BasicBlock(this.ir0Script);
         this.completeBlock(tailBlock);
         this.block = tailBlock;
     }
@@ -152,7 +152,7 @@ export class IR0Emitter {
     public emitCondition(condition: IR0Input, passEmitter: IR0EmitterFunc, failEmitter?: IR0EmitterFunc) {
         this.assertIncomplete();
 
-        const tail = new IR0BasicBlock();
+        const tail = new IR0BasicBlock(this.ir0Script);
 
         const pass = this.emitBlock(passEmitter, tail);
         const fail = this.emitBlock(failEmitter ?? null, tail);

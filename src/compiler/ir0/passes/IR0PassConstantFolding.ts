@@ -12,7 +12,7 @@ export const IR0PassConstantFolding: IR0Pass = {
         let modified = false;
 
         ir.forEachBasicBlock(block => {
-            function tryFoldInputs(node: IR0Node) {
+            function tryFoldInputs(node: IR0Node): void {
                 for (const argName in node.args) {
                     const arg = node.args[argName];
                     arg.value = tryFold(arg.value);
@@ -34,8 +34,7 @@ export const IR0PassConstantFolding: IR0Pass = {
                 return new IR0InputConst(result.constantValue, result.format);
             }
 
-            for (const cmd of block.commands)
-                tryFoldInputs(cmd);
+            block.forEachRootNode(tryFoldInputs, tryFold);
         });
 
         return modified;
