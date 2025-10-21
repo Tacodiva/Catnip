@@ -22,7 +22,7 @@ export class IR0InputReference {
         this.input.requestResultFormat(this.requiredFormat);
         const result = this.input.getResult();
 
-        if (result.isAlwaysFormat(this.requiredFormat))
+        if (result.isAlwaysFormat(this.requiredFormat) || result.isNone)
             return result;
 
         return result.castTo(IR1InstrCast.emitConversion(null, result.format, this.requiredFormat));
@@ -85,6 +85,7 @@ export abstract class IR0Node<TParams extends string[] = string[]> {
     }
 
     public abstract emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[];
+    public preEmitIR1(emitter: IR1Emitter): void {}
     
 }
 

@@ -23,7 +23,7 @@ export class IR0GraphVisDotGenerator {
     public scripts: Map<IR0Script, ScriptInfo>;
 
     public constructor() {
-        this.dot = "digraph {\n  compound=true;";
+        this.dot = "digraph {\n  compound=true;\n  newrank=true;\n";
         this.indentation = 1;
         this.nextName = 0;
         this.blocks = new Map();

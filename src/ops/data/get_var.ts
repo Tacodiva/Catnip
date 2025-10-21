@@ -1,4 +1,4 @@
-import { IR0CmdDataVariableGet } from "../../compiler/ir0/data/IR0CmdDataVariableGet";
+import { IR0InputDataVariableGet } from "../../compiler/ir0/data/IR0InputDataVariableGet";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
 import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipVariableID } from "../../runtime/CatnipVariable";
@@ -15,7 +15,7 @@ export const op_get_var = new class extends CatnipInputOpType<get_var_inputs> {
         const target = sprite.defaultTarget;
         const variable = sprite.getVariable(inputs.variable)!;
 
-        return new IR0CmdDataVariableGet(target, variable);
+        return new IR0InputDataVariableGet(target, variable);
     }
 }
 

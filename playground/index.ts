@@ -4,10 +4,10 @@ import { CatnipRenderer } from "../renderer";
 
 async function main() {
     const moduleRequest = await fetch('catnip.wasm');
-    const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
+    // const sb3File = await (await fetch('Project.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Variable inlining bug.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('Conway.sb3')).arrayBuffer();
-    // const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
+    const sb3File = await (await fetch('Mandlebrot Set Benchmark.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('lines.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('fib.sb3')).arrayBuffer();
     // const sb3File = await (await fetch('LOS.sb3')).arrayBuffer();
@@ -19,8 +19,16 @@ async function main() {
 
     const project = await run(module, new Uint8Array(sb3File), renderer);
     const projectModule = await project.compile({
-        enable_optimization_binaryen: false,
-        dump_wasm_blob: true,
+        dump_wasm_blob: false,
+        enable_compiler_timing: true,
+
+        // enable_optimization_binaryen: false,
+        // enable_optimization_constant_folding: false,
+        // enable_optimization_graph_reduction: false,
+        // enable_optimization_dead_script_elimination: false,
+        // enable_optimization_procedure_inlinling: false,
+        // enable_optimization_dead_branch_elimination: false,
+        // enable_optimization_variable_analysis: false
     });
 
     document.addEventListener("keydown", (event) => {

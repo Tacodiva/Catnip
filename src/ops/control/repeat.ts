@@ -44,6 +44,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
                         )
                     ));
 
+                    ctx.emitLoopYield();
                     ctx.emitFlow(loopHead);
                 }
             );

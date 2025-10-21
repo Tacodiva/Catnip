@@ -7,6 +7,10 @@ export class CatnipValue {
         return CatnipValue.dynamic(CatnipValueFormat.NONE);
     }
 
+    public static constantF64(value: number): CatnipValue {
+        return new CatnipValue(CatnipValueFormatUtils.getNumberFormat(value), value);
+    }
+
     public static constant(value: catnip_compiler_constant, format: CatnipValueFormat): CatnipValue {
         return new CatnipValue(format, value);
     }

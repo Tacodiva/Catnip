@@ -6,6 +6,8 @@ import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { IR0CmdCallback } from "./core/IR0CmdCallback";
+import { IR0CmdRequestRedraw } from "./core/IR0CmdRequestRedraw";
+import { IR0InputCallback } from "./core/IR0InputCallback";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
@@ -71,6 +73,14 @@ export class IR0Emitter {
         this.emitCommand(new IR0CmdCallback(name, callback, args));
     }
 
+    public emitCallbackInput(name: string, callback: catnip_compiler_callback, args: IR0NodeArguments<IR0NodeArgument>, result: CatnipValueFormat): IR0InputCallback {
+        return new IR0InputCallback(name, callback, args, result);
+    }
+
+    public emitRequestRedraw() {
+        this.emitCommand(new IR0CmdRequestRedraw());
+    }
+
     public emitReturn() {
         this.assertIncomplete();
         this.completeBlock({ type: IR0ControlFlowType.Return });
@@ -114,7 +124,7 @@ export class IR0Emitter {
             type: IR0ControlFlowType.Call,
             next: nextBlock,
             args: argReferences,
-            procedure, 
+            procedure,
         });
 
         this.block = nextBlock;

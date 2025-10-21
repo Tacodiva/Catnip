@@ -7,7 +7,7 @@ import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR1Instruction } from "../../ir1/IR1Instruction";
 import { IR0Input } from "../IR0Node";
 
-export class IR0CmdDataVariableGet extends IR0Input {
+export class IR0InputDataVariableGet extends IR0Input {
 
     public readonly target: CatnipTarget;
     public readonly variable: CatnipVariable;
@@ -34,7 +34,7 @@ export class IR0CmdDataVariableGet extends IR0Input {
     }
 
     public clone() {
-        return new IR0CmdDataVariableGet(this.target, this.variable);
+        return new IR0InputDataVariableGet(this.target, this.variable);
     }
 
 }

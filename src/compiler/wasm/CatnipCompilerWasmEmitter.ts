@@ -155,6 +155,10 @@ export class CatnipCompilerWasmEmitter {
         this.emitWasm(SpiderOpcodes.local_get, this._threadParameter);
     }
 
+    public emitWasmPushCurrentTarget() {
+        this.emitWasmPushThread();
+        this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("target"));
+    }
     public emitWasmPushStackPtr() {
         this.emitWasmPushThread();
         this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));

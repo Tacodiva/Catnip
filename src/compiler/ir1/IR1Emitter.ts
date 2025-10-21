@@ -100,7 +100,7 @@ export class IR1Emitter {
 
             const selectedChildren = block.immediateDominates
                 .filter(x => x.isMerge)
-                .sort((x, y) => x.reversePostorderIndex - y.reversePostorderIndex);
+                .sort((x, y) => y.reversePostorderIndex - x.reversePostorderIndex);
 
             if (block.isLoopHead) {
 
@@ -133,6 +133,7 @@ export class IR1Emitter {
                         type: ContainingSyntaxType.BlockFollowedBy,
                         block: followMark
                     });
+
                     const blockBody = nodeWithin(x, children, null, blockCtx);
                     return [new IR1InstrBlock(blockBody)];
                 }
@@ -325,11 +326,14 @@ export class IR1Emitter {
 
         const result = inputRef.input.getResult();
 
-        if (!result.isAlwaysFormat(inputRef.requiredFormat))
+        if (!result.isAlwaysFormat(inputRef.requiredFormat) && !result.isNone)
             body.push(new IR1InstrCast(result.format, inputRef.requiredFormat));
     }
 
     private emitIR0(node: IR0Node, body: IR1Instruction[]): void {
+
+        node.preEmitIR1(this);
+        
         for (const argName in node.args) {
             this.emitIR0Input(node.args[argName], body);
         }

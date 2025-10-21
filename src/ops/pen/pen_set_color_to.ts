@@ -1,28 +1,24 @@
-// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-// import { CatnipIr } from "../../compiler/CatnipIr";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { ir_pen_set_color } from "../../compiler/ir/pen/pen_set_color";
-// import { registerSB3CommandBlock } from "../../sb3_ops";
-// import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { IR0CmdPenSetColor } from "../../compiler/ir0/pen/IR0CmdPenSetColor";
+import { registerSB3CommandBlock } from "../../sb3_ops";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
-// type pen_set_color_to = { color: CatnipInputOp };
+type pen_set_color_to = { color: CatnipInputOp };
 
 
-// export const op_pen_set_color_to = new class extends CatnipCommandOpType<pen_set_color_to> {
+export const op_pen_set_color_to = new class extends CatnipCommandOpType<pen_set_color_to> {
+    public *getInputsAndSubstacks(inputs: pen_set_color_to): IterableIterator<CatnipInputOp | CatnipCommandList> {
+        yield inputs.color;
+    }
 
-//     public *getInputsAndSubstacks(ir: CatnipIr, inputs: pen_set_color_to): IterableIterator<CatnipOp> {
-//         yield inputs.color;
-//     }
-
-//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: pen_set_color_to): void {
-//         ctx.emitInput(inputs.color, CatnipValueFormat.I32_COLOR);
-//         ctx.emitIr(ir_pen_set_color, {}, {});
-//     }
-// }
+    public generateIr(ctx: IR0Emitter, inputs: pen_set_color_to): void {
+        ctx.emitCommand(new IR0CmdPenSetColor(ctx.emitInput(inputs.color)));
+    }
+}
 
 
-// registerSB3CommandBlock("pen_setPenColorToColor", (ctx, block) => 
-//     op_pen_set_color_to.create({
-//         color: ctx.readInput(block.inputs.COLOR)
-//     })
-// );
+registerSB3CommandBlock("pen_setPenColorToColor", (ctx, block) => 
+    op_pen_set_color_to.create({
+        color: ctx.readInput(block.inputs.COLOR)
+    })
+);

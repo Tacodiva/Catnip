@@ -126,6 +126,9 @@ export const IR0PassProcedureInlining: IR0Pass = {
                 }
 
                 // We are going to inline!
+                // TODO Some kind of heuristic here to check if we wanna inline, for now tho
+                //   we just inling everything
+
                 modified = true;
 
                 // First, we need to move all the parameters into transient variables.

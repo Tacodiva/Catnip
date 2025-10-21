@@ -1,3 +1,4 @@
+import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR0Input } from "../IR0Node";
 
@@ -9,4 +10,13 @@ export abstract class IR0InputOperatorGenericBinary extends IR0Input<["left", "r
             right: { value: right, format: inputFormat }
         });
     }
+
+    public getResult(): CatnipValue {
+        return this._getResult(
+            this.args.left.getResult(),
+            this.args.right.getResult()
+        )
+    }
+
+    protected abstract _getResult(left: CatnipValue, right: CatnipValue): CatnipValue;
 }

@@ -5,7 +5,7 @@ import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { IR0Pass, IRType } from "../../IRPass";
-import { IR0CmdDataVariableGet } from "../data/IR0CmdDataVariableGet";
+import { IR0InputDataVariableGet } from "../data/IR0InputDataVariableGet";
 import { IR0CmdDataVariableSet } from "../data/IR0CmdDataVariableSet";
 import { IR0 } from "../IR0";
 import { IR0BasicBlock } from "../IR0BasicBlock";
@@ -180,7 +180,7 @@ export const IR0PassVariableAnalysis: IR0Pass = {
             }
 
             // A map of all the gets to the value they get.
-            const variableGets: Map<IR0CmdDataVariableGet, CatnipValue> = new Map();
+            const variableGets: Map<IR0InputDataVariableGet, CatnipValue> = new Map();
 
             // Now we get started with the main loop, we keep analyzing till there's nothing left to analyze.
             while (blocksToAnalyze.length !== 0) {
@@ -194,7 +194,7 @@ export const IR0PassVariableAnalysis: IR0Pass = {
                     function checkInput(input: IR0Input) {
                         checkNode(input);
 
-                        if (input instanceof IR0CmdDataVariableGet) {
+                        if (input instanceof IR0InputDataVariableGet) {
                             variableGets.set(input, state.get(input.variable));
                         }
                     }

@@ -1,24 +1,23 @@
-// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-// import { CatnipIr } from "../../compiler/CatnipIr";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { IR0Input } from "../../compiler/ir0/IR0Node";
+import { CatnipCommandList, CatnipInputOp, CatnipInputOpType } from "../CatnipOp";
 
-// export type unary_op_inputs = { value: CatnipInputOp };
-// export type unary_op_ir_generator = (ctx: CatnipCompilerIrGenContext, inputs: unary_op_inputs) => void;
+export type unary_op_inputs = { value: CatnipInputOp };
+export type unary_op_ir_generator = (ctx: IR0Emitter, value: CatnipInputOp) => IR0Input;
 
-// export class CatnipInputUnaryOpType extends CatnipInputOpType<unary_op_inputs> {
-//     public readonly generator: unary_op_ir_generator;
+export class CatnipInputUnaryOpType extends CatnipInputOpType<unary_op_inputs> {
+    public readonly generator: unary_op_ir_generator;
 
-//     public constructor(generator: unary_op_ir_generator) {
-//         super();
-//         this.generator = generator;
-//     }
+    public constructor(generator: unary_op_ir_generator) {
+        super();
+        this.generator = generator;
+    }
 
-//     public *getInputsAndSubstacks(ir: CatnipIr, inputs: unary_op_inputs): IterableIterator<CatnipOp> {
-//         yield inputs.value;
-//     }
+    public *getInputsAndSubstacks(inputs: unary_op_inputs): IterableIterator<CatnipInputOp | CatnipCommandList> {
+        yield inputs.value;
+    }
 
-//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: unary_op_inputs) {
-//         this.generator(ctx, inputs);
-//     }
-// }
+    public generateIr(ctx: IR0Emitter, inputs: unary_op_inputs): IR0Input {
+        return this.generator(ctx, inputs.value);
+    }
+}

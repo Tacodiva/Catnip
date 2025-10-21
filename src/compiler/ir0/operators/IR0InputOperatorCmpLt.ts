@@ -8,28 +8,28 @@ import { IR0Input } from "../IR0Node";
 import { IR0InputOperatorGenericBinary } from "./IR0InputOperatorGenericBinary";
 
 
-export class IR0InputOperatorCmpGt extends IR0InputOperatorGenericBinary {
+export class IR0InputOperatorCmpLt extends IR0InputOperatorGenericBinary {
     public constructor(left: IR0Input, right: IR0Input) {
-        super("operator_cmp_gt", CatnipValueFormat.F64, left, right);
+        super("operator_cmp_lt", CatnipValueFormat.F64, left, right);
     }
 
     protected _getResult(left: CatnipValue, right: CatnipValue): CatnipValue {
         if (left.isConstant && right.isConstant)
-            return CatnipValue.constant(Cast.compare(left.asConstantString(), right.asConstantString()) > 0, CatnipValueFormat.I32_BOOLEAN);
+            return CatnipValue.constant(Cast.compare(left.asConstantString(), right.asConstantString()) < 0, CatnipValueFormat.I32_BOOLEAN);
     
         return CatnipValue.dynamic(CatnipValueFormat.I32_BOOLEAN);
     }
 
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrOperatorCmpLtGt(
-            IR1InstrOperatorCmpLtGtType.GREATER_THAN,
+            IR1InstrOperatorCmpLtGtType.LESS_THAN,
             this.args.left.getResult().format,
             this.args.right.getResult().format
         );
     }
 
     public clone(ctx: IR0CloneContext) {
-        return new IR0InputOperatorCmpGt(this.args.left.input.clone(ctx), this.args.right.input.clone(ctx));
+        return new IR0InputOperatorCmpLt(this.args.left.input.clone(ctx), this.args.right.input.clone(ctx));
     }
 
 }
