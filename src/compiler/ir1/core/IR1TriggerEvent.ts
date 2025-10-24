@@ -15,7 +15,7 @@ export class IR1TriggerEvent extends IR1Trigger {
     }
 
     public emitEntryWasm(emitter: CatnipCompilerWasmEmitter): void {
-        emitter.module.getSubsystem(EventTriggerSubsystem).addTrigger(
+        emitter.module.getSubsystem(EventTriggerSubsystem).addEventListener(
             this.eventID, emitter.spriteID, emitter.spiderFunction
         );
     }

@@ -33,8 +33,8 @@ void CATNIP_EXPORT(catnip_runtime_tick)(catnip_runtime *runtime) {
   catnip_runtime_tick(runtime);
 }
 
-void CATNIP_EXPORT(catnip_runtime_start_threads)(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
-  return catnip_runtime_start_threads(runtime, sprite, entrypoint, threadList);
+void CATNIP_EXPORT(catnip_runtime_start_threads)(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_thread *waitingThread) {
+  return catnip_runtime_start_threads(runtime, sprite, entrypoint, waitingThread);
 }
 
 catnip_i32_t CATNIP_EXPORT(catnip_runtime_has_running_threads)(catnip_runtime *runtime) {
@@ -54,8 +54,8 @@ catnip_target *CATNIP_EXPORT(catnip_target_new)(catnip_runtime *runtime, catnip_
   return catnip_target_new(runtime, sprite);
 }
 
-void CATNIP_EXPORT(catnip_target_start_new_thread)(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
-  catnip_target_start_new_thread(target, entrypoint, threadList);
+void CATNIP_EXPORT(catnip_target_start_new_thread)(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_thread *waitingThread) {
+  catnip_target_start_new_thread(target, entrypoint, waitingThread);
 }
 
 void CATNIP_EXPORT(catnip_target_set_xy)(catnip_f64_t x, catnip_f64_t y, catnip_target *target) {

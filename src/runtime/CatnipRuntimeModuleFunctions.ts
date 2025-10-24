@@ -31,7 +31,7 @@ export const CatnipRuntimeModuleFunctions = {
         runtime: SpiderNumberType.i32,
         sprite: SpiderNumberType.i32,
         entrypoint: SpiderNumberType.i32,
-        threadList: SpiderNumberType.i32
+        waitingThread: SpiderNumberType.i32
     ], undefined>([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_runtime_has_running_threads: fn<[runtime: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32], SpiderNumberType.i32),
@@ -41,7 +41,7 @@ export const CatnipRuntimeModuleFunctions = {
 
     catnip_target_new: fn<[runtime: SpiderNumberType.i32, sprite: SpiderNumberType.i32], SpiderNumberType.i32>
         ([SpiderNumberType.i32, SpiderNumberType.i32], SpiderNumberType.i32),
-    catnip_target_start_new_thread: fn<[target: SpiderNumberType.i32, entrypoint: SpiderNumberType.i32, threadList: SpiderNumberType.i32], undefined>
+    catnip_target_start_new_thread: fn<[target: SpiderNumberType.i32, entrypoint: SpiderNumberType.i32, waitingThread: SpiderNumberType.i32], undefined>
         ([SpiderNumberType.i32, SpiderNumberType.i32, SpiderNumberType.i32], undefined),
     catnip_target_set_xy: fn<[x: SpiderNumberType.f64, y: SpiderNumberType.f64, target: SpiderNumberType.i32]>
         ([SpiderNumberType.f64, SpiderNumberType.f64, SpiderNumberType.i32], undefined),

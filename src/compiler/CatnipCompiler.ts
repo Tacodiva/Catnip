@@ -298,7 +298,7 @@ export class CatnipCompiler {
 
         const wasmEvents: CatnipProjectModuleEvent[] = module.getEvents().map(wasmEvent => ({
             id: wasmEvent.id,
-            jsTrigger: wasmInstance.exports[wasmEvent.funcExport.name] as Function,
+            jsTrigger: wasmInstance.exports[wasmEvent.funcExport.name] as any,
             jsListeners: wasmEvent.jsListenerInfo?.listenersArray ?? null
         }));
 

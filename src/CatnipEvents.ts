@@ -41,7 +41,7 @@ export const CatnipEventValueTypes = {
         CatnipValueFormat.I32_HSTRING,
         (proj, value: number) => {
             const bytes = value + CatnipWasmStructHeapString.size;
-            const byteLength = CatnipWasmStructHeapString.getMember(value, proj.runtimeModule.memory, "bytelen") * 2;
+            const byteLength = CatnipWasmStructHeapString.getMember(value, proj.runtimeModule.memory, "bytelen") - CatnipWasmStructHeapString.size;
 
             return UTF16.decode(proj.runtimeModule.memory.buffer.slice(bytes, bytes + byteLength));
         },
@@ -61,9 +61,14 @@ export type CatnipEventValueType = keyof typeof CatnipEventValueTypes;
 
 export class CatnipEventInfo<TArgs extends readonly CatnipEventValueType[]> {
     public readonly args: TArgs;
+    // True if this event can be listened for by scripts outputted by the compile
+    //   This is used to ensure that if the compiler's config doesn't specify any listeners, the event
+    //   has no overhead because it will never be called or listened to.
+    public readonly supportsCompilerListeners: boolean;
 
-    public constructor(args: TArgs) {
+    public constructor(args: TArgs, supportsCompilerListeners: boolean) {
         this.args = args;
+        this.supportsCompilerListeners = supportsCompilerListeners;
     }
 }
 
@@ -72,21 +77,19 @@ export type CatnipEventID = keyof typeof CatnipEvents;
 type CatnipEventListenerArgs<TArgs extends readonly CatnipEventValueType[]> = {
     [K in keyof TArgs]: (typeof CatnipEventValueTypes)[TArgs[K]] extends CatnipEventValueTypeInfo<infer TJavascript> ? TJavascript : never;
 }
-export type CatnipEventArgs<EventID extends CatnipEventID> = 
+export type CatnipEventArgs<EventID extends CatnipEventID> =
     CatnipEventListenerArgs<(typeof CatnipEvents)[EventID] extends CatnipEventInfo<infer Args> ? Args : never>;
 
 export type CatnipEventListener<EventID extends CatnipEventID = CatnipEventID> =
     (...args: CatnipEventArgs<EventID>) => void;
 
 export const CatnipEvents = {
-    PROJECT_START: new CatnipEventInfo([] as const),
-    PROJECT_BROADCAST: new CatnipEventInfo(["STRING", "POINTER"] as const),
+    PROJECT_START: new CatnipEventInfo([] as const, true),
+    PROJECT_BROADCAST: new CatnipEventInfo(["STRING", "POINTER"] as const, false),
 
-    IO_KEY_PRESSED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode
-    IO_KEY_RELEASED: new CatnipEventInfo(["NUMBER_I32"] as const), // keyCode
-    IO_MOUSE_MOVE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const), // x, y
-    IO_MOUSE_DOWN: new CatnipEventInfo([] as const),
-    IO_MOUSE_UP: new CatnipEventInfo([] as const),
-    
-    TARGET_POSITION_UPDATE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const),
+    IO_KEY_PRESSED: new CatnipEventInfo(["NUMBER_I32"] as const, true), // keyCode
+    IO_KEY_RELEASED: new CatnipEventInfo(["NUMBER_I32"] as const, true), // keyCode
+    IO_MOUSE_MOVE: new CatnipEventInfo(["NUMBER", "NUMBER"] as const, true), // x, y
+    IO_MOUSE_DOWN: new CatnipEventInfo([] as const, true),
+    IO_MOUSE_UP: new CatnipEventInfo([] as const, true),
 } satisfies Record<string, CatnipEventInfo<any>>;

@@ -18,13 +18,15 @@ export const IR0PassConstantFolding: IR0Pass = {
 
             function tryFold(inputRef: IR0InputReference) {
                 const input = inputRef.input;
-                tryFoldInputs(input);
-
+                
                 if (input instanceof IR0InputConst) return;
 
                 const result = input.getResult();
 
-                if (!result.isConstant) return;
+                if (!result.isConstant) {
+                    tryFoldInputs(input);
+                    return;
+                }
 
                 modified = true;
                 inputRef.input = new IR0InputConst(result.constantValue, result.format);

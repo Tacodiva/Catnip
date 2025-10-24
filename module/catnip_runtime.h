@@ -91,7 +91,7 @@ struct catnip_runtime {
 
 catnip_runtime *catnip_runtime_new();
 void catnip_runtime_tick(catnip_runtime *runtime);
-void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList);
+void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_thread *waitingThread);
 catnip_bool_t catnip_runtime_has_running_threads(catnip_runtime *runtime);
 catnip_obj_head *catnip_runtime_gc_new_obj(catnip_runtime *runtime, catnip_ui32_t size);
 catnip_obj_head *catnip_gc_new_immortal(catnip_ui32_t size);

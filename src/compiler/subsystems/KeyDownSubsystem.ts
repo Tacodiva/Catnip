@@ -1,5 +1,4 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerModuleSubsystem";
 import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
 

@@ -168,6 +168,10 @@ void gc_iterate_roots(catnip_runtime *runtime, void(*func)(catnip_value*, catnip
   for (catnip_i32_t threadIdx = 0; threadIdx < CATNIP_LIST_LENGTH(&runtime->threads, catnip_thread *); threadIdx++) {
     catnip_thread *thread = CATNIP_LIST_GET(&runtime->threads, catnip_thread *, threadIdx);
 
+    // Don't count terminated threads.
+    if (thread->status == CATNIP_THREAD_STATUS_TERMINATED)
+      continue;
+
     catnip_value *stackValue = thread->stack_start;
 
     while (stackValue < thread->stack_ptr) {

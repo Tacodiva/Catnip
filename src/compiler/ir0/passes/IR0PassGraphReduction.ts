@@ -15,7 +15,9 @@ export const IR0PassGraphReduction: IR0Pass = {
             CatnipCompilerLogger.assert(dst !== src);
 
             dst.block.commands.push(...src.block.commands);
-            dst.block.createdTransients.push(...src.block.createdTransients);
+
+            for (const createdTransient of src.block.createdTransients)
+                dst.block.addCreatedTransient(createdTransient);
 
             // Update inbound connections
             // Everything pointing at 'src' should now point at 'dst'

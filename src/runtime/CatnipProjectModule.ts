@@ -5,11 +5,12 @@ import { CatnipRuntimeModule } from "../runtime/CatnipRuntimeModule";
 import { CatnipWasmStructRuntime } from "../wasm-interop/CatnipWasmStructRuntime";
 import { WasmStructWrapper } from "../wasm-interop/wasm-types";
 import { CatnipRuntimeGcStats } from '../wasm-interop/CatnipWasmStructRuntimeGcStats';
+import { CatnipWasmEnumEventSource } from "../wasm-interop/CatnipWasmEnumEventSource";
 
 export interface CatnipProjectModuleEvent<TEvnetID extends CatnipEventID = CatnipEventID> {
     readonly id: TEvnetID;
     // The function to call to trigger the event
-    readonly jsTrigger: Function;
+    readonly jsTrigger: (source: CatnipWasmEnumEventSource.EXTERNAL, ...arg: any[]) => void;
     // The list of listeners the module will call when the event is triggered
     //   If null, this event was not compiled with JS listeners supported
     //   This must stay readonly, the array object must not change
@@ -60,7 +61,7 @@ export class CatnipProjectModule {
             encodedArgs.push(argInfo.encodeWASM(this.project, arg));
         }
 
-        eventInfo.jsTrigger(...(encodedArgs as any));
+        eventInfo.jsTrigger(CatnipWasmEnumEventSource.EXTERNAL, ...(encodedArgs as any));
     }
 
     public addEventListener<TEventID extends CatnipEventID>(event: TEventID, listener: CatnipEventListener<TEventID>) {

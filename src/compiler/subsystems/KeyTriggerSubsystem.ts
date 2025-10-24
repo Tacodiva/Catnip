@@ -1,9 +1,8 @@
-import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompiler } from "../CatnipCompiler";
+import { SpiderFunction, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
+import { CatnipSpriteID } from "../../runtime/CatnipSprite";
 import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerModuleSubsystem";
-import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";
-import { CatnipIrScriptKeyPressedTrigger } from "../ir/event/key_pressed_trigger";
 import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
+import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";
 
 
 export class KeyTriggerSubsystem extends CatnipCompilerModuleSubsystem {
@@ -35,8 +34,8 @@ export class KeyTriggerSubsystem extends CatnipCompilerModuleSubsystem {
         return generator;
     }
 
-    public registerTrigger(trigger: CatnipIrScriptKeyPressedTrigger) {
-        this._getTriggerFunctionGenerator(trigger.inputs.key).addListener(trigger);
+    public addKeyListener(key: number | null, spriteID: CatnipSpriteID, listener: SpiderFunction) {
+        this._getTriggerFunctionGenerator(key).addListener(listener, spriteID);
     }
 
     public preModuleWrite(): void {
@@ -47,13 +46,13 @@ export class KeyTriggerSubsystem extends CatnipCompilerModuleSubsystem {
 
         eventFunction.body.emitBlock(body => {
             for (const [keyCode, generator] of this._keyMap) {
-                const eventFunction = generator.createTriggerFunction();
+                const triggerFunction = generator.createTriggerFunction();
 
                 body.emit(SpiderOpcodes.local_get, eventFunction.getParameter(0));
                 body.emitConstant(SpiderNumberType.i32, keyCode);
                 body.emit(SpiderOpcodes.i32_eq);
                 body.emitIf((body) => {
-                    body.emit(SpiderOpcodes.call, eventFunction);
+                    body.emit(SpiderOpcodes.call, triggerFunction);
                     // Break out of the block
                     body.emit(SpiderOpcodes.br, 1);
                 });

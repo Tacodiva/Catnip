@@ -5,8 +5,8 @@ import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 import { CatnipWasmStructHeapString } from "../../wasm-interop/CatnipWasmStructHeapString";
 import UTF16 from "../../utf16";
-import { CatnipEventID } from "../../CatnipEvents";
-import { CatnipCompilerWasmEvent } from "./CatnipCompilerWasmEvent";
+import { CatnipEventID, CatnipEvents } from "../../CatnipEvents";
+import { CatnipCompilerWasmEvent, CatnipCompilerWasmEventFilter } from "./CatnipCompilerWasmEvent";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipProjectModuleEvent } from "../../runtime/CatnipProjectModule";
 import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "../CatnipCompilerModuleSubsystem";
@@ -97,9 +97,12 @@ export class CatnipCompilerWasmModule {
 
         // Create all the events specificed in the config
         for (const eventID in this.compiler.config.events) {
-            this.getEvent(eventID as CatnipEventID);
-        }
+            const eventIDCast = eventID as CatnipEventID;
+            const config = this.compiler.config.events[eventIDCast];
 
+            if (config && (config.enable_js_listeners || (config.raw_listeners?.length ?? 0) !== 0))
+                this.createEvent(eventIDCast);
+        }
     }
 
 
@@ -270,15 +273,46 @@ export class CatnipCompilerWasmModule {
         return callbacks;
     }
 
-    public getEvent(id: CatnipEventID): CatnipCompilerWasmEvent {
-        let event = this._events.get(id);
-        if (event !== undefined) return event;
-        this._events.set(id, event = new CatnipCompilerWasmEvent(id, this));
+    private createEvent(id: CatnipEventID): CatnipCompilerWasmEvent {
+        const event = new CatnipCompilerWasmEvent(id, this);
+        this._events.set(id, event);
         return event;
     }
 
-    public addEventListener(id: CatnipEventID, func: SpiderFunction) {
-        this.getEvent(id).addListener(func);
+    public getEvent(id: CatnipEventID, force?: boolean): CatnipCompilerWasmEvent | null;
+    public getEvent(id: CatnipEventID, force: true): CatnipCompilerWasmEvent;
+
+    public getEvent(id: CatnipEventID, force: boolean = false): CatnipCompilerWasmEvent | null {
+        let event = this._events.get(id);
+        if (event !== undefined) return event;
+
+        // If we don't support compiler listeners and we didn't create the event during the constructor,
+        //   it means the event is not going to be included in this module.
+        if (!force && !CatnipEvents[id].supportsCompilerListeners)
+            return null;
+
+        return this.createEvent(id);
+    }
+
+    public hasEvent(id: CatnipEventID): boolean {
+        return this._events.has(id);
+    }
+
+    public addEventListener(
+        id: CatnipEventID, func: SpiderFunction, 
+        filter: CatnipCompilerWasmEventFilter = CatnipCompilerWasmEventFilter.ANY,
+        force: boolean = false
+    ): void {
+        const event = this.getEvent(id, force);
+        if (event === null) throw new Error("This event does not support compiler listeners.");
+        event.addListener(func, filter, force);
+    }
+
+    public getEventFunction(id: CatnipEventID, force?: boolean): SpiderFunction | null;
+    public getEventFunction(id: CatnipEventID, force: true): SpiderFunction;
+
+    public getEventFunction(id: CatnipEventID, force: boolean = false): SpiderFunction | null {
+        return this.getEvent(id, force)?.func ?? null;
     }
 
     public getEvents(): CatnipCompilerWasmEvent[] {

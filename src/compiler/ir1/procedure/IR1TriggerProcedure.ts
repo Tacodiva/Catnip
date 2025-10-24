@@ -1,6 +1,4 @@
-import { CatnipEventID } from "../../../CatnipEvents";
 import { CatnipProcedureID } from "../../../ops/procedure/procedure_definition";
-import { EventTriggerSubsystem } from "../../subsystems/EventTriggerSubsystem";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Trigger } from "../IR1Trigger";
 

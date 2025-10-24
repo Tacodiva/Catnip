@@ -43,6 +43,17 @@ catnip_runtime *catnip_runtime_new() {
   return rt;
 }
 
+void cull_terminated_thread(catnip_list *threadList) {
+  for (catnip_i32_t i = CATNIP_LIST_LENGTH(threadList, catnip_thread *) - 1; i >= 0; i--) {
+    catnip_thread *thread = CATNIP_LIST_GET(threadList, catnip_thread *, i);
+
+    if (thread->status != CATNIP_THREAD_STATUS_TERMINATED) continue;
+
+    CATNIP_LIST_REMOVE(threadList, catnip_thread *, i);
+    catnip_thread_dereference(thread);
+  }
+}
+
 void catnip_runtime_tick(catnip_runtime *runtime) {
   CATNIP_ASSERT(runtime != CATNIP_NULL);
 
@@ -72,6 +83,14 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
         thread->status = CATNIP_THREAD_STATUS_RUNNING;
       }
 
+      if (thread->status == CATNIP_THREAD_STATUS_WAIT_FOR_THREADS) {
+        cull_terminated_thread(&thread->wait_for_threads);
+
+        if (CATNIP_LIST_LENGTH(&thread->wait_for_threads, catnip_thread *) == 0) {
+          thread->status = CATNIP_THREAD_STATUS_RUNNING;
+        }
+      }
+
       catnip_i32_t lc = 0;
 
       while (thread->status == CATNIP_THREAD_STATUS_RUNNING) {
@@ -80,6 +99,13 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
         if (runtime->cfg_turbomode && thread->status == CATNIP_THREAD_STATUS_YIELD) {
           // If the warp timer is not up, we keep running the thread
           if ((catnip_import_time() - tickStartTime) < runtime->cfg_tick_time) {
+            thread->status = CATNIP_THREAD_STATUS_RUNNING;
+          }
+        }
+
+        if (thread->status == CATNIP_THREAD_STATUS_WAIT_FOR_THREADS) {
+          if (CATNIP_LIST_LENGTH(&thread->wait_for_threads, catnip_thread *) == 0) {
+            // If we aren't actually waiting for any threads, keep running immediatly.
             thread->status = CATNIP_THREAD_STATUS_RUNNING;
           }
         }
@@ -95,9 +121,11 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
     ranFirstTick = CATNIP_TRUE;
     catnip_runtime_gc(runtime);
   }
+
+  cull_terminated_thread(&runtime->threads);
 }
 
-void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
+void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite, catnip_thread_fnptr entrypoint, catnip_thread *waitingThread) {
 
   catnip_target *target = sprite->target;
 
@@ -105,8 +133,10 @@ void catnip_runtime_start_threads(catnip_runtime *runtime, catnip_sprite *sprite
 
     catnip_thread *newThread = catnip_thread_new(target, entrypoint);
 
-    if (threadList != CATNIP_NULL)
-      CATNIP_LIST_ADD(threadList, catnip_thread*, newThread);
+    if (waitingThread != CATNIP_NULL) {
+      ++newThread->ref_count;
+      CATNIP_LIST_ADD(&waitingThread->wait_for_threads, catnip_thread*, newThread);
+    }
 
     target = target->next_sprite;
   }

@@ -41,10 +41,14 @@ export class IR0BasicBlock {
     }
 
     public createTransient(name: string, format: CatnipValueFormat): CatnipCompilerTransientVariable {
-        this.script.ir.compiler.assertStageBefore(CatnipCompilerStage.IR0_IR1_PREPASS);
         const transient = new CatnipCompilerTransientVariable(name, format);
-        this._createdTransients.push(transient);
+        this.addCreatedTransient(transient);
         return transient;
+    }
+    
+    public addCreatedTransient(transient: CatnipCompilerTransientVariable) {
+        this.script.ir.compiler.assertStageBefore(CatnipCompilerStage.IR0_IR1_PREPASS);
+        this._createdTransients.push(transient);
     }
 
     public forEachRootNode(

@@ -1,75 +1,87 @@
-import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerModuleSubsystem";
-import { CatnipIrScriptBroadcastTrigger } from "../ir/event/broadcast_trigger";
 import { SpiderFunction, SpiderFunctionDefinition, SpiderNumberType, SpiderOpcodes } from "wasm-spider";
-import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";
+import { CatnipSpriteID } from "../../runtime/CatnipSprite";
+import { CatnipCompilerModuleSubsystem } from "../CatnipCompilerModuleSubsystem";
 import { CatnipCompilerWasmModule } from "../wasm/CatnipCompilerWasmModule";
+import { CatnipCompilerWasmTrigger } from "../wasm/CatnipCompilerWasmTrigger";
+import { CatnipCompilerWasmEventFilter } from "../wasm/CatnipCompilerWasmEvent";
 
-interface BroadcastTriggerInfo {
-    triggerGenerator: CatnipCompilerWasmTrigger,
-    broadcastName: string
-}
 
 export class BroadcastSubsystem extends CatnipCompilerModuleSubsystem {
 
-    private readonly _broadcastTriggers: Map<string, BroadcastTriggerInfo>;
-    private readonly _broadcastGeneric: SpiderFunctionDefinition;
+    private readonly _broadcastTriggers: Map<string, CatnipCompilerWasmTrigger>;
+    private _broadcastGeneric: SpiderFunctionDefinition | null;
 
     public constructor(module: CatnipCompilerWasmModule) {
         super(module);
         this._broadcastTriggers = new Map();
-        this._broadcastGeneric = this.spiderModule.createFunction();
+        this._broadcastGeneric = null;
     }
 
-    private _getBroadcastInfo(name: string) {
-        name = name.toLowerCase();
-        let broadcastInfo = this._broadcastTriggers.get(name);
+    private _getBroadcastTriggerGenerator(broadcastName: string) {
+        broadcastName = broadcastName.toLowerCase();
+        let triggerGenerator = this._broadcastTriggers.get(broadcastName);
 
-        if (broadcastInfo === undefined) {
-            broadcastInfo = {
-                broadcastName: name,
-                triggerGenerator: new CatnipCompilerWasmTrigger(this.compiler, true)
-            };
-            this._broadcastTriggers.set(name, broadcastInfo);
+        if (triggerGenerator === undefined) {
+            triggerGenerator = new CatnipCompilerWasmTrigger(this.module, true);
+            this._broadcastTriggers.set(broadcastName, triggerGenerator);
         }
 
-        return broadcastInfo;
+        return triggerGenerator;
     }
 
-    public registerBroadcastTrigger(trigger: CatnipIrScriptBroadcastTrigger) {
-        this._getBroadcastInfo(trigger.inputs.name).triggerGenerator.addListener(trigger);
+    public addBroadcastListener(broadcastName: string, spriteID: CatnipSpriteID, listener: SpiderFunction) {
+        this._getBroadcastTriggerGenerator(broadcastName).addListener(listener, spriteID);
     }
 
-    public getBroadcastFunction(name: string): SpiderFunction {
-        return this._getBroadcastInfo(name).triggerGenerator.triggerFunction;
+    public getBroadcastFunction(broadcastName: string): SpiderFunction {
+        return this._getBroadcastTriggerGenerator(broadcastName).triggerFunction;
     }
 
-    public getGenericBroadcastFunction(): SpiderFunction {
+    public getGenericBroadcastFunction(): SpiderFunctionDefinition {
+        this._broadcastGeneric ??= this.spiderModule.createFunction();
         return this._broadcastGeneric;
     }
 
     public preModuleWrite(): void {
-        const broadcastName = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
-        const threadListPtrVarRef = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
+        for (const trigger of this._broadcastTriggers.values()) {
+            trigger.createTriggerFunction();
+        }
 
-        for (const broadcastInfo of this._broadcastTriggers.values()) {
-            const eventFunc = broadcastInfo.triggerGenerator.createTriggerFunction();
+        if (this._broadcastGeneric !== null || this.module.hasEvent("PROJECT_BROADCAST")) {
+            
+            this._broadcastGeneric = this.getGenericBroadcastFunction();
+            
+            const broadcastNameParameter = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
+            const threadPtr = this._broadcastGeneric.addParameter(SpiderNumberType.i32);
 
-            this._broadcastGeneric.body.emit(SpiderOpcodes.local_get, broadcastName);
-            this._broadcastGeneric.body.emitConstant(
-                SpiderNumberType.i32,
-                this.compiler.runtimeModule.createCanonHString(broadcastInfo.broadcastName)
-            );
-            this._broadcastGeneric.body.emit(
-                SpiderOpcodes.call,
-                this.module.getRuntimeFunction("catnip_blockutil_hstring_cmp")
-            );
-            this._broadcastGeneric.body.emit(SpiderOpcodes.i32_eqz);
+            for (const [broadcastName, triggerGenerator] of this._broadcastTriggers) {
 
-            this._broadcastGeneric.body.emitIf((trueBody) => {
-                trueBody.emit(SpiderOpcodes.local_get, threadListPtrVarRef);
-                trueBody.emit(SpiderOpcodes.call, eventFunc);
-                trueBody.emit(SpiderOpcodes.return);
-            });
+                this._broadcastGeneric.body.emit(SpiderOpcodes.local_get, broadcastNameParameter);
+                this._broadcastGeneric.body.emitConstant(
+                    SpiderNumberType.i32,
+                    this.compiler.runtimeModule.createCanonHString(broadcastName)
+                );
+                this._broadcastGeneric.body.emit(
+                    SpiderOpcodes.call,
+                    this.module.getRuntimeFunction("catnip_blockutil_hstring_cmp")
+                );
+                this._broadcastGeneric.body.emit(SpiderOpcodes.i32_eqz);
+
+                this._broadcastGeneric.body.emitIf((trueBody) => {
+                    trueBody.emit(SpiderOpcodes.local_get, threadPtr);
+                    trueBody.emit(SpiderOpcodes.call, triggerGenerator.triggerFunction);
+                    trueBody.emit(SpiderOpcodes.return);
+                });
+            }
+
+            if (this.module.hasEvent("PROJECT_BROADCAST")) {
+                // We only want to call this on external calls because otherwise when we broadcasted something
+                //   using the generic 
+                this.module.addEventListener(
+                    "PROJECT_BROADCAST", this._broadcastGeneric,
+                    CatnipCompilerWasmEventFilter.EXTERNAL_ONLY, true
+                );
+            }
         }
     }
 }

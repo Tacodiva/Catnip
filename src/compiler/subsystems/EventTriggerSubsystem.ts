@@ -14,7 +14,7 @@ export class EventTriggerSubsystem extends CatnipCompilerModuleSubsystem {
         this._triggers = new Map();
     }
 
-    public addTrigger(id: CatnipEventID, spriteID: CatnipSpriteID, trigger: SpiderFunction) {
+    public addEventListener(id: CatnipEventID, spriteID: CatnipSpriteID, listener: SpiderFunction) {
         let eventInfo = this._triggers.get(id);
 
         if (eventInfo === undefined) {
@@ -22,7 +22,7 @@ export class EventTriggerSubsystem extends CatnipCompilerModuleSubsystem {
             this._triggers.set(id, eventInfo);
         }
 
-        eventInfo.addListener(trigger, spriteID, 0);
+        eventInfo.addListener(listener, spriteID, 0);
     }
 
     public preModuleWrite(): void {

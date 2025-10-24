@@ -42,13 +42,13 @@ catnip_target *catnip_target_new(struct catnip_runtime *runtime, catnip_sprite *
   return target;
 }
 
-void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_list *threadList) {
+void catnip_target_start_new_thread(catnip_target *target, catnip_thread_fnptr entrypoint, catnip_thread *waitingThread) {
   catnip_thread *newThread = catnip_thread_new(target, entrypoint);
 
-  if (threadList != CATNIP_NULL)
-    CATNIP_LIST_ADD(threadList, catnip_thread *, newThread);
-
-  target = target->next_sprite;
+  if (waitingThread != CATNIP_NULL) {
+    ++newThread->ref_count;
+    CATNIP_LIST_ADD(&waitingThread->wait_for_threads, catnip_thread *, newThread);
+  }
 }
 
 void catnip_target_set_xy(catnip_target* target, catnip_f64_t x, catnip_f64_t y) {

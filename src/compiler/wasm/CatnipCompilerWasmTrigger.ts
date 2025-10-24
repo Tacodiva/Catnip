@@ -13,19 +13,19 @@ export class CatnipCompilerWasmTrigger {
 
     public readonly listeners: Map<CatnipSpriteID, { func: SpiderFunction, priority: number }[]>;
     public readonly triggerFunction: SpiderFunctionDefinition;
-    public readonly writeThreadList: boolean;
+    public readonly threadParameter: SpiderLocalParameterReference | null;
 
     private _generated: boolean;
 
-    public constructor(module: CatnipCompilerWasmModule, writeThreadList: boolean) {
+    public constructor(module: CatnipCompilerWasmModule, waitingThread: boolean) {
         this.module = module;
         this.listeners = new Map();
         this.triggerFunction = this.module.spiderModule.createFunction();
         this._generated = false;
-        this.writeThreadList = writeThreadList;
-
-        if (this.writeThreadList) {
-            this.triggerFunction.addParameter(SpiderNumberType.i32);
+        if (waitingThread) {
+            this.threadParameter = this.triggerFunction.addParameter(SpiderNumberType.i32);
+        } else {
+            this.threadParameter = null;
         }
     }
 
@@ -44,12 +44,7 @@ export class CatnipCompilerWasmTrigger {
 
     public createTriggerFunction(): SpiderFunctionDefinition {
         CatnipCompilerLogger.assert(!this._generated, true, "Function already generated.");
-
-        let threadListPtrVarRef: SpiderLocalParameterReference;
-
-        if (this.writeThreadList) {
-            threadListPtrVarRef = this.triggerFunction.getParameter(0);
-        }
+        this._generated = true;
 
         const targetVarRef = this.triggerFunction.addLocalVariable(SpiderNumberType.i32);
 
@@ -65,7 +60,7 @@ export class CatnipCompilerWasmTrigger {
                 loop.emit(SpiderOpcodes.br_if, 1);
 
                 // Get the pointer to the sprite of this target
-                const spriteVarRef = this.triggerFunction!.addLocalVariable(SpiderNumberType.i32);
+                const spriteVarRef = this.triggerFunction.addLocalVariable(SpiderNumberType.i32);
                 loop.emit(SpiderOpcodes.local_get, targetVarRef);
                 loop.emit(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("sprite"));
                 loop.emit(SpiderOpcodes.local_set, spriteVarRef);
@@ -84,8 +79,13 @@ export class CatnipCompilerWasmTrigger {
                             for (const listener of listeners) {
                                 ifTrue.emit(SpiderOpcodes.local_get, targetVarRef);
                                 ifTrue.emitConstant(SpiderNumberType.i32, this.module.getFunctionTableIndex(listener.func));
-                                if (this.writeThreadList) ifTrue.emit(SpiderOpcodes.local_get, threadListPtrVarRef);
-                                else ifTrue.emitConstant(SpiderNumberType.i32, 0);
+
+                                if (this.threadParameter) {
+                                    ifTrue.emit(SpiderOpcodes.local_get, this.threadParameter);
+                                } else {
+                                    ifTrue.emit(SpiderOpcodes.i32_const, 0);
+                                }
+                                
                                 ifTrue.emit(SpiderOpcodes.call, this.module.getRuntimeFunction("catnip_target_start_new_thread"));
                             }
                             // Skip to the end of "innerBlock"

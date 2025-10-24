@@ -11,13 +11,17 @@ catnip_thread *catnip_thread_new(catnip_target *target, catnip_thread_fnptr entr
 
   thread->runtime = target->runtime;
   thread->function = entrypoint;
+
   thread->target = target;
   thread->status = CATNIP_THREAD_STATUS_RUNNING;
 
+  CATNIP_LIST_INIT(&thread->wait_for_threads, catnip_thread *, 0);
+  
   thread->stack_start = catnip_mem_alloc(INITIAL_STACK_SIZE * sizeof(catnip_value));
   thread->stack_ptr = thread->stack_start;
   thread->stack_end = thread->stack_start + INITIAL_STACK_SIZE;
-
+  
+  thread->ref_count = 1;
   CATNIP_LIST_ADD(&thread->runtime->threads, catnip_thread *, thread);
 
   return thread;
@@ -74,4 +78,17 @@ void catnip_thread_resize_stack(catnip_thread *thread, catnip_ui32_t extraCapaci
   thread->stack_start = newStack;
   thread->stack_end = newStack + newStackCapacity;
   thread->stack_ptr = newStack + oldStackLength;
+}
+
+void catnip_thread_dereference(catnip_thread *thread) {
+  catnip_i32_t newRefCount = --thread->ref_count;
+
+  if (newRefCount == 0)
+    catnip_thread_free(thread);
+}
+
+void catnip_thread_free(catnip_thread *thread) {
+  CATNIP_LIST_FREE(&thread->wait_for_threads, catnip_thread *);
+  catnip_mem_free(thread->stack_start);
+  catnip_mem_free(thread);
 }
