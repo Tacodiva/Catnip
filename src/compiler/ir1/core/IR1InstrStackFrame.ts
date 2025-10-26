@@ -56,7 +56,7 @@ export class IR1InstrStackFrame extends IR1Instruction {
         // (stackEnd < stackPtr + targetFunc.stackSize)
         emitter.emitWasm(SpiderOpcodes.i32_lt_u);
 
-        emitter.emitWasm(SpiderOpcodes.if, emitter.emitExpression(emitter => {
+        emitter.emitWasmIf(emitter => {
             // The stack is not big enough :c, let's resize it :3
             emitter.emitWasmPushThread();
             emitter.emitWasmPushNumber(SpiderNumberType.i32, this.frame.length);
@@ -70,7 +70,7 @@ export class IR1InstrStackFrame extends IR1Instruction {
             emitter.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
             emitter.emitWasm(SpiderOpcodes.i32_add);
             emitter.emitWasm(SpiderOpcodes.local_set, newStackPtrVar);
-        }));
+        });
 
         let stackOffset = 0;
 

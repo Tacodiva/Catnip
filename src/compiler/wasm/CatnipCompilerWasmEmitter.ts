@@ -10,6 +10,8 @@ import { CatnipWasmStructThread } from "../../wasm-interop/CatnipWasmStructThrea
 import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
 import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 
+export type CatnipCompilerWasmEmitFunc = ((emitter: CatnipCompilerWasmEmitter) => void) | IR1Instruction[];
+
 export class CatnipCompilerWasmEmitter {
 
     public get module() { return this.conversionInfo.module; }
@@ -131,6 +133,18 @@ export class CatnipCompilerWasmEmitter {
         this._expression.emit(opcode, ...args);
     }
 
+    public emitWasmBlock(emitFunc: CatnipCompilerWasmEmitFunc, type?: SpiderValueType): void {
+        this.emitWasm(SpiderOpcodes.block, this.emitExpression(emitFunc), type);
+    }
+
+    public emitWasmLoop(emitFunc: CatnipCompilerWasmEmitFunc, type?: SpiderValueType): void {
+        this.emitWasm(SpiderOpcodes.loop, this.emitExpression(emitFunc), type);
+    }
+
+    public emitWasmIf(trueEmit: CatnipCompilerWasmEmitFunc, falseEmit?: CatnipCompilerWasmEmitFunc, type?: SpiderValueType): void {
+        this.emitWasm(SpiderOpcodes.if, this.emitExpression(trueEmit), falseEmit ? this.emitExpression(falseEmit) : undefined, type);
+    }
+
     public emitWasmPushNumber(type: SpiderNumberType, value: number | bigint): void {
         this._expression.emitConstant(type, value);
     }
@@ -191,7 +205,7 @@ export class CatnipCompilerWasmEmitter {
         throw new Error(`Function does not have required external value ${IR1ExternalValue.stringify(value)}.`);
     }
 
-    public emitExpression(emitter: ((emitter: CatnipCompilerWasmEmitter) => void) | IR1Instruction[]): SpiderExpression {
+    public emitExpression(emitter: CatnipCompilerWasmEmitFunc): SpiderExpression {
         const oldExpressoin = this._expression;
         const newExpression = new SpiderExpression();
 

@@ -60,12 +60,10 @@ export class IR1InstrPenChangeParam extends IR1Instruction {
         emitter.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructTarget.getMemberOffset("pen_thsv_valid"));
         emitter.emitWasm(SpiderOpcodes.i32_eqz);
 
-        emitter.emitWasm(SpiderOpcodes.if,
-            emitter.emitExpression(emitter => {
-                emitter.emitWasmPushCurrentTarget();
-                emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_pen_update_thsv");
-            })
-        );
+        emitter.emitWasmIf(emitter => {
+            emitter.emitWasmPushCurrentTarget();
+            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_pen_update_thsv");
+        });
 
         // Alright, now our HSV is up to date, we can modify it.
 
@@ -96,40 +94,36 @@ export class IR1InstrPenChangeParam extends IR1Instruction {
             emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
             emitter.emitWasm(SpiderOpcodes.f64_lt);
 
-            emitter.emitWasm(SpiderOpcodes.if,
-                emitter.emitExpression(emitter => {
-                    emitter.emitWasm(SpiderOpcodes.local_get, value);
-                    emitter.emitWasmPushNumber(SpiderNumberType.f64, 100);
-                    emitter.emitWasm(SpiderOpcodes.f64_add);
-                    emitter.emitWasm(SpiderOpcodes.local_set, value);
-                })
-            );
+            emitter.emitWasmIf(emitter => {
+                emitter.emitWasm(SpiderOpcodes.local_get, value);
+                emitter.emitWasmPushNumber(SpiderNumberType.f64, 100);
+                emitter.emitWasm(SpiderOpcodes.f64_add);
+                emitter.emitWasm(SpiderOpcodes.local_set, value);
+            });
         } else {
             // Otherwise we need to clamp it between 0 and 100
             emitter.emitWasm(SpiderOpcodes.local_get, value);
             emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
             emitter.emitWasm(SpiderOpcodes.f64_lt);
 
-            emitter.emitWasm(SpiderOpcodes.if,
-                emitter.emitExpression(emitter => {
+            emitter.emitWasmIf(
+                emitter => {
                     // It is < 0
                     emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
                     emitter.emitWasm(SpiderOpcodes.local_set, value);
-                }),
-                emitter.emitExpression(emitter => {
+                },
+                emitter => {
                     // Otherwise, see if it's greater than 100
                     emitter.emitWasm(SpiderOpcodes.local_get, value);
                     emitter.emitWasmPushNumber(SpiderNumberType.f64, 100);
                     emitter.emitWasm(SpiderOpcodes.f64_gt);
 
-                    emitter.emitWasm(SpiderOpcodes.if,
-                        emitter.emitExpression(emitter => {
-                            // It is > 100
-                            emitter.emitWasmPushNumber(SpiderNumberType.f64, 100);
-                            emitter.emitWasm(SpiderOpcodes.local_set, value);
-                        })
-                    );
-                })
+                    emitter.emitWasmIf(emitter => {
+                        // It is > 100
+                        emitter.emitWasmPushNumber(SpiderNumberType.f64, 100);
+                        emitter.emitWasm(SpiderOpcodes.local_set, value);
+                    });
+                }
             );
         }
 

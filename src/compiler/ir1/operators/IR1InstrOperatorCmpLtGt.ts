@@ -56,8 +56,8 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
                 emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                 emitter.emitWasm(SpiderOpcodes.f64_eq);
 
-                emitter.emitWasm(SpiderOpcodes.if,
-                    emitter.emitExpression(emitter => {
+                emitter.emitWasmIf(
+                    emitter => {
                         // The right is not NaN. The left might be NaN though.
                         if (CatnipValueFormatUtils.isSometimes(this.leftFormat, CatnipValueFormat.F64_NAN)) {
                             const leftTemp = emitter.borrowLocal(SpiderNumberType.f64);
@@ -67,19 +67,19 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
                             emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                             emitter.emitWasm(SpiderOpcodes.f64_eq);
 
-                            emitter.emitWasm(SpiderOpcodes.if,
-                                emitter.emitExpression(emitter => {
+                            emitter.emitWasmIf(
+                                emitter => {
                                     // Right is not NaN and left is not NaN.
                                     emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                                     emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                                     emitShortcutCheck(emitter);
-                                }),
-                                emitter.emitExpression(emitter => {
+                                },
+                                emitter => {
                                     // Right is not NaN and left is NaN.
                                     emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                                     emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                                     emitFullCheck(emitter);
-                                }),
+                                },
                                 SpiderNumberType.i32
                             );
 
@@ -88,12 +88,12 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
                             // Right is not NaN and left can't be NaN.
                             emitShortcutCheck(emitter);
                         }
-                    }),
-                    emitter.emitExpression(emitter => {
+                    },
+                    emitter => {
                         // The right is NaN.
                         emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                         emitFullCheck(emitter);
-                    }),
+                    },
                     SpiderNumberType.i32
                 );
 
@@ -111,19 +111,19 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
                 emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                 emitter.emitWasm(SpiderOpcodes.f64_eq);
 
-                emitter.emitWasm(SpiderOpcodes.if,
-                    emitter.emitExpression(emitter => {
+                emitter.emitWasmIf(
+                    emitter => {
                         // Left is not NaN and right cannot be NaN.
                         emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                         emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                         emitShortcutCheck(emitter);
-                    }),
-                    emitter.emitExpression(emitter => {
+                    },
+                    emitter => {
                         // Right is NaN and left cannot be NaN.
                         emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                         emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                         emitFullCheck(emitter);
-                    }),
+                    },
                     SpiderNumberType.i32
                 );
 

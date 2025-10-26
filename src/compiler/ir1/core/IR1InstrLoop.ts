@@ -14,7 +14,7 @@ export class IR1InstrLoop extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        emitter.emitWasm(SpiderOpcodes.loop, emitter.emitExpression(this.body));
+        emitter.emitWasmLoop(this.body);
     }
 
     public stringify(ctx: IR1StringificationContext): void {

@@ -15,7 +15,7 @@ export class IR1InstrBlock extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        emitter.emitWasm(SpiderOpcodes.block, emitter.emitExpression(this.body));
+        emitter.emitWasmBlock(this.body);
     }
 
     public stringify(ctx: IR1StringificationContext): void {

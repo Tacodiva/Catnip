@@ -17,9 +17,9 @@ export class IR1InstrIf extends IR1Instruction {
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         if (this.fail.length === 0) {
-            emitter.emitWasm(SpiderOpcodes.if, emitter.emitExpression(this.pass));
+            emitter.emitWasmIf(this.pass);
         } else {
-            emitter.emitWasm(SpiderOpcodes.if, emitter.emitExpression(this.pass), emitter.emitExpression(this.fail));
+            emitter.emitWasmIf(this.pass, this.fail);
         }
     }
 

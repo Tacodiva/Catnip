@@ -38,13 +38,13 @@ export class IR1InstrCast extends IR1Instruction {
             // Binaryen will get rid of this if it's not necessary
             if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
                 emitter.emitWasm(SpiderOpcodes.drop);
-                emitter.emitWasm(SpiderOpcodes.block, emitter.emitExpression(emitter => isNumber(emitter, format)));
+                emitter.emitWasmBlock(emitter => isNumber(emitter, format));
                 return;
             }
 
             if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
                 emitter.emitWasm(SpiderOpcodes.drop);
-                emitter.emitWasm(SpiderOpcodes.block, emitter.emitExpression(emitter => isString(emitter, format)));
+                emitter.emitWasmBlock(emitter => isString(emitter, format));
                 return;
             }
         }
@@ -106,9 +106,9 @@ export class IR1InstrCast extends IR1Instruction {
                             emitter.emitWasm(SpiderOpcodes.local_get, local);
                             emitter.emitWasm(SpiderOpcodes.f64_eq);
 
-                            emitter.emitWasm(SpiderOpcodes.if,
-                                emitter.emitExpression(emitter => emitter.emitWasm(SpiderOpcodes.local_get, local)),
-                                emitter.emitExpression(emitter => emitter.emitWasm(SpiderOpcodes.f64_const, 0)),
+                            emitter.emitWasmIf(
+                                emitter => emitter.emitWasm(SpiderOpcodes.local_get, local),
+                                emitter => emitter.emitWasm(SpiderOpcodes.f64_const, 0),
                                 SpiderNumberType.f64
                             );
 
@@ -126,47 +126,47 @@ export class IR1InstrCast extends IR1Instruction {
                             emitter.emitWasmPushNumber(SpiderNumberType.f64, 0.5);
                             emitter.emitWasm(SpiderOpcodes.f64_lt);
 
-                            emitter.emitWasm(SpiderOpcodes.if,
-                                emitter.emitExpression((emitter) => {
+                            emitter.emitWasmIf(
+                                emitter => {
                                     // The value is < 0.5
                                     emitter.emitWasm(SpiderOpcodes.local_get, local);
                                     emitter.emitWasmPushNumber(SpiderNumberType.f64, -0.5);
                                     emitter.emitWasm(SpiderOpcodes.f64_lt);
                                     emitter.emitWasm(SpiderOpcodes.i32_eqz);
 
-                                    emitter.emitWasm(SpiderOpcodes.if,
-                                        emitter.emitExpression((emitter) => {
+                                    emitter.emitWasmIf(
+                                        (emitter) => {
                                             // The value is < 0.5 and >= -0.5
                                             emitter.emitWasm(SpiderOpcodes.local_get, local);
                                             emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
                                             emitter.emitWasm(SpiderOpcodes.f64_lt);
-                                            emitter.emitWasm(SpiderOpcodes.if,
-                                                emitter.emitExpression((emitter) => {
+                                            emitter.emitWasmIf(
+                                                (emitter) => {
                                                     // The value is < 0 and >= -0.5
                                                     emitter.emitWasmPushNumber(SpiderNumberType.f64, -0);
-                                                }),
-                                                emitter.emitExpression((emitter) => {
+                                                },
+                                                (emitter) => {
                                                     // The value is >= 0 and < 0.5
                                                     emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
-                                                }),
+                                                },
                                                 SpiderNumberType.f64
                                             );
-                                        }),
-                                        emitter.emitExpression((emitter) => {
+                                        },
+                                        (emitter) => {
                                             // The value is < -0.5
                                             emitter.emitWasm(SpiderOpcodes.local_get, local);
                                             emitter.emitWasm(SpiderOpcodes.f64_floor);
-                                        }),
+                                        },
                                         SpiderNumberType.f64
                                     );
-                                }),
-                                emitter.emitExpression((emitter) => {
+                                },
+                                emitter => {
                                     // Value is >= 0.5
                                     emitter.emitWasm(SpiderOpcodes.local_get, local);
                                     emitter.emitWasmPushNumber(SpiderNumberType.f64, 0.5);
                                     emitter.emitWasm(SpiderOpcodes.f64_add);
                                     emitter.emitWasm(SpiderOpcodes.f64_floor);
-                                }),
+                                },
                                 SpiderNumberType.f64
                             );
                             emitter.returnLocal(local);
@@ -203,26 +203,26 @@ export class IR1InstrCast extends IR1Instruction {
                         emitter.emitWasmPushNumber(SpiderNumberType.f64, -2147483648); // Min 32-bit signed integer
                         emitter.emitWasm(SpiderOpcodes.f64_lt);
 
-                        emitter.emitWasm(SpiderOpcodes.if,
-                            emitter.emitExpression((emitter) => {
+                        emitter.emitWasmIf(
+                            (emitter) => {
                                 emitter.emitWasmPushNumber(SpiderNumberType.i32, -2147483648);
-                            }),
-                            emitter.emitExpression((emitter) => {
+                            },
+                            (emitter) => {
                                 emitter.emitWasm(SpiderOpcodes.local_get, value);
                                 emitter.emitWasmPushNumber(SpiderNumberType.f64, 2147483647); // Max 32-bit signed integer
                                 emitter.emitWasm(SpiderOpcodes.f64_gt);
 
-                                emitter.emitWasm(SpiderOpcodes.if,
-                                    emitter.emitExpression((emitter) => {
+                                emitter.emitWasmIf(
+                                    (emitter) => {
                                         emitter.emitWasmPushNumber(SpiderNumberType.i32, 2147483647);
-                                    }),
-                                    emitter.emitExpression((emitter) => {
+                                    },
+                                    (emitter) => {
                                         emitter.emitWasm(SpiderOpcodes.local_get, value);
                                         emitter.emitWasm(SpiderOpcodes.i32_trunc_f64_s);
-                                    }),
+                                    },
                                     SpiderNumberType.i32
                                 );
-                            }),
+                            },
                             SpiderNumberType.i32
                         );
 
@@ -372,20 +372,20 @@ export class IR1InstrCast extends IR1Instruction {
                         emitter.emitWasmPushNumber(SpiderNumberType.i32, "#".charCodeAt(0));
                         emitter.emitWasm(SpiderOpcodes.i32_eq);
 
-                        emitter.emitWasm(SpiderOpcodes.if,
-                            emitter.emitExpression(emitter => {
+                        emitter.emitWasmIf(
+                            emitter => {
                                 // The first character of the string is a '#'
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
                                 emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_to_argb");
-                            }),
-                            emitter.emitExpression(emitter => {
+                            },
+                            emitter => {
                                 // The first character is not a '#', we will try to parse it into a number then a color
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
                                 emitter.emitWasmPushRuntime();
                                 emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
 
                                 this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);
-                            }),
+                            },
                             SpiderNumberType.i32
                         );
 
@@ -407,9 +407,9 @@ export class IR1InstrCast extends IR1Instruction {
                     // boolean -> string
 
                     if (emitter !== null) {
-                        emitter.emitWasm(SpiderOpcodes.if,
-                            emitter.emitExpression(emitter => emitter.emitWasmPushString("true")),
-                            emitter.emitExpression(emitter => emitter.emitWasmPushString("false")),
+                        emitter.emitWasmIf(
+                            emitter => emitter.emitWasmPushString("true"),
+                            emitter => emitter.emitWasmPushString("false"),
                             SpiderNumberType.i32
                         );
                     }
