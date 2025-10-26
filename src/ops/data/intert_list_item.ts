@@ -1,39 +1,34 @@
 
-// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { CatnipSpriteID } from "../../runtime/CatnipSprite";
-// import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
-// import { registerSB3CommandBlock } from "../../sb3_ops";
-// import { CatnipIr } from "../../compiler/CatnipIr";
-// import { CatnipListID } from "../../runtime/CatnipList";
-// import { ir_insert_list_item } from "../../compiler/ir/data/insert_list_item";
+import { IR0CmdDataListInsertItem } from "../../compiler/ir0/data/IR0CmdDataListInsertItem";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { CatnipListID } from "../../runtime/CatnipList";
+import { CatnipSpriteID } from "../../runtime/CatnipSprite";
+import { registerSB3CommandBlock } from "../../sb3_ops";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
-// type insert_list_item_inputs = { sprite: CatnipSpriteID, list: CatnipListID, value: CatnipInputOp, index: CatnipInputOp };
+type insert_list_item_inputs = { sprite: CatnipSpriteID, list: CatnipListID, value: CatnipInputOp, index: CatnipInputOp };
 
-// export const op_insert_list_item = new class extends CatnipCommandOpType<insert_list_item_inputs> {
-//     public *getInputsAndSubstacks(ir: CatnipIr, inputs: insert_list_item_inputs): IterableIterator<CatnipOp> {
-//         yield inputs.value;
-//         yield inputs.index;
-//     }
-    
-//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: insert_list_item_inputs): void {
-//         ctx.emitInput(inputs.value, CatnipValueFormat.F64);
-//         ctx.emitInput(inputs.index, CatnipValueFormat.F64 | CatnipValueFormat.I32_NUMBER);
+export const op_insert_list_item = new class extends CatnipCommandOpType<insert_list_item_inputs> {
+    public *getInputsAndSubstacks(inputs: insert_list_item_inputs): IterableIterator<CatnipInputOp | CatnipCommandList> {
+        yield inputs.index;
+        yield inputs.value;
+    }
 
-//         const sprite = ctx.project.getSprite(inputs.sprite)!;
-//         const target = sprite.defaultTarget;
-//         const list = sprite.getList(inputs.list)!;
+    public generateIr(ctx: IR0Emitter, inputs: insert_list_item_inputs): void {
+        const sprite = ctx.project.getSprite(inputs.sprite)!;
+        const target = sprite.defaultTarget;
+        const list = sprite.getList(inputs.list)!;
 
-//         ctx.emitIr(ir_insert_list_item, { target, list }, {});
-//     }
-// }
+        ctx.emitCommand(new IR0CmdDataListInsertItem(list, target, ctx.emitInput(inputs.index), ctx.emitInput(inputs.value)));
+    }
+}
 
-// registerSB3CommandBlock("data_insertatlist", (ctx, block) => {
-//     const listInfo = ctx.getList(block.fields.LIST);
-//     return op_insert_list_item.create({
-//         sprite: listInfo.spriteID,
-//         list: listInfo.listID,
-//         value: ctx.readInput(block.inputs.ITEM),
-//         index: ctx.readInput(block.inputs.INDEX),
-//     });
-// });
+registerSB3CommandBlock("data_insertatlist", (ctx, block) => {
+    const listInfo = ctx.getList(block.fields.LIST);
+    return op_insert_list_item.create({
+        sprite: listInfo.spriteID,
+        list: listInfo.listID,
+        value: ctx.readInput(block.inputs.ITEM),
+        index: ctx.readInput(block.inputs.INDEX),
+    });
+});

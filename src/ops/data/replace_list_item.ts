@@ -1,39 +1,34 @@
 
-// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { CatnipSpriteID } from "../../runtime/CatnipSprite";
-// import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
-// import { registerSB3CommandBlock } from "../../sb3_ops";
-// import { CatnipIr } from "../../compiler/CatnipIr";
-// import { CatnipListID } from "../../runtime/CatnipList";
-// import { ir_replace_list_item } from "../../compiler/ir/data/replace_list_item";
+import { IR0CmdDataListReplaceItem } from "../../compiler/ir0/data/IR0CmdDataListReplaceItem";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { CatnipListID } from "../../runtime/CatnipList";
+import { CatnipSpriteID } from "../../runtime/CatnipSprite";
+import { registerSB3CommandBlock } from "../../sb3_ops";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
-// type replace_list_item_inputs = { sprite: CatnipSpriteID, list: CatnipListID, value: CatnipInputOp, index: CatnipInputOp };
+type replace_list_item_inputs = { sprite: CatnipSpriteID, list: CatnipListID, value: CatnipInputOp, index: CatnipInputOp };
 
-// export const op_replace_list_item = new class extends CatnipCommandOpType<replace_list_item_inputs> {
-//     public *getInputsAndSubstacks(ir: CatnipIr, inputs: replace_list_item_inputs): IterableIterator<CatnipOp> {
-//         yield inputs.value;
-//         yield inputs.index;
-//     }
-    
-//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: replace_list_item_inputs): void {
-//         ctx.emitInput(inputs.value, CatnipValueFormat.F64);
-//         ctx.emitInput(inputs.index, CatnipValueFormat.F64 | CatnipValueFormat.I32_NUMBER);
+export const op_replace_list_item = new class extends CatnipCommandOpType<replace_list_item_inputs> {
+    public *getInputsAndSubstacks(inputs: replace_list_item_inputs): IterableIterator<CatnipInputOp | CatnipCommandList> {
+        yield inputs.index;
+        yield inputs.value;
+    }
 
-//         const sprite = ctx.project.getSprite(inputs.sprite)!;
-//         const target = sprite.defaultTarget;
-//         const list = sprite.getList(inputs.list)!;
+    public generateIr(ctx: IR0Emitter, inputs: replace_list_item_inputs): void {
+        const sprite = ctx.project.getSprite(inputs.sprite)!;
+        const target = sprite.defaultTarget;
+        const list = sprite.getList(inputs.list)!;
 
-//         ctx.emitIr(ir_replace_list_item, { target, list }, {});
-//     }
-// }
+        ctx.emitCommand(new IR0CmdDataListReplaceItem(list, target, ctx.emitInput(inputs.index), ctx.emitInput(inputs.value)));
+    }
+}
 
-// registerSB3CommandBlock("data_replaceitemoflist", (ctx, block) => {
-//     const listInfo = ctx.getList(block.fields.LIST);
-//     return op_replace_list_item.create({
-//         sprite: listInfo.spriteID,
-//         list: listInfo.listID,
-//         value: ctx.readInput(block.inputs.ITEM),
-//         index: ctx.readInput(block.inputs.INDEX),
-//     });
-// });
+registerSB3CommandBlock("data_replaceitemoflist", (ctx, block) => {
+    const listInfo = ctx.getList(block.fields.LIST);
+    return op_replace_list_item.create({
+        sprite: listInfo.spriteID,
+        list: listInfo.listID,
+        value: ctx.readInput(block.inputs.ITEM),
+        index: ctx.readInput(block.inputs.INDEX),
+    });
+});

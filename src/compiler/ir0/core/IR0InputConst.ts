@@ -17,24 +17,32 @@ export class IR0InputConst extends IR0Input<[]> {
         this.format = format ?? null;
     }
 
-    private _isValidNumber(): boolean {
-        return Cast.toString(Cast.toNumber(this.value)) === "" + this.value;
-    }
+
 
     public getResultFormat(): CatnipValueFormat {
+        const numberCast = Cast.toNumber(this.value);
+
+        const isValidNumber = Cast.toString(numberCast) === Cast.toString(this.value);
+
         if (this.format === null) {
-            if (this._isValidNumber())
-                return CatnipValueFormatUtils.getNumberFormat(Cast.toNumber(this.value));
+            if (isValidNumber)
+                return CatnipValueFormatUtils.getNumberFormat(numberCast);
 
             return CatnipValueFormat.I32_HSTRING;
-        } else if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.F64_NUMBER_OR_NAN) && CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
-            if (this._isValidNumber())
-                return CatnipValueFormatUtils.getNumberFormat(Cast.toNumber(this.value));
+        }
+
+        if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.I32_NUMBER) && isValidNumber) {
+            if (Number.isInteger(numberCast) && numberCast <= 2147483647 && numberCast >= -2147483648)
+                return CatnipValueFormat.I32_NUMBER;
+        }
+
+        if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.F64_NUMBER_OR_NAN) && CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
+            if (isValidNumber)
+                return CatnipValueFormatUtils.getNumberFormat(numberCast);
 
             return CatnipValueFormat.F64_BOXED_I32_HSTRING;
-        } else {
-            return this.format;
         }
+        return this.format;
     }
 
     public getResult(): CatnipValue {
@@ -42,11 +50,7 @@ export class IR0InputConst extends IR0Input<[]> {
     }
 
     public requestResultFormat(format: CatnipValueFormat): void {
-        if (this.format !== null && CatnipValueFormatUtils.isSometimes(this.format, format)) {
-            this.format &= format;
-        } else {
-            this.format = format;
-        }
+        this.format = format;
     }
 
     public getGraphVisNodeProperties(): string {

@@ -22,29 +22,29 @@ export class IR1InstrCast extends IR1Instruction {
     }
 
     public static emitStringCheck(emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat,
-        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat,
-        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat): CatnipValueFormat;
+        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => CatnipValueFormat,
+        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => CatnipValueFormat): CatnipValueFormat;
 
     public static emitStringCheck(emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat,
-        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => void,
-        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => void): void;
+        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => void,
+        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => void): void;
 
     public static emitStringCheck(emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat,
-        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat | void,
-        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat) => CatnipValueFormat | void): CatnipValueFormat | void {
+        isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => CatnipValueFormat | void,
+        isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => CatnipValueFormat | void): CatnipValueFormat | void {
 
         {
             // We do a block so if there is a br in the lambda, the index stays the same.
             // Binaryen will get rid of this if it's not necessary
             if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
                 emitter.emitWasm(SpiderOpcodes.drop);
-                emitter.emitWasmBlock(emitter => isNumber(emitter, format));
+                isNumber(emitter, format, 0);
                 return;
             }
 
             if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
                 emitter.emitWasm(SpiderOpcodes.drop);
-                emitter.emitWasmBlock(emitter => isString(emitter, format));
+                isString(emitter, format, 0);
                 return;
             }
         }
@@ -64,8 +64,8 @@ export class IR1InstrCast extends IR1Instruction {
 
         let valueFormat0: CatnipValueFormat | void = undefined, valueFormat1: CatnipValueFormat | void = undefined;
 
-        const trueExpr = emitter.emitExpression((emitter) => valueFormat0 = isString(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING));
-        const falseExpr = emitter.emitExpression((emitter) => valueFormat1 = isNumber(emitter, format & (~CatnipValueFormat.F64_BOXED_I32_HSTRING)));
+        const trueExpr = emitter.emitExpression((emitter) => valueFormat0 = isString(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, 1));
+        const falseExpr = emitter.emitExpression((emitter) => valueFormat1 = isNumber(emitter, format & (~CatnipValueFormat.F64_BOXED_I32_HSTRING), 1));
 
         if (valueFormat0 === undefined || valueFormat1 === undefined) {
             if (valueFormat0 !== undefined || valueFormat1 !== undefined)
@@ -436,6 +436,16 @@ export class IR1InstrCast extends IR1Instruction {
             }
 
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_NUMBER)) {
+
+                if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_BOOLEAN)) {
+                    if (emitter !== null) {
+                        emitter.emitWasm(SpiderOpcodes.i32_eqz);
+                        emitter.emitWasm(SpiderOpcodes.i32_eqz);
+                    }
+
+                    return CatnipValueFormat.I32_BOOLEAN;
+                }
+
                 if (emitter !== null) {
                     emitter.emitWasm(SpiderOpcodes.f64_convert_i32_s);
                 }

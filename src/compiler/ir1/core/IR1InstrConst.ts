@@ -24,6 +24,16 @@ export class IR1InstrConst extends IR1Instruction {
             return;
         }
 
+        if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.I32_NUMBER)) {
+            emitter.emitWasmPushNumber(SpiderNumberType.i32, Cast.toNumber(this.value));
+            return;
+        }
+
+        if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.I32_BOOLEAN)) {
+            emitter.emitWasmPushNumber(SpiderNumberType.i32, Cast.toBoolean(this.value) ? 1 : 0);
+            return;
+        }
+        
         if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
             emitter.emitWasmPushNumber(SpiderNumberType.f64, Cast.toNumber(this.value));
             return;
@@ -33,16 +43,6 @@ export class IR1InstrConst extends IR1Instruction {
             const stringPtr = emitter.createCanonHString(Cast.toString(this.value));
             emitter.emitWasmPushNumber(SpiderNumberType.i64, VALUE_STRING_MASK | BigInt(stringPtr));
             emitter.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
-            return;
-        }
-
-        if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.I32_NUMBER)) {
-            emitter.emitWasmPushNumber(SpiderNumberType.i32, Cast.toNumber(this.value));
-            return;
-        }
-
-        if (CatnipValueFormatUtils.isSometimes(this.format, CatnipValueFormat.I32_BOOLEAN)) {
-            emitter.emitWasmPushNumber(SpiderNumberType.i32, Cast.toBoolean(this.value) ? 1 : 0);
             return;
         }
 

@@ -9,10 +9,10 @@ import { IR0Command, IR0Input } from "../IR0Node";
 
 export class IR0CmdDataVariableSet extends IR0Command<["value"]> {
 
-    public readonly target: CatnipTarget;
+    public readonly target: CatnipTarget | null;
     public readonly variable: CatnipVariable;
 
-    public constructor(target: CatnipTarget, variable: CatnipVariable, value: IR0Input) {
+    public constructor(target: CatnipTarget | null, variable: CatnipVariable, value: IR0Input) {
         super("data_var_set", { value: { value, format: CatnipValueFormat.F64 } });
         this.target = target;
         this.variable = variable;

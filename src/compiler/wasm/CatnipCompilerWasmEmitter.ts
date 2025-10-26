@@ -9,6 +9,7 @@ import { IR1Trigger } from "../ir1/IR1Trigger";
 import { CatnipWasmStructThread } from "../../wasm-interop/CatnipWasmStructThread";
 import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
 import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
+import { VALUE_STRING_MASK } from "../../wasm-interop/CatnipWasmStructValue";
 
 export type CatnipCompilerWasmEmitFunc = ((emitter: CatnipCompilerWasmEmitter) => void) | IR1Instruction[];
 
@@ -155,6 +156,11 @@ export class CatnipCompilerWasmEmitter {
 
     public emitWasmPushString(str: string): void {
         this.emitWasmPushNumber(SpiderNumberType.i32, this.createCanonHString(str));
+    }
+
+    public emitWasmPushBoxedString(str: string): void {
+        this.emitWasmPushNumber(SpiderNumberType.i64, VALUE_STRING_MASK | BigInt(this.createCanonHString("")));
+        this.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
     }
 
     public emitWasmRuntimeFunctionCall(funcName: CatnipRuntimeModuleFunctionName) {

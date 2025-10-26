@@ -1,3 +1,4 @@
+import { SpiderNumberType } from "wasm-spider";
 import { Cast, catnip_compiler_constant } from "./cast";
 import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
@@ -68,6 +69,10 @@ export class CatnipValue {
 
     public isSometimesFormat(format: CatnipValueFormat): boolean {
         return CatnipValueFormatUtils.isSometimes(this.format, format);
+    }
+
+    public getSpiderType(): SpiderNumberType {
+        return CatnipValueFormatUtils.getFormatSpiderType(this.format);
     }
 
     public or(other: CatnipValue): CatnipValue {

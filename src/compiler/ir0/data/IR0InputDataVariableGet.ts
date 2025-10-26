@@ -9,12 +9,12 @@ import { IR0Input } from "../IR0Node";
 
 export class IR0InputDataVariableGet extends IR0Input {
 
-    public readonly target: CatnipTarget;
+    public readonly target: CatnipTarget | null;
     public readonly variable: CatnipVariable;
 
     public result: CatnipValue;
 
-    public constructor(target: CatnipTarget, variable: CatnipVariable) {
+    public constructor(target: CatnipTarget | null, variable: CatnipVariable) {
         super("data_var_get", {});
         this.target = target;
         this.variable = variable;

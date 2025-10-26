@@ -1,36 +1,32 @@
 
-// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { CatnipSpriteID } from "../../runtime/CatnipSprite";
-// import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
-// import { registerSB3CommandBlock } from "../../sb3_ops";
-// import { CatnipIr } from "../../compiler/CatnipIr";
-// import { CatnipListID } from "../../runtime/CatnipList";
-// import { ir_delete_list_item } from "../../compiler/ir/data/delete_list_item";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { IR0CmdDataListDeleteItem } from "../../compiler/ir0/data/IR0CmdDataListDeleteItem";
+import { CatnipListID } from "../../runtime/CatnipList";
+import { CatnipSpriteID } from "../../runtime/CatnipSprite";
+import { registerSB3CommandBlock } from "../../sb3_ops";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
-// type delete_list_item_inputs = { sprite: CatnipSpriteID, list: CatnipListID, index: CatnipInputOp };
+type delete_list_item_inputs = { sprite: CatnipSpriteID, list: CatnipListID, index: CatnipInputOp };
 
-// export const op_delete_list_item = new class extends CatnipCommandOpType<delete_list_item_inputs> {
-//     public *getInputsAndSubstacks(ir: CatnipIr, inputs: delete_list_item_inputs): IterableIterator<CatnipOp> {
-//         yield inputs.index;
-//     }
-    
-//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: delete_list_item_inputs): void {
-//         ctx.emitInput(inputs.index, CatnipValueFormat.F64 | CatnipValueFormat.I32_NUMBER);
+export const op_delete_list_item = new class extends CatnipCommandOpType<delete_list_item_inputs> {
+    public *getInputsAndSubstacks(inputs: delete_list_item_inputs): IterableIterator<CatnipInputOp | CatnipCommandList> {
+        yield inputs.index;
+    }
 
-//         const sprite = ctx.project.getSprite(inputs.sprite)!;
-//         const target = sprite.defaultTarget;
-//         const list = sprite.getList(inputs.list)!;
+    public generateIr(ctx: IR0Emitter, inputs: delete_list_item_inputs): void {
+        const sprite = ctx.project.getSprite(inputs.sprite)!;
+        const target = sprite.defaultTarget;
+        const list = sprite.getList(inputs.list)!;
 
-//         ctx.emitIr(ir_delete_list_item, { target, list }, {});
-//     }
-// }
+        ctx.emitCommand(new IR0CmdDataListDeleteItem(list, target, ctx.emitInput(inputs.index)));
+    }
+}
 
-// registerSB3CommandBlock("data_deleteoflist", (ctx, block) => {
-//     const listInfo = ctx.getList(block.fields.LIST);
-//     return op_delete_list_item.create({
-//         sprite: listInfo.spriteID,
-//         list: listInfo.listID,
-//         index: ctx.readInput(block.inputs.INDEX),
-//     });
-// });
+registerSB3CommandBlock("data_deleteoflist", (ctx, block) => {
+    const listInfo = ctx.getList(block.fields.LIST);
+    return op_delete_list_item.create({
+        sprite: listInfo.spriteID,
+        list: listInfo.listID,
+        index: ctx.readInput(block.inputs.INDEX),
+    });
+});
