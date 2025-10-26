@@ -37,9 +37,9 @@ export const op_procedure_arg_get = new class extends CatnipInputOpType<procedur
             CatnipCompilerLogger.warn(`Can't find parameter with name '${inputs.argName}' in script.`);
 
             if (inputs.format === CatnipValueFormat.I32_BOOLEAN) {
-                return new IR0InputConst(false, CatnipValueFormat.I32_BOOLEAN);
+                return ctx.emitConst(false, CatnipValueFormat.I32_BOOLEAN);
             } else {
-                return new IR0InputConst("", CatnipValueFormat.F64);
+                return ctx.emitConst("", CatnipValueFormat.F64);
             }
         }
 

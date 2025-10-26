@@ -1,6 +1,5 @@
 import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
 import { IR0CmdTransientSet } from "../../compiler/ir0/core/IR0CmdTransientSet";
-import { IR0InputConst } from "../../compiler/ir0/core/IR0InputConst";
 import { IR0InputTransientGet } from "../../compiler/ir0/core/IR0InputTransientGet";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
 import { IR0InputOperatorCmpGt } from "../../compiler/ir0/operators/IR0InputOperatorCmpGt";
@@ -30,7 +29,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
             emitter.emitCondition(
                 new IR0InputOperatorCmpGt(
                     new IR0InputTransientGet(loopCount),
-                    new IR0InputConst(0)
+                    emitter.emitConst(0)
                 ),
 
                 emitter => {
@@ -40,7 +39,7 @@ export const op_repeat = new class extends CatnipCommandOpType<repeat_inputs> {
                     ctx.emitCommand(new IR0CmdTransientSet(loopCount, 
                         new IR0InputOperatorSub(
                             new IR0InputTransientGet(loopCount),
-                            new IR0InputConst(1)
+                            emitter.emitConst(1)
                         )
                     ));
 

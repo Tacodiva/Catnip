@@ -1,8 +1,7 @@
 import { catnip_compiler_constant } from "../../compiler/cast";
-import { IR0Input } from "../../compiler/ir0/IR0Node";
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
-import { IR0InputConst } from "../../compiler/ir0/core/IR0InputConst";
-import { CatnipCommandList, CatnipInputOp, CatnipInputOpType, CatnipOp } from "../CatnipOp";
+import { IR0Input } from "../../compiler/ir0/IR0Node";
+import { CatnipInputOpType } from "../CatnipOp";
 
 type const_inputs = { value: catnip_compiler_constant };
 
@@ -30,6 +29,6 @@ export const op_const = new class extends CatnipInputOpType<const_inputs> {
         //         break;
         // }
 
-        return new IR0InputConst(inputs.value);
+        return ctx.emitConst(inputs.value);
     }
 }

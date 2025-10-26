@@ -13,6 +13,7 @@ export const op_goto_xy = new class extends CatnipCommandOpType<goto_xy_inputs> 
     }
     
     public generateIr(ctx: IR0Emitter, inputs: goto_xy_inputs): void {
+        ctx.emitRequestRedraw();
         ctx.emitCommand(new IR0CmdMotionSetXY(
             ctx.emitInput(inputs.x),
             ctx.emitInput(inputs.y)

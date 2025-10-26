@@ -1,6 +1,7 @@
 import { CatnipCommandList, CatnipInputOp } from "../../ops";
 import { CatnipScript } from "../../runtime/CatnipScript";
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
+import { catnip_compiler_constant } from "../cast";
 import { catnip_compiler_callback } from "../CatnipCompiler";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
@@ -8,6 +9,7 @@ import { CatnipValueFormat } from "../CatnipValueFormat";
 import { IR0CmdCallback } from "./core/IR0CmdCallback";
 import { IR0CmdRequestRedraw } from "./core/IR0CmdRequestRedraw";
 import { IR0InputCallback } from "./core/IR0InputCallback";
+import { IR0InputConst } from "./core/IR0InputConst";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
 import { IR0Logger } from "./IR0Logger";
@@ -51,6 +53,10 @@ export class IR0Emitter {
 
     public emitInput(input: CatnipInputOp) {
         return input.type.generateIr(this, input.inputs);
+    }
+
+    public emitConst(value: catnip_compiler_constant, format?: CatnipValueFormat): IR0InputConst {
+        return new IR0InputConst(value, format);
     }
 
     public emitCommands(commands: CatnipCommandList) {
