@@ -863,7 +863,6 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
     }
 
     if (detect_radix != -1) {
-      // TODO Flags stuff here
       radix = detect_radix;
       p += 2;
       p_len -= 2;
@@ -912,7 +911,7 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
         // }
       }
 
-      // if ((flags & DUK_S2N_FLAG_ALLOW_FRAC) == 0) {
+      if (radix != 10) {
       //   /* Some contexts don't allow fractions at all; this can't be a
       //    * post-check because the state ('f' and expt) would be incorrect.
       //    */
@@ -922,14 +921,15 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
       //   } else {
       //     DUK_DDD(DUK_DDDPRINT("parse failed: fraction part not allowed"));
       //   }
-      // }
+        break;
+      }
 
       // DUK_DDD(DUK_DDDPRINT("start fraction part"));
       dig_frac = 0;
       continue;
       // } else if ((flags & DUK_S2N_FLAG_ALLOW_EXP) && dig_expt < 0 &&
       //            (ch == (catnip_i32_t)'e' || ch == (catnip_i32_t)'E')) {
-    } else if (dig_expt < 0 && (ch == (catnip_i32_t)'e' || ch == (catnip_i32_t)'E')) {
+    } else if (radix == 10 && dig_expt < 0 && (ch == (catnip_i32_t)'e' || ch == (catnip_i32_t)'E')) {
       /* Note: we don't parse back exponent notation for anything else
        * than radix 10, so this is not an ambiguous check (e.g. hex
        * exponent values may have 'e' either as a significand digit
@@ -1042,11 +1042,11 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
       goto parse_fail;
     } else if (dig_frac > 0) {
       /* ".123" */
-      // if ((flags & DUK_S2N_FLAG_ALLOW_NAKED_FRAC) == 0) {
+      if (radix != 10) {
       //   DUK_DDD(DUK_DDDPRINT("parse failed: fraction part not allowed without "
       //                        "leading integer digit(s)"));
-      //   goto parse_fail;
-      // }
+        goto parse_fail;
+      }
     } else {
       /* Empty ("") is allowed in some formats (e.g. Number(''), as zero,
        * but it must not have a leading +/- sign (GH-2019).  Note that
@@ -1065,10 +1065,10 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
   } else {
     if (dig_frac == 0) {
       /* "123." is allowed in some formats */
-      // if ((flags & DUK_S2N_FLAG_ALLOW_EMPTY_FRAC) == 0) {
+      if (radix != 10) {
       //   DUK_DDD(DUK_DDDPRINT("parse failed: empty fractions"));
-      //   goto parse_fail;
-      // }
+        goto parse_fail;
+      }
     } else if (dig_frac > 0) {
       /* "123.456" */
       ;
