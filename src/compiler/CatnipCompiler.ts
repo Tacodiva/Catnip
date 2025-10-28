@@ -257,30 +257,33 @@ export class CatnipCompiler {
             }
         }
 
-        if (globalThis.window && this.config.dump_wasm_blob) {
-            const downloadURL = (data: string, fileName: string) => {
-                const a = document.createElement('a')
-                a.href = data
-                a.download = fileName
-                document.body.appendChild(a)
-                a.style.display = 'none'
-                a.click()
-                a.remove()
-            }
-
-            const downloadBlob = (data: Uint8Array, fileName: string, mimeType: string) => {
-
-                const blob = new Blob([data] as any, {
-                    type: mimeType
+        if (this.config.dump_wasm_blob) {
+            if (globalThis.window) {
+                const blob = new Blob([moduleSource] as any, {
+                    type: "application/wasm"
                 })
 
                 const url = window.URL.createObjectURL(blob)
 
-                downloadURL(url, fileName)
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = this.config.dump_wasm_blob;
+                document.body.appendChild(a);
+                a.style.display = 'none';
+                a.click();
+                a.remove();
 
-                setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+                setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+                CatnipCompilerLogger.log(`Downloaded WASM blob '${this.config.dump_wasm_blob}'.`);
+
+            } else if (typeof process !== 'undefined') {
+
+                (await import('node:fs')).writeFileSync(this.config.dump_wasm_blob, moduleSource);
+                CatnipCompilerLogger.log(`Saved WASM blob to '${this.config.dump_wasm_blob}'.`);
+
+            } else {
+                CatnipCompilerLogger.warn("Unable to dump WASM blob.");
             }
-            downloadBlob(moduleSource, "catnip_output.wasm", "application/wasm");
         }
 
         this._transitionStage(CatnipCompilerStage.MODULE_INSTANTIATE);

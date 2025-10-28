@@ -166,7 +166,7 @@ export class IR0ToIR1Info {
             }
 
             // The head will always be a function
-            script.entrypoint = createFunction(script.ir0.head, false, script.ir1.entrypoint);
+            script.entrypoint = createFunction(script.ir0.head, script.ir1.trigger.isTopLevel, script.ir1.entrypoint);
 
             // Figure out which basic blocks must be function heads
             script.ir0.forEachBasicBlock(block => {

@@ -27,6 +27,7 @@ export class CatnipCompilerWasmEmitter {
     public readonly spiderFunction: SpiderFunctionDefinition;
 
     public get spriteID() { return this.ir1Function.script.spriteID; }
+    public get sprite() { return this.compiler.project.getSprite(this.spriteID); }
 
     private readonly _threadParameter: SpiderLocalParameterReference;
     private readonly _externalValueReferences: readonly SpiderLocalReference[];

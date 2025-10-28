@@ -15,16 +15,16 @@ async function main() {
     // const projectFile = await fs.readFile("public/Variable inlining bug.sb3");
     // const projectFile = await fs.readFile("public/Conway.sb3");    
     // const projectFile = await fs.readFile("public/fib.sb3");
-    // const projectFile = await fs.readFile("public/LOS.sb3");
+    // const projectFile = await fs.readFile("public/LOS2.sb3");
 
     const project = await run(catnipModule, projectFile);
     const projectModule = await project.compile({
         // dump_ir0: "advanced",
-        // dump_ir0: "advanced",
-        dump_ir1: true,
+        dump_ir0: "advanced",
+        // dump_ir1: true,
         // dump_binaryen: "stack",
-        // enable_compiler_timing: true,
-        // dump_wasm_blob: true,
+        enable_compiler_timing: true,
+        // dump_wasm_blob: "los.wasm",
         
         enable_optimization_binaryen: false,
         // enable_optimization_constant_folding: false,
@@ -34,16 +34,16 @@ async function main() {
         // enable_optimization_dead_branch_elimination: false,
         enable_optimization_variable_analysis: false,
 
-        events: {
-            PROJECT_BROADCAST: {
-                enable_js_listeners: true
-            }
-        }
+        // events: {
+        //     PROJECT_BROADCAST: {
+        //         enable_js_listeners: true
+        //     }
+        // }
     });
 
-    projectModule.addEventListener("PROJECT_BROADCAST", (name) => {
-        console.log(`Received broadcast '${name}'`)
-    })
+    // projectModule.addEventListener("PROJECT_BROADCAST", (name) => {
+    //     console.log(`Received broadcast '${name}'`)
+    // })
 
     projectModule.start();
 

@@ -115,8 +115,8 @@ export class IR0 {
             const fromNode = getNode(from);
             const toNode = getNode(to);
 
-            fromNode.out.push(toNode);
-            toNode.in.push(fromNode);
+            if (!fromNode.out.includes(toNode)) fromNode.out.push(toNode);
+            if (!toNode.in.includes(fromNode)) toNode.in.push(fromNode);
         }, includeCalls);
 
         return blocks;

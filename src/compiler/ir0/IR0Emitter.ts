@@ -39,16 +39,12 @@ export class IR0Emitter {
     }
 
     public emitAll() {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
 
         this.emitCommands(this.sb3Script.commands);
         this.completeBlock({
             type: IR0ControlFlowType.Return
         });
-    }
-
-    private assertIncomplete() {
-        IR0Logger.assert(!this.block.isComplete, true, "Block is already completed.");
     }
 
     public emitInput(input: CatnipInputOp) {
@@ -60,7 +56,7 @@ export class IR0Emitter {
     }
 
     public emitCommands(commands: CatnipCommandList) {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
 
         for (const command of commands) {
 
@@ -71,7 +67,7 @@ export class IR0Emitter {
     }
 
     public emitCommand(inst: IR0Command) {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
         this.block.commands.push(inst);
     }
 
@@ -88,19 +84,19 @@ export class IR0Emitter {
     }
 
     public emitReturn() {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
         this.completeBlock({ type: IR0ControlFlowType.Return });
     }
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD) {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
         const nextBlock = new IR0BasicBlock(this.ir0Script);
         this.completeBlock({ type: IR0ControlFlowType.Next, status, next: nextBlock });
         this.block = nextBlock;
     }
 
     public emitFlow(block: IR0BasicBlock) {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
         this.completeBlock(block);
     }
 
@@ -111,7 +107,7 @@ export class IR0Emitter {
     }
 
     public emitCall(procedure: IR0Script, args: IR0Input[]) {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
 
         const nextBlock = new IR0BasicBlock(this.ir0Script);
 
@@ -165,7 +161,7 @@ export class IR0Emitter {
     }
 
     public emitInlineBlock(emitter: IR0EmitterFunc) {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
 
         const innerBlock = new IR0BasicBlock(this.ir0Script);
         this.completeBlock(innerBlock);
@@ -179,7 +175,7 @@ export class IR0Emitter {
     }
 
     public emitCondition(condition: IR0Input, passEmitter: IR0EmitterFunc, failEmitter?: IR0EmitterFunc) {
-        this.assertIncomplete();
+        if (this.block.isComplete) return;
 
         const tail = new IR0BasicBlock(this.ir0Script);
 

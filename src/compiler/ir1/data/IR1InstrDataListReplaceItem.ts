@@ -22,13 +22,8 @@ export class IR1InstrDataListReplaceItem extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        const uncastIndexVariable = emitter.borrowLocal(this.index.getSpiderType());
-        emitter.emitWasm(SpiderOpcodes.local_set, uncastIndexVariable);
-
         const valueVariable = emitter.borrowLocal(SpiderNumberType.f64);
         emitter.emitWasm(SpiderOpcodes.local_set, valueVariable);
-
-        emitter.emitWasm(SpiderOpcodes.local_get, uncastIndexVariable);
 
         ListUtils.emitListBoundsCheck(emitter,
             {
@@ -50,6 +45,8 @@ export class IR1InstrDataListReplaceItem extends IR1Instruction {
                 // Invalid index
             }
         );
+
+        emitter.returnLocal(valueVariable);
     }
 
     public stringify(ctx: IR1StringificationContext): void {

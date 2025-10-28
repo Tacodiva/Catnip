@@ -114,7 +114,7 @@ export const ListUtils = new class {
                         emitter.emitWasm(SpiderOpcodes.local_get, rawIndexVariable);
 
                         IR1InstrCast.emitStringCheck(emitter, index.format,
-                            (ctx, depth) => {
+                            (ctx, format, depth) => {
                                 // The index is a string.
 
                                 ctx.emitWasm(SpiderOpcodes.local_get, rawIndexVariable);

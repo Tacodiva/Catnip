@@ -4,7 +4,7 @@ import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructTh
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
-import { IR1Function } from "../IR1Function";
+import { IR1ExternalValueSourceType, IR1Function } from "../IR1Function";
 
 
 export class IR1InstrYield extends IR1Instruction {
@@ -33,7 +33,7 @@ export class IR1InstrYield extends IR1Instruction {
     }
 
     public stringify(ctx: IR1StringificationContext): void {
-        ctx.writeLine(`yield ${ctx.getFunctionName(this.func)} status = ${this.status}`);
+        ctx.writeLine(`yield ${ctx.getFunctionName(this.func)} ${CatnipWasmEnumThreadStatus[this.status]}`);
     }
 
 }

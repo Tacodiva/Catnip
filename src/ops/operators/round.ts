@@ -1,14 +1,11 @@
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { ir_not } from "../../compiler/ir/operators/not";
-// import { ir_round } from "../../compiler/ir/operators/round";
-// import { registerSB3InputBlock } from "../../sb3_ops";
-// import { CatnipInputUnaryOpType } from "./UnaryOperator";
+import { IR0InputOperatorRound } from "../../compiler/ir0/operators/IR0InputOperatorRound";
+import { registerSB3InputBlock } from "../../sb3_ops";
+import { CatnipInputUnaryOpType } from "./UnaryOperator";
 
-// export const op_round = new CatnipInputUnaryOpType((ctx, inputs) => {
-//     ctx.emitInput(inputs.value, CatnipValueFormat.F64_INT);
-//     ctx.emitIr(ir_round, { }, {});
-// });
+export const op_round = new CatnipInputUnaryOpType((ctx, input) => 
+    new IR0InputOperatorRound(ctx.emitInput(input))
+);
 
-// registerSB3InputBlock("operator_round", (ctx, block) => op_round.create({
-//     value: ctx.readInput(block.inputs.NUM),
-// }));
+registerSB3InputBlock("operator_round", (ctx, block) => op_round.create({
+    value: ctx.readInput(block.inputs.NUM),
+}));

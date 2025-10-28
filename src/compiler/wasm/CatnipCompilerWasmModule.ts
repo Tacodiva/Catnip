@@ -10,6 +10,7 @@ import { CatnipCompilerWasmEvent, CatnipCompilerWasmEventFilter } from "./Catnip
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipProjectModuleEvent } from "../../runtime/CatnipProjectModule";
 import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "../CatnipCompilerModuleSubsystem";
+import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 
@@ -246,7 +247,7 @@ export class CatnipCompilerWasmModule {
         let counter = 1;
         let uniqueName = name;
 
-        while (taken.has(name)) {
+        while (taken.has(uniqueName)) {
             uniqueName = `${name}_${counter++}`;
         }
 
@@ -299,7 +300,7 @@ export class CatnipCompilerWasmModule {
     }
 
     public addEventListener(
-        id: CatnipEventID, func: SpiderFunction, 
+        id: CatnipEventID, func: SpiderFunction,
         filter: CatnipCompilerWasmEventFilter = CatnipCompilerWasmEventFilter.ANY,
         force: boolean = false
     ): void {
@@ -349,7 +350,14 @@ export class CatnipCompilerWasmModule {
 
     public write(): Uint8Array {
         this.compiler.assertStage(CatnipCompilerStage.MODULE_WRITE);
-        return writeModule(this.spiderModule, { mergeTypes: false });
+        const module = writeModule(this.spiderModule, { mergeTypes: false });
+
+        const largestFunctionIndex = this._functionTableOffset + this._functionTable.length;
+        if (largestFunctionIndex > this.runtimeModule.indirectFunctionTable.length) {
+            this.runtimeModule.indirectFunctionTable.grow(largestFunctionIndex - this.runtimeModule.indirectFunctionTable.length);
+        }
+
+        return module;
     }
 
 }

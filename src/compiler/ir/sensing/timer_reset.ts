@@ -1,7 +1,7 @@
 import { SpiderOpcodes } from "wasm-spider";
+import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 import { CatnipCompilerWasmGenContext } from "../../CatnipCompilerWasmGenContext";
 import { CatnipIrCommandOpType, CatnipIrInputOp } from "../../CatnipIrOp";
-import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 
 export const ir_timer_reset = new class extends CatnipIrCommandOpType<{}> {
     public constructor() { super("sensing_timer_reset"); }

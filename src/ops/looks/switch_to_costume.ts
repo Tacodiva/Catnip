@@ -1,32 +1,27 @@
 
-// import { CatnipCompilerIrGenContext } from "../../compiler/CatnipCompilerIrGenContext";
-// import { CatnipIr } from "../../compiler/CatnipIr";
-// import { CatnipValueFormat } from "../../compiler/CatnipValueFormat";
-// import { ir_request_redraw } from "../../compiler/ir/core/request_redraw";
-// import { ir_set_costume } from "../../compiler/ir/looks/set_costume";
-// import { CatnipSpriteID } from "../../runtime/CatnipSprite";
-// import { registerSB3CommandBlock } from "../../sb3_ops";
-// import { CatnipCommandOpType, CatnipInputOp, CatnipOp } from "../CatnipOp";
+import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { IR0CmdLooksCostumeSet } from "../../compiler/ir0/looks/IR0CmdLooksCostumeSet";
+import { CatnipSpriteID } from "../../runtime/CatnipSprite";
+import { registerSB3CommandBlock } from "../../sb3_ops";
+import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
-// type switch_to_costume = { sprite: CatnipSpriteID, costume: CatnipInputOp };
+type switch_to_costume = { sprite: CatnipSpriteID, costume: CatnipInputOp };
 
-// export const op_switch_to_costume = new class extends CatnipCommandOpType<switch_to_costume> {
+export const op_switch_to_costume = new class extends CatnipCommandOpType<switch_to_costume> {
+    public *getInputsAndSubstacks(inputs: switch_to_costume): IterableIterator<CatnipInputOp | CatnipCommandList> {
+        yield inputs.costume;
+    }
 
-//     public *getInputsAndSubstacks(ir: CatnipIr, inputs: switch_to_costume): IterableIterator<CatnipOp> {
-//         yield inputs.costume;
-//     }
-
-//     public generateIr(ctx: CatnipCompilerIrGenContext, inputs: switch_to_costume): void {
-//         ctx.emitInput(inputs.costume, CatnipValueFormat.F64 | CatnipValueFormat.I32_NUMBER | CatnipValueFormat.I32_HSTRING);
-//         ctx.emitIr(ir_request_redraw, {}, {});
-//         ctx.emitIr(ir_set_costume, { }, {});
-//     }
-// }
+    public generateIr(ctx: IR0Emitter, inputs: switch_to_costume): void {
+        ctx.emitRequestRedraw();
+        ctx.emitCommand(new IR0CmdLooksCostumeSet(ctx.emitInput(inputs.costume)));
+    }
+}
 
 
-// registerSB3CommandBlock("looks_switchcostumeto", (ctx, block) =>
-//     op_switch_to_costume.create({
-//         sprite: ctx.spriteDesc.id,
-//         costume: ctx.readInput(block.inputs.COSTUME)
-//     })
-// );
+registerSB3CommandBlock("looks_switchcostumeto", (ctx, block) =>
+    op_switch_to_costume.create({
+        sprite: ctx.spriteDesc.id,
+        costume: ctx.readInput(block.inputs.COSTUME)
+    })
+);

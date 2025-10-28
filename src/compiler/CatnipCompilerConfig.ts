@@ -4,7 +4,7 @@ export interface CatnipCompilerConfig {
     dump_binaryen: false | "wat" | "as" | "stack";
     dump_ir0: false | "basic" | "advanced";
     dump_ir1: boolean;
-    dump_wasm_blob: boolean;
+    dump_wasm_blob: false | string;
     enable_compiler_timing: boolean;
     enable_tail_call: boolean;
 

@@ -50,9 +50,14 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
             if (CatnipValueFormatUtils.isSometimes(this.rightFormat, CatnipValueFormat.F64_NAN)) {
 
                 const rightTemp = emitter.borrowLocal(SpiderNumberType.f64);
+                emitter.emitWasm(SpiderOpcodes.local_set, rightTemp);
+
+                const leftTemp = emitter.borrowLocal(SpiderNumberType.f64);
+                emitter.emitWasm(SpiderOpcodes.local_set, leftTemp);
+
 
                 // NaN check on the right value
-                emitter.emitWasm(SpiderOpcodes.local_tee, rightTemp);
+                emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                 emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                 emitter.emitWasm(SpiderOpcodes.f64_eq);
 
@@ -60,10 +65,9 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
                     emitter => {
                         // The right is not NaN. The left might be NaN though.
                         if (CatnipValueFormatUtils.isSometimes(this.leftFormat, CatnipValueFormat.F64_NAN)) {
-                            const leftTemp = emitter.borrowLocal(SpiderNumberType.f64);
 
                             // NaN check on the left value
-                            emitter.emitWasm(SpiderOpcodes.local_tee, leftTemp);
+                            emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                             emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                             emitter.emitWasm(SpiderOpcodes.f64_eq);
 
@@ -86,11 +90,14 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
                             emitter.returnLocal(leftTemp);
                         } else {
                             // Right is not NaN and left can't be NaN.
+                            emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
+                            emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                             emitShortcutCheck(emitter);
                         }
                     },
                     emitter => {
                         // The right is NaN.
+                        emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);
                         emitter.emitWasm(SpiderOpcodes.local_get, rightTemp);
                         emitFullCheck(emitter);
                     },

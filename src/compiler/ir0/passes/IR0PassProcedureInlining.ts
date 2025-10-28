@@ -169,7 +169,7 @@ export const IR0PassProcedureInlining: IR0Pass = {
                             visitInput(inputRef);
                     }
 
-                    for (const cmd of block.commands) visitNode(cmd);
+                    block.forEachRootNode(visitNode, visitInput);
 
                     if (block.flow.type === IR0ControlFlowType.Return) {
                         // Return now branches to where we would have returned to
