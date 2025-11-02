@@ -1,4 +1,5 @@
 import { IR0Emitter } from "../../compiler/ir0/IR0Emitter";
+import { IR0CmdPenClear } from "../../compiler/ir0/pen/IR0CmdPenClear";
 import { registerSB3CommandBlock } from "../../sb3_ops";
 import { CatnipCommandList, CatnipCommandOpType, CatnipInputOp } from "../CatnipOp";
 
@@ -8,11 +9,7 @@ export const op_erase_all = new class extends CatnipCommandOpType<{}> {
 
     public generateIr(ctx: IR0Emitter, inputs: {}): void {
         ctx.emitRequestRedraw();
-
-        // TODO Check this doesn't import a different function every time
-        ctx.emitCallbackCommand("erase_all", () => {
-            ctx.compiler.runtimeModule.renderer.penEraseAll();
-        }, {});
+        ctx.emitCommand(new IR0CmdPenClear());
     }
 
 }

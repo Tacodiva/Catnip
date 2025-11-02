@@ -201,37 +201,7 @@ export class IR1InstrCast extends IR1Instruction {
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
                     if (emitter !== null) {
                         this.emitConversion(emitter, src, CatnipValueFormat.F64_INT);
-
-                        const value = emitter.borrowLocal(src);
-                        emitter.emitWasm(SpiderOpcodes.local_tee, value);
-
-                        emitter.emitWasmPushNumber(SpiderNumberType.f64, -2147483648); // Min 32-bit signed integer
-                        emitter.emitWasm(SpiderOpcodes.f64_lt);
-
-                        emitter.emitWasmIf(
-                            (emitter) => {
-                                emitter.emitWasmPushNumber(SpiderNumberType.i32, -2147483648);
-                            },
-                            (emitter) => {
-                                emitter.emitWasm(SpiderOpcodes.local_get, value);
-                                emitter.emitWasmPushNumber(SpiderNumberType.f64, 2147483647); // Max 32-bit signed integer
-                                emitter.emitWasm(SpiderOpcodes.f64_gt);
-
-                                emitter.emitWasmIf(
-                                    (emitter) => {
-                                        emitter.emitWasmPushNumber(SpiderNumberType.i32, 2147483647);
-                                    },
-                                    (emitter) => {
-                                        emitter.emitWasm(SpiderOpcodes.local_get, value);
-                                        emitter.emitWasm(SpiderOpcodes.i32_trunc_f64_s);
-                                    },
-                                    SpiderNumberType.i32
-                                );
-                            },
-                            SpiderNumberType.i32
-                        );
-
-                        emitter.returnLocal(value);
+                        emitter.emitWasm(SpiderOpcodes.i32_trunc_sat_f64_s);
                     }
 
                     return CatnipValueFormat.I32_NUMBER;

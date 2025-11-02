@@ -26,6 +26,7 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
     gc_page: WasmPtrVoid,
     gc_pages: CatnipWasmStructList,
     gc_large_objs: CatnipWasmStructList,
+    gc_max_pages: WasmInt32,
 
     gc_temp_enabled: WasmBool32,
     gc_temp_page: WasmPtrVoid,
