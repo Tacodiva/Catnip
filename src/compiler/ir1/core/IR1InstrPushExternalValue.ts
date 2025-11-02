@@ -1,10 +1,9 @@
 
-import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
+import { SpiderOpcodes } from "wasm-spider";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
+import { IR1ExternalValue } from "../IR1ExternalValue";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
-import { IR1Function } from "../IR1Function";
-import { IR1ExternalValue, IR1ExternalValueType } from "../IR1ExternalValue";
 
 export class IR1InstrPushExternalValue extends IR1Instruction {
 

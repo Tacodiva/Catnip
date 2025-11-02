@@ -213,9 +213,10 @@ export const ir_convert = new class extends CatnipIrInputOpType<convert_ir_input
                     // Convert from a number to a string
                     if (ctx !== null) {
                         ctx.emitWasmGetRuntime();
-                        ctx.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
+                        ctx.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64_gc");
                     }
 
+                    
                     return CatnipValueFormat.I32_HSTRING;
                 }
 
@@ -406,7 +407,6 @@ export const ir_convert = new class extends CatnipIrInputOpType<convert_ir_input
                         ctx.pushExpression();
                         // The first character is not a '#', we will try to parse it into a number then a color
                         ctx.emitWasm(SpiderOpcodes.local_get, strPtr.ref);
-                        ctx.emitWasmGetRuntime();
                         ctx.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
 
                         this.emitConversion(ctx, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);

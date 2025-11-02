@@ -1,15 +1,26 @@
 import { SpiderExpression, SpiderFunctionDefinition, SpiderLocalParameterReference, SpiderLocalReference, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes, SpiderValueType } from "wasm-spider";
-import { CatnipCompilerWasmModule } from "./CatnipCompilerWasmModule";
-import { IR1Instruction } from "../ir1/IR1Instruction";
-import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
-import { IR1ToWasmInfo } from '../ir1/IR1ToWasmInfo';
 import { CatnipRuntimeModuleFunctionName } from "../../runtime/CatnipRuntimeModuleFunctions";
-import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
-import { IR1Trigger } from "../ir1/IR1Trigger";
 import { CatnipWasmStructThread } from "../../wasm-interop/CatnipWasmStructThread";
-import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
+import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../wasm-interop/CatnipWasmStructValue";
+import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
+import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
-import { VALUE_STRING_MASK } from "../../wasm-interop/CatnipWasmStructValue";
+import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
+import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
+import { IR1Instruction } from "../ir1/IR1Instruction";
+import { IR1ToWasmInfo } from '../ir1/IR1ToWasmInfo';
+import { IR1Trigger } from "../ir1/IR1Trigger";
+import { CatnipWasmStructRuntime } from "../../wasm-interop/CatnipWasmStructRuntime";
+
+export type CatnipCompilerWasmEmitStackFrame = {
+    local: SpiderLocalReference,
+    format: CatnipValueFormat
+}[];
+
+interface GCFrameInfo {
+    gcIndex: SpiderLocalReference | null;
+    frame: CatnipCompilerWasmEmitStackFrame;
+}
 
 export type CatnipCompilerWasmEmitFunc = ((emitter: CatnipCompilerWasmEmitter) => void) | IR1Instruction[];
 
@@ -35,8 +46,10 @@ export class CatnipCompilerWasmEmitter {
 
     private _expression: SpiderExpression;
 
-    private _locals: Map<SpiderValueType, SpiderLocalVariableReference[]>;
-    private _localsUnreturnedCount: number;
+    private _locals: Map<SpiderValueType, SpiderLocalReference[]>;
+    private _borrowedLocals: Map<SpiderLocalReference, CatnipValueFormat>;
+
+    private _gcFrameInfo: GCFrameInfo | null;
 
     public constructor(conversionInfo: IR1ToWasmInfo, func: IR1Function) {
         this.conversionInfo = conversionInfo;
@@ -45,7 +58,9 @@ export class CatnipCompilerWasmEmitter {
         this.spiderFunction = this.conversionInfo.getSpiderFunction(func);
         this._expression = this.spiderFunction.body;
         this._locals = new Map();
-        this._localsUnreturnedCount = 0;
+        this._borrowedLocals = new Map();
+
+        this._gcFrameInfo = null;
 
         CatnipCompilerLogger.assert(this.spiderFunction.parameters.length === 0);
 
@@ -60,49 +75,18 @@ export class CatnipCompilerWasmEmitter {
         this._threadParameter = this.spiderFunction.addParameter(SpiderNumberType.i32);
 
         if (this.ir1Function.externalValueSource === IR1ExternalValueSourceType.STACK) {
-            const frameSizeBytes = this.ir1Function.externalValues.length * 8;
 
-            if (frameSizeBytes !== 0) {
-                // We subtract the frame size from the stack pointer to get the base of our frame
-                this.emitWasmPushStackPtr();
-                this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
-                this.emitWasm(SpiderOpcodes.i32_sub);
+            const frame: CatnipCompilerWasmEmitStackFrame = [];
 
-                const stackPointer = this.borrowLocal(SpiderNumberType.i32);
-                this.emitWasm(SpiderOpcodes.local_set, stackPointer);
-
-                let stackOffset = 0;
-                // We need to get the values off of the stack. They were stored in reverse order.
-                for (const externalValue of [...this.ir1Function.externalValues].reverse()) {
-
-                    const spiderType = IR1ExternalValue.getSpiderType(externalValue);
-
-                    this.emitWasm(SpiderOpcodes.local_get, stackPointer);
-
-                    if (spiderType === SpiderNumberType.i32) {
-                        this.emitWasm(SpiderOpcodes.i32_load, 2, stackOffset);
-                    } else {
-                        CatnipCompilerLogger.assert(spiderType === SpiderNumberType.f64);
-                        this.emitWasm(SpiderOpcodes.f64_load, 3, stackOffset);
-                    }
-
-                    const local = this.spiderFunction.addLocalVariable(spiderType);
-                    this.emitWasm(SpiderOpcodes.local_set, local);
-                    externalValueReferences.push(local);
-
-                    stackOffset += 8;
-                }
-
-                // Reverse again to go back to the correct order
-                externalValueReferences.reverse();
-
-                // Now that we've read everything, store the new stack pointer
-                this.emitWasmPushThread();
-                this.emitWasm(SpiderOpcodes.local_get, stackPointer);
-                this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
-
-                this.returnLocal(stackPointer);
+            for (const externalValue of this.ir1Function.externalValues) {
+                const format = IR1ExternalValue.getFormat(externalValue);
+                const local = this.spiderFunction.addLocalVariable(CatnipValueFormatUtils.getFormatSpiderType(format));
+                frame.push({ local, format });
+                externalValueReferences.push(local)
             }
+
+            // The values were stored in reverse, so we pop them in reverse too
+            this.emitPopFrame(frame.reverse());
         }
 
         this._externalValueReferences = externalValueReferences;
@@ -201,6 +185,8 @@ export class CatnipCompilerWasmEmitter {
             }
         }
 
+        CatnipCompilerLogger.assert(this.ir1Function.externalValues.length === this._externalValueReferences.length);
+
         for (let i = 0; i < this.ir1Function.externalValues.length; i++) {
             const externalValue = this.ir1Function.externalValues[i];
 
@@ -229,7 +215,8 @@ export class CatnipCompilerWasmEmitter {
         return newExpression;
     }
 
-    public borrowLocal(type: SpiderNumberType): SpiderLocalVariableReference {
+    public borrowLocal(format: CatnipValueFormat): SpiderLocalReference {
+        const type = CatnipValueFormatUtils.getFormatSpiderType(format);
         let locals = this._locals.get(type);
 
         if (locals === undefined)
@@ -240,24 +227,238 @@ export class CatnipCompilerWasmEmitter {
         if (local === undefined)
             local = this.spiderFunction.addLocalVariable(type);
 
-        ++this._localsUnreturnedCount;
+        this._borrowedLocals.set(local, format);
 
         return local;
     }
 
-    public returnLocal(local: SpiderLocalVariableReference): void {
+    public returnLocal(local: SpiderLocalReference): void {
         let locals = this._locals.get(local.value);
 
         if (locals === undefined)
             this._locals.set(local.value, locals = []);
 
-        --this._localsUnreturnedCount;
+        this._borrowedLocals.delete(local);
 
         locals.push(local);
     }
 
     public finish() {
-        if (this._localsUnreturnedCount !== 0)
+        if (this._borrowedLocals.size !== 0)
             CatnipCompilerLogger.warn(`WASM generation of function has unreleased locals.`);
+    }
+
+    public emitPushFrame(frame: CatnipCompilerWasmEmitStackFrame) {
+        const frameSizeBytes = frame.length * 8;
+
+        if (frameSizeBytes === 0) return;
+
+        this.emitWasmPushStackEnd();
+
+        // Get the stack pointer and save it it a local
+        this.emitWasmPushStackPtr();
+        const baseStackPtrVar = this.borrowLocal(CatnipValueFormat.I32_NUMBER);
+        this.emitWasm(SpiderOpcodes.local_tee, baseStackPtrVar);
+
+        // Add the stack size
+        this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
+        this.emitWasm(SpiderOpcodes.i32_add);
+
+        // Save the new stack pointer
+        const newStackPtrVar = this.borrowLocal(CatnipValueFormat.I32_NUMBER);
+        this.emitWasm(SpiderOpcodes.local_tee, newStackPtrVar);
+
+        // (stackEnd < stackPtr + targetFunc.stackSize)
+        this.emitWasm(SpiderOpcodes.i32_lt_u);
+
+        this.emitWasmIf(emitter => {
+            // The stack is not big enough :c, let's resize it :3
+            emitter.emitWasmPushThread();
+            emitter.emitWasmPushNumber(SpiderNumberType.i32, frame.length);
+            emitter.emitWasmRuntimeFunctionCall("catnip_thread_resize_stack");
+
+            emitter.emitWasmPushStackPtr();
+            // Update the base stack pointer local
+            emitter.emitWasm(SpiderOpcodes.local_tee, baseStackPtrVar);
+
+            // Update the new stack pointer local
+            emitter.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
+            emitter.emitWasm(SpiderOpcodes.i32_add);
+            emitter.emitWasm(SpiderOpcodes.local_set, newStackPtrVar);
+        });
+
+        let stackOffset = 0;
+
+        for (const frameValue of frame) {
+
+            this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar);
+            this.emitWasm(SpiderOpcodes.local_get, frameValue.local);
+
+            // We store it as a boxed f64 then undo this when we load it from the stack again
+            if (CatnipValueFormatUtils.isAlways(frameValue.format, CatnipValueFormat.I32_HSTRING)) {
+
+                // This is so GC can track we're using this string
+                this.emitWasm(SpiderOpcodes.i32_store, 2, stackOffset);
+
+                // Store the upper bits
+                this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar);
+                this.emitWasmPushNumber(SpiderNumberType.i32, VALUE_STRING_UPPER);
+                this.emitWasm(SpiderOpcodes.i32_store, 2, stackOffset + 4);
+
+            } else if (CatnipValueFormatUtils.isAlways(frameValue.format, CatnipValueFormat.I32_NUMBER)) {
+
+                this.emitWasm(SpiderOpcodes.i32_store, 2, stackOffset);
+
+                // Clear the upper bits
+                this.emitWasm(SpiderOpcodes.local_get, baseStackPtrVar);
+                this.emitWasmPushNumber(SpiderNumberType.i32, 0);
+                this.emitWasm(SpiderOpcodes.i32_store, 2, stackOffset + 4);
+
+            } else if (CatnipValueFormatUtils.isAlways(frameValue.format, CatnipValueFormat.F64)) {
+
+                this.emitWasm(SpiderOpcodes.f64_store, 3, stackOffset);
+
+            } else {
+                CatnipCompilerLogger.assert(
+                    false, true, `Unsupported stack type '${CatnipValueFormatUtils.stringify(frameValue.format)}'.`
+                );
+            }
+
+            stackOffset += 8;
+        }
+
+        this.emitWasmPushThread();
+        this.emitWasm(SpiderOpcodes.local_get, newStackPtrVar);
+        this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+
+        this.returnLocal(baseStackPtrVar);
+        this.returnLocal(newStackPtrVar);
+    }
+
+    public emitPopFrame(frame: CatnipCompilerWasmEmitStackFrame) {
+        const frameSizeBytes = frame.length * 8;
+
+        if (frameSizeBytes === 0) return;
+
+        // We subtract the frame size from the stack pointer to get the base of our frame
+        this.emitWasmPushStackPtr();
+        this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
+        this.emitWasm(SpiderOpcodes.i32_sub);
+
+        const stackPointer = this.borrowLocal(CatnipValueFormat.I32_NUMBER);
+        this.emitWasm(SpiderOpcodes.local_set, stackPointer);
+
+        let stackOffset = 0;
+        // We need to get the values off of the stack.
+        for (const frameValue of frame) {
+
+            const spiderType = CatnipValueFormatUtils.getFormatSpiderType(frameValue.format);
+
+            this.emitWasm(SpiderOpcodes.local_get, stackPointer);
+
+            if (spiderType === SpiderNumberType.i32) {
+                this.emitWasm(SpiderOpcodes.i32_load, 2, stackOffset);
+            } else {
+                CatnipCompilerLogger.assert(spiderType === SpiderNumberType.f64);
+                this.emitWasm(SpiderOpcodes.f64_load, 3, stackOffset);
+            }
+
+            this.emitWasm(SpiderOpcodes.local_set, frameValue.local);
+            stackOffset += 8;
+        }
+
+        // Now that we've read everything, store the new stack pointer
+        this.emitWasmPushThread();
+        this.emitWasm(SpiderOpcodes.local_get, stackPointer);
+        this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+
+        this.returnLocal(stackPointer);
+    }
+
+    public createGCFrame(conditional: boolean): void {
+        CatnipCompilerLogger.assert(this._gcFrameInfo === null);
+
+        const frame: CatnipCompilerWasmEmitStackFrame = [];
+
+        function pushFrameValue(local: SpiderLocalReference, format: CatnipValueFormat) {
+            if (!CatnipValueFormatUtils.isGarbageCollectable(format))
+                return;
+
+            frame.push({ local, format });
+        }
+
+        // External values
+
+        // Transients we've created
+        for (let idx = 0; idx < this.ir1Function.createdTransients.length; idx++) {
+            const transient = this.ir1Function.createdTransients[idx];
+            const transientLocal = this._createdTransients[idx];
+            pushFrameValue(transientLocal, transient.format);
+        }
+
+        // External values
+        for (let idx = 0; idx < this.ir1Function.externalValues.length; idx++) {
+            const externalValue = this.ir1Function.externalValues[idx];
+            const externalLocal = this._externalValueReferences[idx];
+            pushFrameValue(externalLocal, IR1ExternalValue.getFormat(externalValue));
+        }
+
+        // Locals
+        for (const [local, format] of this._borrowedLocals) {
+            pushFrameValue(local, format);
+        }
+
+        this.emitPushFrame(frame);
+
+        let gcIndex: SpiderLocalReference | null = null;
+
+        if (conditional) {
+            gcIndex = this.borrowLocal(CatnipValueFormat.I32_NUMBER);
+
+            this.emitWasmPushRuntime();
+            this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("gc_index"));
+            this.emitWasm(SpiderOpcodes.local_set, gcIndex);
+        }
+
+        this._gcFrameInfo = { gcIndex, frame };
+    }
+
+    public restoreGCFrame(): void {
+        CatnipCompilerLogger.assert(this._gcFrameInfo !== null);
+
+        if (this._gcFrameInfo.gcIndex === null) {
+            this.emitPopFrame(this._gcFrameInfo.frame);
+        } else {
+
+            const frameInfo = this._gcFrameInfo;
+
+            this.emitWasm(SpiderOpcodes.local_get, this._gcFrameInfo.gcIndex);
+            this.emitWasmPushRuntime();
+            this.emitWasm(SpiderOpcodes.i32_load, 2, CatnipWasmStructRuntime.getMemberOffset("gc_index"));
+            this.emitWasm(SpiderOpcodes.i32_ne);
+
+            this.emitWasmIf(
+                emitter => {
+                    emitter.emitPopFrame(frameInfo.frame);
+                },
+                emitter => {
+                    const frameSizeBytes = this._gcFrameInfo!.frame.length;
+
+                    if (frameSizeBytes === 0) return;
+
+                    this.emitWasmPushThread();
+
+                    this.emitWasmPushStackPtr();
+                    this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
+                    this.emitWasm(SpiderOpcodes.i32_sub);
+
+                    this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+                }
+            );
+
+            this.returnLocal(this._gcFrameInfo.gcIndex);
+        }
+
+        this._gcFrameInfo = null;
     }
 }

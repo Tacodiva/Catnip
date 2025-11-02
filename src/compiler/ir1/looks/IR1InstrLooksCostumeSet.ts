@@ -26,7 +26,7 @@ export class IR1InstrLooksCostumeSet extends IR1Instruction {
     }
 
     private _emitNegCheckAndSet(emitter: CatnipCompilerWasmEmitter) {
-        const value = emitter.borrowLocal(SpiderNumberType.i32);
+        const value = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
         emitter.emitWasm(SpiderOpcodes.local_tee, value);
 
         // If it's less than zero, add the costume count
@@ -63,7 +63,7 @@ export class IR1InstrLooksCostumeSet extends IR1Instruction {
         // Turn it into an i32
         emitter.emitWasm(SpiderOpcodes.i32_trunc_f64_s);
 
-        const value = emitter.borrowLocal(SpiderNumberType.i32);
+        const value = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
         emitter.emitWasm(SpiderOpcodes.local_tee, value);
 
         this._emitNegCheckAndSet(emitter);
@@ -153,7 +153,7 @@ export class IR1InstrLooksCostumeSet extends IR1Instruction {
 
             // If it's a string, call the runtime function, otherwise set it
 
-            const value = emitter.borrowLocal(SpiderNumberType.f64);
+            const value = emitter.borrowLocal(CatnipValueFormat.F64);
             emitter.emitWasm(SpiderOpcodes.local_tee, value);
 
             IR1InstrCast.emitStringCheck(emitter, this.costume.format,

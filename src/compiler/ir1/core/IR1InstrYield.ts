@@ -2,12 +2,13 @@ import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmEnumThreadStatus } from "../../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipWasmStructThread } from "../../../wasm-interop/CatnipWasmStructThread";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
+import { IR1Function } from "../IR1Function";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
-import { IR1ExternalValueSourceType, IR1Function } from "../IR1Function";
 
 
 export class IR1InstrYield extends IR1Instruction {
+    public doesReturn: boolean = true;
 
     public func: IR1Function;
     public status: CatnipWasmEnumThreadStatus;

@@ -6,6 +6,7 @@ import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValu
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export class IR1InstrDataVariableSet extends IR1Instruction {
     public readonly target: CatnipTarget | null;
@@ -18,7 +19,7 @@ export class IR1InstrDataVariableSet extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        const valueLocal = emitter.borrowLocal(SpiderNumberType.f64);
+        const valueLocal = emitter.borrowLocal(CatnipValueFormat.F64);
         emitter.emitWasm(SpiderOpcodes.local_set, valueLocal);
 
         const variableOffset = this.variable.index * CatnipWasmUnionValue.size;

@@ -87,8 +87,8 @@ export const ListUtils = new class {
 
         const needsConversion = !CatnipValueFormatUtils.isAlways(index.format, CatnipValueFormat.I32_NUMBER);
 
-        const castIndexVariable = emitter.borrowLocal(SpiderNumberType.i32);
-        const rawIndexVariable = emitter.borrowLocal(index.getSpiderType());
+        const castIndexVariable = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
+        const rawIndexVariable = emitter.borrowLocal(index.format);
 
         if (needsConversion) {
             emitter.emitWasm(SpiderOpcodes.local_set, rawIndexVariable);
@@ -114,15 +114,15 @@ export const ListUtils = new class {
                         emitter.emitWasm(SpiderOpcodes.local_get, rawIndexVariable);
 
                         IR1InstrCast.emitStringCheck(emitter, index.format,
-                            (ctx, format, depth) => {
+                            (emitter, format, depth) => {
                                 // The index is a string.
 
-                                ctx.emitWasm(SpiderOpcodes.local_get, rawIndexVariable);
+                                emitter.emitWasm(SpiderOpcodes.local_get, rawIndexVariable);
 
-                                IR1InstrCast.emitConversion(ctx, CatnipValueFormat.F64_BOXED_I32_HSTRING, CatnipValueFormat.I32_HSTRING);
+                                IR1InstrCast.emitConversion(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, CatnipValueFormat.I32_HSTRING);
 
-                                const stringLocal = ctx.borrowLocal(SpiderNumberType.i32);
-                                ctx.emitWasm(SpiderOpcodes.local_set, stringLocal);
+                                const stringLocal = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
+                                emitter.emitWasm(SpiderOpcodes.local_set, stringLocal);
 
                                 // We need to check if this string is one of the special strings
 
@@ -130,14 +130,14 @@ export const ListUtils = new class {
                                     const isConstLast = index.isConstant && index.asConstantString() === "last";
 
                                     if (isConstLast) {
-                                        ctx.emitWasmPushNumber(SpiderNumberType.i32, 1);
+                                        emitter.emitWasmPushNumber(SpiderNumberType.i32, 1);
                                     } else {
-                                        ctx.emitWasm(SpiderOpcodes.local_get, stringLocal);
-                                        ctx.emitWasmPushString("last");
-                                        ctx.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_eq_strict");
+                                        emitter.emitWasm(SpiderOpcodes.local_get, stringLocal);
+                                        emitter.emitWasmPushString("last");
+                                        emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_eq_strict");
                                     }
 
-                                    ctx.emitWasmIf(ctx => {
+                                    emitter.emitWasmIf(ctx => {
                                         // The index is 'last', we need to find the last index and jump to the end
                                         this.emitPushListLength(ctx, target, list);
 
@@ -158,7 +158,7 @@ export const ListUtils = new class {
                                     });
 
                                     if (isConstLast) {
-                                        ctx.returnLocal(stringLocal);
+                                        emitter.returnLocal(stringLocal);
                                         return; // We don't emit the rest of this check
                                     }
                                 }
@@ -166,11 +166,11 @@ export const ListUtils = new class {
                                 // TODO any or random here
 
                                 // Cast our string into an int and set it
-                                ctx.emitWasm(SpiderOpcodes.local_get, stringLocal);
-                                IR1InstrCast.emitConversion(ctx, CatnipValueFormat.I32_HSTRING, CatnipValueFormat.I32_NUMBER);
-                                ctx.emitWasm(SpiderOpcodes.local_set, castIndexVariable);
+                                emitter.emitWasm(SpiderOpcodes.local_get, stringLocal);
+                                IR1InstrCast.emitConversion(emitter, CatnipValueFormat.I32_HSTRING, CatnipValueFormat.I32_NUMBER);
+                                emitter.emitWasm(SpiderOpcodes.local_set, castIndexVariable);
 
-                                ctx.returnLocal(stringLocal);
+                                emitter.returnLocal(stringLocal);
                             },
                             (ctx) => {
                                 // The index is a number

@@ -16,12 +16,12 @@ void CATNIP_EXPORT(catnip_mem_free)(void *ptr) {
   catnip_mem_free(ptr);
 }
 
-catnip_hstring *CATNIP_EXPORT(catnip_numconv_stringify_f64)(catnip_f64_t value, catnip_runtime *runtime) {
-  return catnip_numconv_stringify_f64(runtime, value);
+catnip_hstring *CATNIP_EXPORT(catnip_numconv_stringify_f64_gc)(catnip_f64_t value, catnip_runtime *runtime) {
+  return catnip_numconv_stringify_f64_gc(runtime, value);
 }
 
-catnip_f64_t CATNIP_EXPORT(catnip_numconv_parse)(catnip_hstring *str, catnip_runtime *runtime) {
-  return catnip_numconv_parse(runtime, str);
+catnip_f64_t CATNIP_EXPORT(catnip_numconv_parse)(catnip_hstring *str) {
+  return catnip_numconv_parse(str);
 }
 
 
@@ -47,6 +47,10 @@ void CATNIP_EXPORT(catnip_runtime_render_pen_flush)(catnip_runtime *runtime) {
 
 catnip_hstring *CATNIP_EXPORT(catnip_runtime_new_hstring)(catnip_runtime *runtime, catnip_ui32_t length) {
   return catnip_hstring_new_simple(runtime, length);
+}
+
+void CATNIP_EXPORT(catnip_runtime_gc)(catnip_runtime *runtime) {
+  catnip_runtime_gc(runtime);
 }
 
 
@@ -104,8 +108,8 @@ catnip_bool_t CATNIP_EXPORT(catnip_blockutil_hstring_eq_strict)(const catnip_hst
   return catnip_hstring_equal(a, b);
 }
 
-catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_join)(const catnip_hstring *a, const catnip_hstring *b, catnip_runtime *runtime) {
-  return catnip_blockutil_hstring_join(runtime, a, b);
+catnip_hstring *CATNIP_EXPORT(catnip_blockutil_hstring_join_gc)(const catnip_hstring *a, const catnip_hstring *b, catnip_runtime *runtime) {
+  return catnip_blockutil_hstring_join_gc(runtime, a, b);
 }
 
 catnip_ui32_t CATNIP_EXPORT(catnip_blockutil_hstring_length)(catnip_hstring *str) {

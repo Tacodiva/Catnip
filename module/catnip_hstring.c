@@ -7,7 +7,7 @@ catnip_wchar_t *catnip_hstring_get_data(const catnip_hstring *str) {
   return ((void *)str) + sizeof(catnip_hstring);
 }
 
-catnip_hstring *catnip_hstring_new_simple(catnip_runtime *runtime, catnip_ui32_t len) {
+catnip_hstring *catnip_hstring_new_simple(catnip_runtime *runtime, catnip_ui32_t len) {  
   return (catnip_hstring *) catnip_runtime_gc_new_obj(runtime, sizeof(catnip_hstring) + len * sizeof(catnip_wchar_t));
 }
 
@@ -52,7 +52,7 @@ void catnip_hstring_print(const catnip_hstring *str) {
 }
 
 // https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_api_string.c#L293
-catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str) {
+catnip_hstring_span catnip_hstring_trim(catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
   const catnip_wchar_t *ptr_start = catnip_hstring_get_data(str);
@@ -75,7 +75,7 @@ catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str
 
   if (trim_start == ptr_end) {
     // Entire string is whitespace
-    return CATNIP_STRING_BLANK;
+    return (catnip_hstring_span) { CATNIP_NULL, 0 };
   }
 
   ptr = ptr_end;
@@ -102,12 +102,7 @@ catnip_hstring *catnip_hstring_trim(catnip_runtime *runtime, catnip_hstring *str
   CATNIP_ASSERT(trim_end >= ptr_start && trim_end <= ptr_end);
   CATNIP_ASSERT(trim_end >= trim_start);
 
-  if (trim_start == ptr_start && trim_end == ptr_end) {
-    // Nothing was trimmed, no need to duplicate the string
-    return str;
-  }
-
-  return catnip_hstring_new(runtime, trim_start, (catnip_ui32_t) (trim_end - trim_start));
+  return (catnip_hstring_span) { (catnip_wchar_t*) trim_start, (catnip_ui32_t) (trim_end - trim_start) };
 }
 
 catnip_bool_t catnip_hstring_equal(const catnip_hstring *a, const catnip_hstring *b) {

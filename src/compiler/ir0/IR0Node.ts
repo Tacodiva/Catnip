@@ -49,9 +49,11 @@ export abstract class IR0Node<TParams extends string[] = string[]> {
 
     public readonly args: Readonly<IR0NodeArguments<IR0InputReference, TParams>>;
 
+    public readonly canTriggerGC: boolean = false;
+
     constructor(name: string, args: IR0NodeArguments<IR0NodeArgument, TParams>) {
         this.name = name;
-        
+
         const argReferences: Partial<IR0NodeArguments<IR0InputReference, TParams>> = {};
 
         for (const paramName of Object.keys(args)) {
@@ -84,9 +86,10 @@ export abstract class IR0Node<TParams extends string[] = string[]> {
         return [];
     }
 
+
     public abstract emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[];
-    public preEmitIR1(emitter: IR1Emitter): void {}
-    
+    public preEmitIR1(emitter: IR1Emitter): void { }
+
 }
 
 export abstract class IR0Command<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
@@ -96,7 +99,7 @@ export abstract class IR0Command<TArgs extends string[] = string[]> extends IR0N
 // Inputs must not have side effects
 export abstract class IR0Input<TArgs extends string[] = string[]> extends IR0Node<TArgs> {
     public abstract getResult(): CatnipValue;
-    
+
     public requestResultFormat(dest: CatnipValueFormat): void {
     }
 

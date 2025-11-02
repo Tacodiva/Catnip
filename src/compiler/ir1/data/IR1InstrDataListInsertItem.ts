@@ -6,6 +6,7 @@ import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter"
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
 import { ListUtils } from "./ListUtils";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export class IR1InstrDataListInsertItem extends IR1Instruction {
 
@@ -21,7 +22,7 @@ export class IR1InstrDataListInsertItem extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        const valueVariable = emitter.borrowLocal(SpiderNumberType.f64);
+        const valueVariable = emitter.borrowLocal(CatnipValueFormat.F64);
         emitter.emitWasm(SpiderOpcodes.local_set, valueVariable);
 
         ListUtils.emitListBoundsCheck(emitter,

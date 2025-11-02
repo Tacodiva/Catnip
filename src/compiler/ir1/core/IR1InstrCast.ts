@@ -9,6 +9,9 @@ import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/Cat
 import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
 import { CatnipWasmStructHeapString } from "../../../wasm-interop/CatnipWasmStructHeapString";
 
+interface CastContext {
+    didGC: boolean;
+}
 
 export class IR1InstrCast extends IR1Instruction {
 
@@ -84,7 +87,7 @@ export class IR1InstrCast extends IR1Instruction {
         return outFormat;
     }
 
-    public static emitConversion(emitter: CatnipCompilerWasmEmitter | null, src: CatnipValueFormat, dst: CatnipValueFormat): CatnipValueFormat {
+    public static emitConversion(emitter: CatnipCompilerWasmEmitter | null, src: CatnipValueFormat, dst: CatnipValueFormat, ctx?: CastContext): CatnipValueFormat {
 
         if (CatnipValueFormatUtils.isAlways(src, dst))
             return src;
@@ -101,7 +104,7 @@ export class IR1InstrCast extends IR1Instruction {
 
                     if (CatnipValueFormatUtils.isSometimes(src, CatnipValueFormat.F64_NAN) && !CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NAN)) {
                         if (emitter !== null) {
-                            const local = emitter.borrowLocal(SpiderNumberType.f64);
+                            const local = emitter.borrowLocal(src);
                             emitter.emitWasm(SpiderOpcodes.local_tee, local);
                             emitter.emitWasm(SpiderOpcodes.local_get, local);
                             emitter.emitWasm(SpiderOpcodes.f64_eq);
@@ -120,7 +123,7 @@ export class IR1InstrCast extends IR1Instruction {
                     if (dst === CatnipValueFormat.F64_INT) {
                         if (emitter !== null) {
                             // https://github.com/svaarala/duktape/blob/50af773b1b32067170786c2b7c661705ec7425d4/src-input/duk_bi_math.c#L146
-                            const local = emitter.borrowLocal(SpiderNumberType.f64);
+                            const local = emitter.borrowLocal(src);
                             emitter.emitWasm(SpiderOpcodes.local_tee, local);
 
                             emitter.emitWasmPushNumber(SpiderNumberType.f64, 0.5);
@@ -182,8 +185,10 @@ export class IR1InstrCast extends IR1Instruction {
                     // Convert from a number to a string
                     if (emitter !== null) {
                         emitter.emitWasmPushRuntime();
-                        emitter.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64");
+                        emitter.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64_gc");
                     }
+
+                    if (ctx) ctx.didGC = true;
 
                     return CatnipValueFormat.I32_HSTRING;
                 }
@@ -197,7 +202,7 @@ export class IR1InstrCast extends IR1Instruction {
                     if (emitter !== null) {
                         this.emitConversion(emitter, src, CatnipValueFormat.F64_INT);
 
-                        const value = emitter.borrowLocal(SpiderNumberType.f64);
+                        const value = emitter.borrowLocal(src);
                         emitter.emitWasm(SpiderOpcodes.local_tee, value);
 
                         emitter.emitWasmPushNumber(SpiderNumberType.f64, -2147483648); // Min 32-bit signed integer
@@ -255,7 +260,7 @@ export class IR1InstrCast extends IR1Instruction {
 
                 if (emitter !== null) {
 
-                    const value = emitter.borrowLocal(SpiderNumberType.f64);
+                    const value = emitter.borrowLocal(src);
                     emitter.emitWasm(SpiderOpcodes.local_tee, value);
 
                     // We need to check if this is a strings, and try to parse it as a '#RRGGBB' if it is.
@@ -283,7 +288,7 @@ export class IR1InstrCast extends IR1Instruction {
 
                 if (emitter !== null) {
 
-                    const value = emitter.borrowLocal(SpiderNumberType.f64);
+                    const value = emitter.borrowLocal(src);
                     emitter.emitWasm(SpiderOpcodes.local_tee, value);
 
                     const format = this.emitStringCheck(emitter, src,
@@ -309,7 +314,7 @@ export class IR1InstrCast extends IR1Instruction {
                 if (emitter !== null) {
                     // Convert from an F64 that may be a boxed hstring or a number to an hstring
 
-                    const value = emitter.borrowLocal(SpiderNumberType.f64);
+                    const value = emitter.borrowLocal(src);
                     emitter.emitWasm(SpiderOpcodes.local_tee, value);
 
                     const format = this.emitStringCheck(emitter, src,
@@ -363,7 +368,7 @@ export class IR1InstrCast extends IR1Instruction {
 
                     if (emitter !== null) {
                         // If the first character of the string is '#', we will try to parse it as a color
-                        const strPtr = emitter.borrowLocal(SpiderNumberType.i32);
+                        const strPtr = emitter.borrowLocal(src);
                         emitter.emitWasm(SpiderOpcodes.local_tee, strPtr);
 
                         // Get the first character of the string
@@ -381,7 +386,6 @@ export class IR1InstrCast extends IR1Instruction {
                             emitter => {
                                 // The first character is not a '#', we will try to parse it into a number then a color
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
-                                emitter.emitWasmPushRuntime();
                                 emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
 
                                 this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);
@@ -396,7 +400,6 @@ export class IR1InstrCast extends IR1Instruction {
                 }
 
                 if (emitter !== null) {
-                    emitter.emitWasmPushRuntime();
                     emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
                 }
                 return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
@@ -457,6 +460,12 @@ export class IR1InstrCast extends IR1Instruction {
         }
 
         notSupported();
+    }
+
+    public canTriggerGC(): boolean {
+        const ctx: CastContext = { didGC: false };
+        IR1InstrCast.emitConversion(null, this.src, this.dst, ctx);
+        return ctx.didGC;
     }
 
     public getResultFormat(): CatnipValueFormat {

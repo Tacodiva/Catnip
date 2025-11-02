@@ -669,7 +669,7 @@ recheck_exp:
   *x = CATNIP_DBLUNION_GET_DOUBLE(&u);
 }
 
-catnip_hstring *catnip_numconv_stringify_f64(catnip_runtime *runtime, catnip_f64_t x) {
+catnip_hstring *catnip_numconv_stringify_f64_gc(catnip_runtime *runtime, catnip_f64_t x) {
 
   catnip_i32_t radix = 10;
   catnip_i32_t digits = 0;
@@ -811,20 +811,20 @@ zero_skip:
   return catnip_numconv_dragon4_convert(nc_ctx, radix, digits, 0, is_neg);
 }
 
-catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) {
+catnip_f64_t catnip_numconv_parse(catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
 
   // TODO Account for scratch's broken trim polyfill?
-  str = catnip_hstring_trim(runtime, str);
+  catnip_hstring_span strSpan = catnip_hstring_trim(str);
 
-  catnip_ui32_t p_len = CATNIP_HSTRING_LENGTH(str);
+  catnip_ui32_t p_len = strSpan.length;
 
   if (p_len == 0) {
     // Empty string
     goto parse_fail;
   }
 
-  catnip_wchar_t *p = catnip_hstring_get_data(str);
+  catnip_wchar_t *p = strSpan.ptr;
   catnip_f64_t result;
 
   catnip_wchar_t ch = *p;
@@ -1057,10 +1057,10 @@ catnip_f64_t catnip_numconv_parse(catnip_runtime *runtime, catnip_hstring *str) 
       //   DUK_DDD(DUK_DDDPRINT("parse failed: empty string not allowed (as zero)"));
       //   goto parse_fail;
       // } else if (duk_hstring_get_bytelen(h_str) != 0) {
-      if (CATNIP_HSTRING_LENGTH(str) != 0) {
+      // if (CATNIP_HSTRING_LENGTH(str) != 0) {
         // no digits, but not empty (had a +/- sign)
         goto parse_fail;
-      }
+      // }
     }
   } else {
     if (dig_frac == 0) {

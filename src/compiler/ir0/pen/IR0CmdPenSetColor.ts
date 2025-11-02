@@ -15,7 +15,7 @@ export class IR0CmdPenSetColor extends IR0Command<["color"]> {
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
         return new IR1InstrSimple(this.name, emitter => {
-            const local = emitter.borrowLocal(SpiderNumberType.i32);
+            const local = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
 
             // Set ARGB
             emitter.emitWasm(SpiderOpcodes.local_set, local);

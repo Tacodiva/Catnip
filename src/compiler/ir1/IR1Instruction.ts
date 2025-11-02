@@ -10,6 +10,8 @@ export type IR1InstructionArgs<TArgs extends string[] = string[]> = {
 
 export abstract class IR1Instruction {
 
+    public readonly doesReturn: boolean = false;
+
     public abstract stringify(ctx: IR1StringificationContext): void;
 
     public abstract emitWasm(emitter: CatnipCompilerWasmEmitter): void;

@@ -5,6 +5,7 @@ import { IR1StringificationContext } from "../IR1StringificationContext";
 import { CatnipWasmPtrThread } from "../../../wasm-interop/CatnipWasmStructThread";
 import { BroadcastSubsystem } from "../../subsystems/BroadcastSubsystem";
 import { CatnipWasmEnumEventSource } from "../../../wasm-interop/CatnipWasmEnumEventSource";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export class IR1InstrEventsBroadcast extends IR1Instruction {
 
@@ -21,8 +22,7 @@ export class IR1InstrEventsBroadcast extends IR1Instruction {
 
         const broadcastSubsystem = emitter.module.getSubsystem(BroadcastSubsystem);
 
-        const broadcastNameVariable = emitter.borrowLocal(SpiderNumberType.i32);
-        const threadListVariable = emitter.borrowLocal(SpiderNumberType.i32);
+        const broadcastNameVariable = emitter.borrowLocal(CatnipValueFormat.I32_HSTRING);
 
         if (this.broadcastName === null) {
             emitter.emitWasm(SpiderOpcodes.local_tee, broadcastNameVariable);
@@ -58,17 +58,10 @@ export class IR1InstrEventsBroadcast extends IR1Instruction {
                 emitter.emitWasmPushString(this.broadcastName);
             }
 
-            if (this.waitThreads) {
-                emitter.emitWasm(SpiderOpcodes.local_get, threadListVariable);
-            } else {
-                emitter.emitWasmPushNumber(SpiderNumberType.i32, 0);
-            }
-
             emitter.emitWasm(SpiderOpcodes.call, eventFunction);
         }
 
         emitter.returnLocal(broadcastNameVariable);
-        emitter.returnLocal(threadListVariable);
     }
 
     public stringify(ctx: IR1StringificationContext): void {

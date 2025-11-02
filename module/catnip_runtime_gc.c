@@ -1,6 +1,7 @@
 #include "./catnip_runtime.h"
 
 #define CATNIP_ALIGN8(addr) (((catnip_ui32_t)(addr) + 7) & ~((catnip_ui32_t)7))
+#define CATNIP_RUNTIME_GC_PAGE_START(page) (((void *) (page)) + sizeof(catnip_gc_page))
 
 catnip_gc_page *gc_next_page(catnip_runtime *runtime) {
 
@@ -13,6 +14,8 @@ catnip_gc_page *gc_next_page(catnip_runtime *runtime) {
 
     CATNIP_ASSERT(runtime->gc_page->magic == CATNIP_HEAP_PAGE_MAGIC);
 
+    runtime->gc_page->next_current = runtime->gc_page->current;
+
     return runtime->gc_page;
   }
 
@@ -24,7 +27,7 @@ catnip_gc_page *gc_next_page(catnip_runtime *runtime) {
 
   catnip_gc_page *page = pagePtr;
 
-  void* pageDataStart = pagePtr + sizeof(catnip_gc_page);
+  void* pageDataStart = CATNIP_RUNTIME_GC_PAGE_START(page);
   void* pageDataEnd = pagePtr + CATNIP_HEAP_PAGE_SIZE_BYTES;
 
   CATNIP_ASSERT(((catnip_ui32_t)pageDataStart & 7) == 0);
@@ -45,6 +48,11 @@ catnip_gc_page *gc_next_page(catnip_runtime *runtime) {
   runtime->gc_stats->total_page_memory += CATNIP_HEAP_PAGE_SIZE_BYTES;
   runtime->gc_stats->total_memory += CATNIP_HEAP_PAGE_SIZE_BYTES;
   #endif
+
+  if (heapPagesLen > runtime->gc_max_pages) {
+    runtime->gc_max_pages = heapPagesLen;
+    runtime->gc_requested = CATNIP_TRUE;
+  }
 
   return page;
 }
@@ -135,8 +143,6 @@ catnip_obj_head *catnip_runtime_gc_new_obj(catnip_runtime *runtime, catnip_ui32_
   return objHead;
 }
 
-#define CATNIP_RUNTIME_GC_PAGE_START(page) ((void *) (page)) + sizeof(catnip_gc_page)
-
 // Loops through all the GC roots :3
 void gc_iterate_roots(catnip_runtime *runtime, void(*func)(catnip_value*, catnip_runtime*)) {
 
@@ -214,15 +220,19 @@ void gc_move_root(catnip_value *value, catnip_runtime *runtime) {
     #endif
 
     value->parts.lower = (catnip_ui32_t) strHead->move_ptr;
-
-
   }
 }
 
 void catnip_runtime_gc(catnip_runtime *runtime) {
 
-  #ifndef CATNIP_GC_DISABLE
   CATNIP_ASSERT(runtime != CATNIP_NULL);
+  runtime->gc_requested = CATNIP_FALSE;
+
+  #ifndef CATNIP_GC_DISABLE
+
+  ++runtime->gc_index;
+
+  CATNIP_ASSERT(!runtime->gc_temp_enabled);
 
   const catnip_ui32_t numberOfPages = CATNIP_LIST_LENGTH(&runtime->gc_pages, catnip_gc_page*);
 
@@ -418,4 +428,40 @@ void catnip_runtime_gc(catnip_runtime *runtime) {
   runtime->gc_stats->total_memory += runtime->gc_stats->total_page_memory;
   #endif
   #endif // ifndef CATNIP_GC_DISABLE
+}
+
+void catnip_runtime_gc_begin_temporary(catnip_runtime *runtime) {
+
+  CATNIP_ASSERT(!runtime->gc_temp_enabled);
+
+  runtime->gc_temp_enabled = CATNIP_TRUE;
+  runtime->gc_temp_page = runtime->gc_page;
+  runtime->gc_temp_page_index = runtime->gc_page_index;
+  runtime->gc_temp_large_obj_index = CATNIP_LIST_LENGTH(&runtime->gc_large_objs, catnip_obj_head *);
+
+  if (runtime->gc_page != CATNIP_NULL)
+    runtime->gc_page->next_current = runtime->gc_page->current;
+}
+
+void catnip_runtime_gc_end_temporary(catnip_runtime *runtime) {
+  CATNIP_ASSERT(runtime->gc_temp_enabled);
+
+  runtime->gc_temp_enabled = CATNIP_FALSE;
+
+  if (runtime->gc_temp_page != CATNIP_NULL) {
+    for (catnip_i32_t pageIdx = runtime->gc_page_index; pageIdx <= runtime->gc_temp_page_index; pageIdx++) {
+      catnip_gc_page *page = CATNIP_LIST_GET(&runtime->gc_pages, catnip_gc_page *, pageIdx);
+      CATNIP_ASSERT(page->magic == CATNIP_HEAP_PAGE_MAGIC);
+      page->current = page->next_current;
+    }
+  }
+
+  runtime->gc_page = runtime->gc_temp_page;
+  runtime->gc_page_index = runtime->gc_temp_page_index;
+
+  for (catnip_i32_t largeObjIdx = runtime->gc_temp_large_obj_index; largeObjIdx < CATNIP_LIST_LENGTH(&runtime->gc_large_objs, catnip_obj_head *); largeObjIdx++) {
+    catnip_mem_free(CATNIP_LIST_GET(&runtime->gc_large_objs, catnip_obj_head *, largeObjIdx));
+  }
+
+  CATNIP_LIST_TRIM(&runtime->gc_large_objs, catnip_obj_head *, runtime->gc_temp_large_obj_index);
 }

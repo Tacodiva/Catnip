@@ -3,6 +3,7 @@ import { CatnipWasmStructTarget } from "../../../wasm-interop/CatnipWasmStructTa
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 
 export enum IR1PenParameter {
     COLOR,
@@ -52,7 +53,7 @@ export class IR1InstrPenChangeParam extends IR1Instruction {
         }
 
         // Store the value
-        const value = emitter.borrowLocal(SpiderNumberType.f64);
+        const value = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER);
         emitter.emitWasm(SpiderOpcodes.local_set, value);
 
         // If the current HSV is out of date, we need to update it

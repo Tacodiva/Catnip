@@ -13,7 +13,7 @@ catnip_i32_t catnip_blockutil_value_cmp(catnip_runtime *runtime, catnip_value a,
 catnip_bool_t catnip_blockutil_value_eq(catnip_runtime *runtime, catnip_value a, catnip_value b);
 
 catnip_i32_t catnip_blockutil_hstring_cmp(const catnip_hstring *a, const catnip_hstring *b);
-catnip_hstring *catnip_blockutil_hstring_join(catnip_runtime *runtime, const catnip_hstring *a, const catnip_hstring *b);
+catnip_hstring *catnip_blockutil_hstring_join_gc(catnip_runtime *runtime, const catnip_hstring *a, const catnip_hstring *b);
 catnip_ui32_t catnip_blockutil_hstring_length(catnip_hstring *str);
 catnip_hstring *catnip_blockutil_hstring_char_at(catnip_runtime *runtime, catnip_hstring *str, catnip_ui32_t index);
 catnip_bool_t catnip_blockutil_hstring_contains(catnip_hstring *str, catnip_hstring *contains);

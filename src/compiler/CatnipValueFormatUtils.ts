@@ -14,13 +14,13 @@ export class CatnipValueFormatUtils {
             if (isNaN(testFormat))
                 continue;
 
-            if (this.isAlways(testFormat, format)) {
+            if (CatnipValueFormatUtils.isAlways(testFormat, format)) {
                 for (const existingFormat of formatFlags) {
-                    if (this.isAlways(testFormat, existingFormat))
+                    if (CatnipValueFormatUtils.isAlways(testFormat, existingFormat))
                         continue;
                 }
 
-                formatFlags = formatFlags.filter(value => !this.isAlways(value, testFormat));
+                formatFlags = formatFlags.filter(value => !CatnipValueFormatUtils.isAlways(value, testFormat));
                 formatFlags.push(testFormat);
             }
         }
@@ -47,6 +47,10 @@ export class CatnipValueFormatUtils {
 
     public static isSometimes(x: CatnipValueFormat, y: CatnipValueFormat): boolean {
         return (x & y) !== 0;
+    }
+
+    public static isGarbageCollectable(format: CatnipValueFormat): boolean {
+        return CatnipValueFormatUtils.isSometimes(format, CatnipValueFormat.I32_HSTRING | CatnipValueFormat.F64_BOXED_I32_HSTRING);
     }
 
     public static getNumberFormat(number: number): CatnipValueFormat {

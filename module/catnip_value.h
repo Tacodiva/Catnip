@@ -39,7 +39,7 @@ union catnip_value {
 
 typedef union catnip_value catnip_value;
 
-catnip_f64_t catnip_value_to_number(catnip_runtime *runtime, catnip_value value);
-catnip_hstring *catnip_value_to_string(catnip_runtime *runtime, catnip_value value);
+catnip_f64_t catnip_value_to_number(catnip_value value);
+catnip_hstring *catnip_value_to_string_gc(catnip_runtime *runtime, catnip_value value);
 
 #endif

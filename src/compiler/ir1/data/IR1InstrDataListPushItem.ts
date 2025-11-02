@@ -1,7 +1,5 @@
-import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipList } from "../../../runtime/CatnipList";
 import { CatnipTarget } from "../../../runtime/CatnipTarget";
-import { CatnipValue } from "../../CatnipValue";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";

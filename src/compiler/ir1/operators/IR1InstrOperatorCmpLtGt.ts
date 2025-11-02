@@ -49,10 +49,10 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
 
             if (CatnipValueFormatUtils.isSometimes(this.rightFormat, CatnipValueFormat.F64_NAN)) {
 
-                const rightTemp = emitter.borrowLocal(SpiderNumberType.f64);
+                const rightTemp = emitter.borrowLocal(this.rightFormat);
                 emitter.emitWasm(SpiderOpcodes.local_set, rightTemp);
 
-                const leftTemp = emitter.borrowLocal(SpiderNumberType.f64);
+                const leftTemp = emitter.borrowLocal(this.leftFormat);
                 emitter.emitWasm(SpiderOpcodes.local_set, leftTemp);
 
 
@@ -109,10 +109,10 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
             } else if (CatnipValueFormatUtils.isSometimes(this.leftFormat, CatnipValueFormat.F64_NAN)) {
                 // The right cannot be NaN, but the left could be.
 
-                const rightTemp = emitter.borrowLocal(SpiderNumberType.f64);
+                const rightTemp = emitter.borrowLocal(this.rightFormat);
                 emitter.emitWasm(SpiderOpcodes.local_set, rightTemp);
 
-                const leftTemp = emitter.borrowLocal(SpiderNumberType.f64);
+                const leftTemp = emitter.borrowLocal(this.leftFormat);
                 // NaN check on the left value
                 emitter.emitWasm(SpiderOpcodes.local_tee, leftTemp);
                 emitter.emitWasm(SpiderOpcodes.local_get, leftTemp);

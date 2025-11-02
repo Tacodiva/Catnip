@@ -19,7 +19,7 @@ catnip_ui32_t get_key_code(catnip_runtime *runtime, catnip_value key) {
     if (keyCode >= 0 && keyCode <= 9 && keyCode == CATNIP_F64_FLOOR(keyCode))
       return '0' + keyCode; 
 
-    keyName = catnip_numconv_stringify_f64(runtime, keyCode);
+    keyName = catnip_numconv_stringify_f64_gc(runtime, keyCode);
   }
 
   CATNIP_ASSERT(CATNIP_FALSE);

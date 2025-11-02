@@ -13,17 +13,24 @@ export const CatnipWasmStructRuntime = new WasmStruct("catnip_runtime", {
 
     sprite_count: WasmUInt32,
     sprites: new WasmPtr(new WasmArray(CatnipWasmPtrSprite, null)),
-    
+
     targets: CatnipWasmPtrTarget,
 
     threads: CatnipWasmStructList,
     redraw_requested: WasmBool32,
 
+    gc_requested: WasmBool32,
+    gc_index: WasmUInt32,
     gc_stats: CatnipWasmPtrRuntimeGcStats,
     gc_page_index: WasmInt32,
     gc_page: WasmPtrVoid,
     gc_pages: CatnipWasmStructList,
     gc_large_objs: CatnipWasmStructList,
+
+    gc_temp_enabled: WasmBool32,
+    gc_temp_page: WasmPtrVoid,
+    gc_temp_page_index: WasmInt32,
+    gc_temp_large_obj_index: WasmInt32,
 
     pen_line_buffer_length: WasmUInt32,
     pen_line_buffer: WasmPtrVoid,

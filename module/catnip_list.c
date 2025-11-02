@@ -93,3 +93,10 @@ void catnip_list_insert(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_
   catnip_mem_move(&list->data[byteIndex + item_size], &list->data[byteIndex], (list->length - index) * item_size);
   catnip_mem_copy(&list->data[byteIndex], item, item_size);
 }
+
+void catnip_list_trim(catnip_list *list, catnip_ui32_t beginIndex) {
+  CATNIP_ASSERT_LIST_VALID(list);
+  CATNIP_ASSERT(beginIndex <= list->length);
+
+  list->length = beginIndex;
+}

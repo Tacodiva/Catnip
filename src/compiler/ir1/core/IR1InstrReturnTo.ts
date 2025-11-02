@@ -7,6 +7,8 @@ import { IR1ExternalValueType } from "../IR1ExternalValue";
 
 
 export class IR1InstrReturnTo extends IR1Instruction {
+    public doesReturn: boolean = true;
+
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasmPushThread();
         emitter.emitWasm(SpiderOpcodes.local_get, emitter.getExternalValueLocal({ type: IR1ExternalValueType.RETURN_LOCATION }));

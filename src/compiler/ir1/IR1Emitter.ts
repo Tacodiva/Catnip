@@ -1,15 +1,17 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipValueFormat } from "../CatnipValueFormat";
-import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
 import { IR0ControlFlowType } from "../ir0/IR0ControlFlow";
-import { IR0Input, IR0InputReference, IR0Node } from "../ir0/IR0Node";
+import { IR0InputReference, IR0Node } from "../ir0/IR0Node";
 import { IR0Script } from "../ir0/IR0Script";
 import { BasicBlockInfo, FunctionInfo, IR0ToIR1Info, ScriptInfo } from "../ir0/IR0ToIR1Info";
 import { IR1InstrBlock } from "./core/IR1InstrBlock";
 import { IR1InstrBr } from "./core/IR1InstrBr";
 import { IR1InstrCall } from "./core/IR1InstrCall";
 import { IR1InstrCast } from "./core/IR1InstrCast";
+import { IR1InstrGC } from "./core/IR1InstrGC";
+import { IR1InstrGCCreateFrame } from "./core/IR1InstrGCCreateFrame";
+import { IR1InstrGCRestoreFrame } from "./core/IR1InstrGCRestoreFrame";
 import { IR1InstrIf } from "./core/IR1InstrIf";
 import { IR1InstrLoop } from "./core/IR1InstrLoop";
 import { IR1InstrPushExternalValue } from "./core/IR1InstrPushExternalValue";
@@ -167,7 +169,8 @@ export class IR1Emitter {
             const body: IR1Instruction[] = [];
 
             for (const command of x.block.commands) {
-                this.emitIR0(command, body);
+                const canGC = this.emitIR0(command, body);
+                if (canGC) body.push(new IR1InstrGC([]));
             }
 
             const flow = x.block.flow;
@@ -191,7 +194,11 @@ export class IR1Emitter {
 
                 case IR0ControlFlowType.Condition: {
 
-                    this.emitIR0Input(flow.condition, body);
+                    const conditionCanGC = this.emitIR0Input(flow.condition, body);
+
+                    if (conditionCanGC) {
+                        body.push(new IR1InstrGC([CatnipValueFormat.I32_BOOLEAN]));
+                    }
 
                     const branchCtx = ctx.inside({
                         type: ContainingSyntaxType.IfElseThen,
@@ -233,11 +240,13 @@ export class IR1Emitter {
                     }
 
                     // If this were a function, it would be called "prepareExternalCall"
+                    let inputsCanGC = false;
                     {
                         for (const calledExternalValue of calledFunction.externalValues) {
                             switch (calledExternalValue.type) {
                                 case IR1ExternalValueType.PROCEDURE_ARGUMENT:
-                                    this.emitIR0Input(flow.args[calledExternalValue.index], body);
+                                    if (this.emitIR0Input(flow.args[calledExternalValue.index], body))
+                                        inputsCanGC = true;
                                     break;
                                 case IR1ExternalValueType.RETURN_LOCATION:
                                     IR1Logger.assert(nextBlockInfo.isEntrypoint);
@@ -252,11 +261,31 @@ export class IR1Emitter {
                         this.stackifyArguments(calledFunction, body);
                     }
 
+                    if (inputsCanGC) {
+
+                        if (calledFunction.externalValueSource === IR1ExternalValueSourceType.STACK) {
+                            // If the values are already on the stack, we don't need to capture them to do a GC
+                            body.push(new IR1InstrGC([]));
+                        } else {
+                            // Otherwise the GC needs capture all the stuff we just pushed 
+                            body.push(new IR1InstrGC(calledFunction.externalValues.map(IR1ExternalValue.getFormat)));
+                        }
+                    }
+
                     if (calledProcedureInfo.isYielding) {
                         // TODO If calledProcedureInfo.isYielding then this is a tail call
+                        // We don't need to do GC stuff here because the function is terminating right after
                         body.push(new IR1InstrCall(calledFunction));
+                        body.push(new IR1InstrReturn());
                     } else {
+                        if (calledProcedureInfo.entrypoint.canTriggerGC)
+                            body.push(new IR1InstrGCCreateFrame());
+
                         body.push(new IR1InstrCall(calledFunction));
+
+                        if (calledProcedureInfo.entrypoint.canTriggerGC)
+                            body.push(new IR1InstrGCRestoreFrame());
+
                         body.push(...doBranch(x, this.conversionInfo.getBasicBlockInfo(flow.next), ctx));
                     }
                 }
@@ -274,7 +303,14 @@ export class IR1Emitter {
                 const body: IR1Instruction[] = [];
 
                 this.prepareInternalCall(to.func.ir1, body);
+
+                if (to.func.canTriggerGC)
+                    body.push(new IR1InstrGCCreateFrame());
+
                 body.push(new IR1InstrCall(to.func.ir1));
+
+                if (to.func.canTriggerGC)
+                    body.push(new IR1InstrGCRestoreFrame());
 
                 return body;
             }
@@ -319,28 +355,37 @@ export class IR1Emitter {
         }
     }
 
-    private emitIR0Input(inputRef: IR0InputReference, body: IR1Instruction[]) {
+    private emitIR0Input(inputRef: IR0InputReference, body: IR1Instruction[]): boolean {
         inputRef.input.requestResultFormat(inputRef.requiredFormat);
 
-        this.emitIR0(inputRef.input, body);
+        let canTriggerGC = this.emitIR0(inputRef.input, body);
 
         const result = inputRef.input.getResult();
 
-        if (!result.isAlwaysFormat(inputRef.requiredFormat) && !result.isNone)
-            body.push(new IR1InstrCast(result.format, inputRef.requiredFormat));
+        if (!result.isAlwaysFormat(inputRef.requiredFormat) && !result.isNone) {
+            const cast = new IR1InstrCast(result.format, inputRef.requiredFormat);
+            canTriggerGC ||= cast.canTriggerGC();
+            body.push(cast);
+        }
+
+        return canTriggerGC;
     }
 
-    private emitIR0(node: IR0Node, body: IR1Instruction[]): void {
+    private emitIR0(node: IR0Node, body: IR1Instruction[]): boolean {
+        let canTriggerGC = false;
 
         node.preEmitIR1(this);
-        
+
         for (const argName in node.args) {
-            this.emitIR0Input(node.args[argName], body);
+            if (this.emitIR0Input(node.args[argName], body))
+                canTriggerGC = true;
         }
 
         const emitted = node.emitIR1(this);
 
         if (Array.isArray(emitted)) body.push(...emitted);
         else body.push(emitted);
+
+        return canTriggerGC || node.canTriggerGC;
     }
 }

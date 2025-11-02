@@ -1,17 +1,20 @@
-import { SpiderOpcodes } from "wasm-spider";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
 
+export class IR1InstrGCCreateFrame extends IR1Instruction {
 
-export class IR1InstrReturn extends IR1Instruction {
-    public doesReturn: boolean = true;
+    public constructor() {
+        super();
+    }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        emitter.emitWasm(SpiderOpcodes.return);
+        emitter.createGCFrame(true);
     }
 
     public stringify(ctx: IR1StringificationContext): void {
-        ctx.writeLine(`return`);
+        ctx.writeLine(`gc_create_frame`);
     }
+
 }

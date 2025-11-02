@@ -7,6 +7,8 @@ import { IR1StringificationContext } from "../IR1StringificationContext";
 
 
 export class IR1InstrTerminate extends IR1Instruction {
+    public doesReturn: boolean = true;
+
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
         emitter.emitWasmPushThread();
         emitter.emitWasmPushNumber(SpiderNumberType.i32, CatnipWasmEnumThreadStatus.TERMINATED);

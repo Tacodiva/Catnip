@@ -15,7 +15,7 @@ export class IR0CmdPenSetSize extends IR0Command<["size"]> {
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
         return new IR1InstrSimple(this.name, emitter => {
-            const local = emitter.borrowLocal(SpiderNumberType.f64);
+            const local = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER_OR_NAN);
             emitter.emitWasm(SpiderOpcodes.local_set, local);
             emitter.emitWasmPushCurrentTarget();
             emitter.emitWasm(SpiderOpcodes.local_get, local);

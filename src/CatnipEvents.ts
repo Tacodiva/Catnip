@@ -85,7 +85,7 @@ export type CatnipEventListener<EventID extends CatnipEventID = CatnipEventID> =
 
 export const CatnipEvents = {
     PROJECT_START: new CatnipEventInfo([] as const, true),
-    PROJECT_BROADCAST: new CatnipEventInfo(["STRING", "POINTER"] as const, false),
+    PROJECT_BROADCAST: new CatnipEventInfo(["STRING"] as const, false),
 
     IO_KEY_PRESSED: new CatnipEventInfo(["NUMBER_I32"] as const, true), // keyCode
     IO_KEY_RELEASED: new CatnipEventInfo(["NUMBER_I32"] as const, true), // keyCode

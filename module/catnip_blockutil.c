@@ -47,14 +47,18 @@ catnip_thread_status catnip_blockutil_wait_for_threads(catnip_list *threadList) 
 
 // https://github.com/TurboWarp/scratch-vm/blob/fed099c4ccb1ae59a8a7fe2ae14fa4ef4b85bd01/src/util/cast.js#L142
 catnip_i32_t catnip_blockutil_value_cmp(catnip_runtime *runtime, catnip_value a, catnip_value b) {
-  catnip_f64_t aNumber = catnip_value_to_number(runtime, a);
-  catnip_f64_t bNumber = catnip_value_to_number(runtime, b);
+  catnip_f64_t aNumber = catnip_value_to_number(a);
+  catnip_f64_t bNumber = catnip_value_to_number(b);
 
   if (CATNIP_F64_ISNAN(aNumber) || CATNIP_F64_ISNAN(bNumber)) {
-    catnip_hstring *aString = catnip_value_to_string(runtime, a);
-    catnip_hstring *bString = catnip_value_to_string(runtime, b);
+    catnip_runtime_gc_begin_temporary(runtime);
+
+    catnip_hstring *aString = catnip_value_to_string_gc(runtime, a);
+    catnip_hstring *bString = catnip_value_to_string_gc(runtime, b);
 
     catnip_i32_t result = catnip_blockutil_hstring_cmp(aString, bString);
+
+    catnip_runtime_gc_end_temporary(runtime);
 
     return result;
   }
@@ -75,14 +79,19 @@ catnip_i32_t catnip_blockutil_value_cmp(catnip_runtime *runtime, catnip_value a,
 
 // Any changes to this should be reflected in catnip_blockutil_list_index_of
 catnip_bool_t catnip_blockutil_value_eq(catnip_runtime *runtime, catnip_value a, catnip_value b) {
-  catnip_f64_t aNumber = catnip_value_to_number(runtime, a);
-  catnip_f64_t bNumber = catnip_value_to_number(runtime, b);
+
+  catnip_f64_t aNumber = catnip_value_to_number(a);
+  catnip_f64_t bNumber = catnip_value_to_number(b);
 
   if (CATNIP_F64_ISNAN(aNumber) || CATNIP_F64_ISNAN(bNumber)) {
-    catnip_hstring *aString = catnip_value_to_string(runtime, a);
-    catnip_hstring *bString = catnip_value_to_string(runtime, b);
+    catnip_runtime_gc_begin_temporary(runtime);
+
+    catnip_hstring *aString = catnip_value_to_string_gc(runtime, a);
+    catnip_hstring *bString = catnip_value_to_string_gc(runtime, b);
 
     catnip_i32_t result = catnip_blockutil_hstring_cmp(aString, bString);
+
+    catnip_runtime_gc_end_temporary(runtime);
 
     return result == 0;
   }
@@ -134,7 +143,7 @@ catnip_i32_t catnip_blockutil_hstring_cmp(const catnip_hstring *a, const catnip_
   }
 }
 
-catnip_hstring *catnip_blockutil_hstring_join(catnip_runtime *runtime, const catnip_hstring *a, const catnip_hstring *b) {
+catnip_hstring *catnip_blockutil_hstring_join_gc(catnip_runtime *runtime, const catnip_hstring *a, const catnip_hstring *b) {
 
   const catnip_ui32_t aLen = CATNIP_HSTRING_LENGTH(a);
   const catnip_ui32_t bLen = CATNIP_HSTRING_LENGTH(b);
@@ -392,22 +401,26 @@ void catnip_blockutil_list_insert_at(catnip_list *list, catnip_i32_t index, catn
 
 catnip_ui32_t catnip_blockutil_list_index_of(catnip_runtime *runtime, catnip_list *list, catnip_value value) {
 
-  catnip_f64_t valueNumber = catnip_value_to_number(runtime, value);
+  catnip_runtime_gc_begin_temporary(runtime);
+
+  catnip_f64_t valueNumber = catnip_value_to_number(value);
   catnip_bool_t valueIsNumber = !CATNIP_F64_ISNAN(valueNumber);
 
   catnip_hstring *valueString = CATNIP_NULL;
 
-  for (catnip_ui32_t i = 0; i < CATNIP_LIST_LENGTH(list, catnip_value); i++) {
+  catnip_i32_t i;
+
+  for (i = 0; i < CATNIP_LIST_LENGTH(list, catnip_value); i++) {
     
     catnip_value compare = CATNIP_LIST_GET(list, catnip_value, i);
 
     if (valueIsNumber) {
-      catnip_f64_t compareNumber = catnip_value_to_number(runtime, compare);
+      catnip_f64_t compareNumber = catnip_value_to_number(compare);
 
       if (!CATNIP_F64_ISNAN(compareNumber)) {
 
         if (valueNumber == compareNumber) {
-          return i + 1;
+          goto end;
         }
 
         continue;
@@ -415,18 +428,22 @@ catnip_ui32_t catnip_blockutil_list_index_of(catnip_runtime *runtime, catnip_lis
     }
 
     if (valueString == CATNIP_NULL) {
-      valueString = catnip_value_to_string(runtime, value);
+      valueString = catnip_value_to_string_gc(runtime, value);
     }
 
-    catnip_hstring *compareString = catnip_value_to_string(runtime, compare);
+    catnip_hstring *compareString = catnip_value_to_string_gc(runtime, compare);
 
     if (catnip_blockutil_hstring_cmp(valueString, compareString) == 0) {
-      return i + 1;
+      goto end;
     }
   }
 
   // No match
-  return 0;
+  i = -1;
+
+  end:
+  catnip_runtime_gc_end_temporary(runtime);
+  return i + 1;
 }
 
 void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume) {
@@ -445,12 +462,12 @@ void catnip_blockutil_costume_set(catnip_target *target, catnip_hstring *costume
 
   // TODO Check for 'next costume' and 'previous costume'
 
-  catnip_f64_t cast = catnip_numconv_parse(target->runtime, costume);
+  catnip_f64_t cast = catnip_numconv_parse(costume);
 
   if (CATNIP_F64_ISNAN(cast)) return;
 
   // If the string is whitespace, we don't do anything
-  if (CATNIP_HSTRING_LENGTH(catnip_hstring_trim(target->runtime, costume)) == 0)
+  if (catnip_hstring_trim(costume).length == 0)
     return;
 
   cast = catnip_math_round(cast - 1);
@@ -476,10 +493,10 @@ catnip_bool_t is_int(catnip_value value, catnip_f64_t valueNumber) {
 
 catnip_f64_t catnip_blockutil_operator_random(catnip_runtime *runtime, catnip_value a, catnip_value b) {
 
-  catnip_f64_t aVal = catnip_value_to_number(runtime, a);
+  catnip_f64_t aVal = catnip_value_to_number(a);
   if (CATNIP_F64_ISNAN(aVal)) aVal = 0;
   
-  catnip_f64_t bVal = catnip_value_to_number(runtime, b);
+  catnip_f64_t bVal = catnip_value_to_number(b);
   if (CATNIP_F64_ISNAN(bVal)) bVal = 0;
 
   catnip_f64_t low, high;

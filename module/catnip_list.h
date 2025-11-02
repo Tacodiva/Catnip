@@ -35,4 +35,7 @@ catnip_ui32_t catnip_list_length(catnip_list *list);
 #define CATNIP_LIST_INSERT(list, type, index, item) (catnip_list_insert((list), sizeof(type), (index), (void*) (&item)))
 void catnip_list_insert(catnip_list *list, catnip_ui32_t item_size, catnip_ui32_t index, const void *item);
 
+#define CATNIP_LIST_TRIM(list, type, index) (catnip_list_trim((list), (index)))
+void catnip_list_trim(catnip_list *list, catnip_ui32_t beginIndex);
+
 #endif

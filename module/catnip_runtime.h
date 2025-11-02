@@ -73,11 +73,20 @@ struct catnip_runtime {
     catnip_list threads; // list of catnip_thread*
     catnip_bool_t redraw_requested;
 
+    catnip_bool_t gc_requested;
+    catnip_ui32_t gc_index;
     catnip_runtime_gc_stats *gc_stats; // Only if CATNIP_GC_STATS is defined, updated after a GC
     catnip_i32_t gc_page_index;
     catnip_gc_page *gc_page;
     catnip_list gc_pages;
     catnip_list gc_large_objs;
+    catnip_i32_t gc_max_pages;
+
+    catnip_bool_t gc_temp_enabled;
+    catnip_gc_page* gc_temp_page;
+    catnip_i32_t gc_temp_page_index;
+    catnip_i32_t gc_temp_large_obj_index;
+    
 
     catnip_ui32_t pen_line_buffer_length;
     catnip_pen_line *pen_line_buffer;
@@ -96,6 +105,8 @@ catnip_bool_t catnip_runtime_has_running_threads(catnip_runtime *runtime);
 catnip_obj_head *catnip_runtime_gc_new_obj(catnip_runtime *runtime, catnip_ui32_t size);
 catnip_obj_head *catnip_gc_new_immortal(catnip_ui32_t size);
 void catnip_runtime_gc(catnip_runtime *runtime);
+void catnip_runtime_gc_begin_temporary(catnip_runtime *runtime);
+void catnip_runtime_gc_end_temporary(catnip_runtime *runtime);
 void catnip_runtime_render_pen_draw_line( catnip_runtime *runtime, catnip_target *target, catnip_f32_t x0, catnip_f32_t y0, catnip_f32_t x1, catnip_f32_t y1);
 void catnip_runtime_render_pen_flush(catnip_runtime *runtime);
 

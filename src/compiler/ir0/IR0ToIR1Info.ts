@@ -1,17 +1,15 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { IR1 } from "../ir1/IR1";
-import { IR1Script } from "../ir1/IR1Script";
-import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
 import { IR1ExternalValue, IR1ExternalValueType } from "../ir1/IR1ExternalValue";
+import { IR1ExternalValueSourceType, IR1Function } from "../ir1/IR1Function";
 import { IR1Logger } from "../ir1/IR1Logger";
+import { IR1Script } from "../ir1/IR1Script";
 import { IR0 } from "./IR0";
-import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
-import { IR0Script } from "./IR0Script";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlowType } from "./IR0ControlFlow";
-import { IR0InputProcedureArgument } from "./procedure/IR0InputProcedureArgument";
-import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
+import { IR0GraphVisDotGenerator } from "./IR0GraphVisDotGenerator";
+import { IR0Script } from "./IR0Script";
 
 // Holds additional info we need about each basic block for translating it to IR1
 export interface BasicBlockInfo {
@@ -38,7 +36,12 @@ export interface FunctionInfo {
     ir0: IR0BasicBlock;
     ir1: IR1Function;
 
+    // All the functions who call this function (in) and who this function calls (out). Including across scripts
+    in: FunctionInfo[];
+    out: FunctionInfo[];
+
     isYieldTarget: boolean;
+    canTriggerGC: boolean;
 }
 
 // Holds additional info we need about each script for translating it to IR1
@@ -146,8 +149,11 @@ export class IR0ToIR1Info {
                     functionInfo = {
                         script,
                         isYieldTarget,
+                        canTriggerGC: false,
                         ir0: block,
                         ir1: func ?? new IR1Function(script.ir1),
+                        in: [],
+                        out: [],
                     };
 
                     this._functions.set(block, functionInfo);
@@ -471,8 +477,31 @@ export class IR0ToIR1Info {
             }
         }
 
-        // Okay so we've figured out every IR1 function we're going emit
+        // Okay so we've figured out every IR1 function we're going emit across every script
+
+        // We now link up the 'in' and 'out' arrays of each function
+        for (const fromInfo of this._blocks.values()) {
+            function link(from: FunctionInfo, to: FunctionInfo) {
+                if (from.out.includes(to)) return;
+                CatnipCompilerLogger.assert(!to.in.includes(from));
+                from.out.push(to);
+                to.in.push(from);
+            }
+
+            for (const toInfo of fromInfo.out) {
+                if (toInfo.func !== fromInfo.func)
+                    link(fromInfo.func, toInfo.func);
+            }
+
+            const flow = fromInfo.block.flow;
+
+            if (flow.type === IR0ControlFlowType.Call)
+                link(fromInfo.func, this._functions.get(flow.procedure.head)!);
+        }
+
+
         // Now we need to figure out what the inputs to each of these functions is going to be
+        // While we're here, mark each function that can trigger a GC
         {
             const sourceExternalValue = (block: BasicBlockInfo, value: IR1ExternalValue): void => {
 
@@ -517,23 +546,35 @@ export class IR0ToIR1Info {
                 }
             };
 
+            const markFunctionAsTriggerGC = (func: FunctionInfo): void => {
+                if (func.canTriggerGC) return;
+                func.canTriggerGC = true;
+                func.in.forEach(markFunctionAsTriggerGC);
+            };
+
             for (const blockInfo of this._blocks.values()) {
+
                 blockInfo.block.forEachNode(node => {
+
+                    // Source all the external values
                     for (const externalValue of node.getExternalValues())
                         sourceExternalValue(blockInfo, externalValue);
+
+                    // Also, if this node causes a GC, mark the function as able to cause a GC
+                    if (node.canTriggerGC) markFunctionAsTriggerGC(blockInfo.func);
                 });
 
-                // We need an explicit return location if the script is not top level, and the script is yielding.
-                //   If the script is top level, `Return` just terminates the thread.
-                //   If the script is not yielding, WASM deals with the return location for us.
-                const needsReturnLocation = !blockInfo.func.script.ir1.trigger.isTopLevel && blockInfo.func.script.isYielding;
+                if (blockInfo.block.flow.type === IR0ControlFlowType.Return) {
+                    // We need an explicit return location if the script is not top level, and the script is yielding.
+                    //   If the script is top level, `Return` just terminates the thread.
+                    //   If the script is not yielding, WASM deals with the return location for us.
+                    const needsReturnLocation = !blockInfo.func.script.ir1.trigger.isTopLevel && blockInfo.func.script.isYielding;
 
-                if (needsReturnLocation && blockInfo.block.flow.type === IR0ControlFlowType.Return) {
-                    sourceExternalValue(blockInfo, { type: IR1ExternalValueType.RETURN_LOCATION });
+                    if (needsReturnLocation)
+                        sourceExternalValue(blockInfo, { type: IR1ExternalValueType.RETURN_LOCATION });
                 }
             }
         }
-
     }
 
     public addGraphVisDominanceEdges(generator: IR0GraphVisDotGenerator) {
@@ -543,32 +584,33 @@ export class IR0ToIR1Info {
 
             for (const blockInfo of script.blocks.values()) {
 
-                if (blockInfo.isLoopHead || blockInfo.isMerge) {
-
-                    let label: string;
-                    if (blockInfo.isLoopHead) {
-                        if (blockInfo.isMerge) label = "Loop & Merge";
-                        else label = "Loop";
-                    } else label = "Merge";
-
-                    generator.writeLine(`subgraph cluster_${generator.blocks.get(blockInfo.block)!.clusterName} { label="${label}"; }`);
-                }
+                const labels: string[] = [];
 
                 if (blockInfo.immediateDominator === null) {
                     IR1Logger.assert(blockInfo.isEntrypoint);
-                    generator.writeLine(`subgraph cluster_${generator.blocks.get(blockInfo.block)!.clusterName} { color=blue; }`);
-                    continue;
+                    labels.push("Entrypoint");
+
+                    if (blockInfo.func.canTriggerGC)
+                        labels.push("GC");
                 }
+                
+                if (blockInfo.isLoopHead) labels.push("Loop");
+                if (blockInfo.isMerge) labels.push("Merge");
 
-                const blockGraphInfo = generator.blocks.get(blockInfo.block)!;
+                if (labels.length !== 0)
+                    generator.writeLine(`subgraph cluster_${generator.blocks.get(blockInfo.block)!.clusterName} { label="${labels.join(" & ")}"; }`);
 
-                // Dominator edges
-                // const dominatorGraphInfo = generator.blocks.get(blockInfo.immediateDominator.block)!;
-                // generator.writeEdge(dominatorGraphInfo.finalNode, blockGraphInfo.firstNode, `color=black lhead="cluster_${blockGraphInfo.clusterName}" ltail="cluster_${dominatorGraphInfo.clusterName}"`);
+                if (!blockInfo.isEntrypoint) {
+                    const blockGraphInfo = generator.blocks.get(blockInfo.block)!;
 
-                // Function ownership edges
-                // const funcEntrypointGraphInfo = generator.blocks.get([...this.functions].find(([block, func]) => func === blockInfo.func)![0])!;
-                // generator.writeEdge(blockGraphInfo.firstNode, funcEntrypointGraphInfo.firstNode, `color=red lhead="cluster_${funcEntrypointGraphInfo.clusterName}" ltail="cluster_${blockGraphInfo.clusterName}"`);
+                    // Dominator edges
+                    // const dominatorGraphInfo = generator.blocks.get(blockInfo.immediateDominator.block)!;
+                    // generator.writeEdge(dominatorGraphInfo.finalNode, blockGraphInfo.firstNode, `color=black lhead="cluster_${blockGraphInfo.clusterName}" ltail="cluster_${dominatorGraphInfo.clusterName}"`);
+
+                    // Function ownership edges
+                    // const funcEntrypointGraphInfo = generator.blocks.get([...this.functions].find(([block, func]) => func === blockInfo.func)![0])!;
+                    // generator.writeEdge(blockGraphInfo.firstNode, funcEntrypointGraphInfo.firstNode, `color=red lhead="cluster_${funcEntrypointGraphInfo.clusterName}" ltail="cluster_${blockGraphInfo.clusterName}"`);
+                }
             }
 
             generator.decrementIndentation();

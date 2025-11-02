@@ -19,8 +19,11 @@ catnip_runtime *catnip_runtime_new() {
 
   CATNIP_LIST_INIT(&rt->threads, catnip_thread *, 8);
 
+  rt->gc_requested = CATNIP_FALSE;
+  rt->gc_index = 0;
   rt->gc_page_index = -1;
   rt->gc_page = CATNIP_NULL;
+  rt->gc_max_pages = 3;
   CATNIP_LIST_INIT(&rt->gc_pages, catnip_gc_page *, 4);
   CATNIP_LIST_INIT(&rt->gc_large_objs, catnip_obj_head *, 0);
 
@@ -110,16 +113,18 @@ void catnip_runtime_tick(catnip_runtime *runtime) {
           }
         }
 
+        if (runtime->gc_requested)
+          catnip_runtime_gc(runtime);
+
         if (++lc > 100000000)
           CATNIP_ASSERT(CATNIP_FALSE);
       }
 
-      if (thread->status != CATNIP_THREAD_STATUS_TERMINATED && thread->status != CATNIP_THREAD_STATUS_YIELD_TICK) 
+      if (thread->status == CATNIP_THREAD_STATUS_RUNNING || thread->status == CATNIP_THREAD_STATUS_YIELD) 
         ++numActiveThreads;
     }
 
     ranFirstTick = CATNIP_TRUE;
-    catnip_runtime_gc(runtime);
   }
 
   cull_terminated_thread(&runtime->threads);

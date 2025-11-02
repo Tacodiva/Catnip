@@ -21,12 +21,12 @@ export class IR0InputOperatorMod extends IR0InputOperatorGenericBinary {
 
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrSimple(this.name, emitter => {
-            const modulus = emitter.borrowLocal(SpiderNumberType.f64);
+            const modulus = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER);
 
             emitter.emitWasm(SpiderOpcodes.local_tee, modulus);
             emitter.emitWasmRuntimeFunctionCall("catnip_math_fmod");
 
-            const result = emitter.borrowLocal(SpiderNumberType.f64);
+            const result = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER_OR_NAN);
             emitter.emitWasm(SpiderOpcodes.local_tee, result);
 
             emitter.emitWasm(SpiderOpcodes.local_get, modulus);

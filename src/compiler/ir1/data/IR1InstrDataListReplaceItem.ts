@@ -1,12 +1,12 @@
-import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
+import { SpiderOpcodes } from "wasm-spider";
 import { CatnipList } from "../../../runtime/CatnipList";
 import { CatnipTarget } from "../../../runtime/CatnipTarget";
 import { CatnipValue } from "../../CatnipValue";
+import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction } from "../IR1Instruction";
 import { IR1StringificationContext } from "../IR1StringificationContext";
 import { ListUtils } from "./ListUtils";
-import { CatnipWasmUnionValue } from "../../../wasm-interop/CatnipWasmStructValue";
 
 export class IR1InstrDataListReplaceItem extends IR1Instruction {
 
@@ -22,7 +22,7 @@ export class IR1InstrDataListReplaceItem extends IR1Instruction {
     }
 
     public emitWasm(emitter: CatnipCompilerWasmEmitter): void {
-        const valueVariable = emitter.borrowLocal(SpiderNumberType.f64);
+        const valueVariable = emitter.borrowLocal(CatnipValueFormat.F64);
         emitter.emitWasm(SpiderOpcodes.local_set, valueVariable);
 
         ListUtils.emitListBoundsCheck(emitter,

@@ -8,6 +8,9 @@ import { IR0InputOperatorGenericBinary } from "./IR0InputOperatorGenericBinary";
 
 
 export class IR0InputOperatorJoin extends IR0InputOperatorGenericBinary {
+
+    public canTriggerGC: boolean = true;
+    
     public constructor(left: IR0Input, right: IR0Input) {
         super("operator_join", CatnipValueFormat.I32_HSTRING, left, right);
     }
@@ -23,7 +26,7 @@ export class IR0InputOperatorJoin extends IR0InputOperatorGenericBinary {
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrSimple(this.name, emitter => {
             emitter.emitWasmPushRuntime();
-            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_join");
+            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_join_gc");
         });
     }
 
