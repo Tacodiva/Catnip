@@ -1,4 +1,4 @@
-import { SpiderExpression, SpiderFunctionDefinition, SpiderLocalParameterReference, SpiderLocalReference, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes, SpiderValueType } from "wasm-spider";
+import { SpiderExpression, SpiderFunction, SpiderFunctionDefinition, SpiderLocalParameterReference, SpiderLocalReference, SpiderLocalVariableReference, SpiderNumberType, SpiderOpcode, SpiderOpcodes, SpiderReferenceType, SpiderValueType } from "wasm-spider";
 import { CatnipRuntimeModuleFunctionName } from "../../runtime/CatnipRuntimeModuleFunctions";
 import { CatnipWasmStructThread } from "../../wasm-interop/CatnipWasmStructThread";
 import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../wasm-interop/CatnipWasmStructValue";
@@ -148,8 +148,23 @@ export class CatnipCompilerWasmEmitter {
         this.emitWasm(SpiderOpcodes.f64_reinterpret_i64);
     }
 
-    public emitWasmRuntimeFunctionCall(funcName: CatnipRuntimeModuleFunctionName) {
-        this.emitWasm(SpiderOpcodes.call, this.module.getRuntimeFunction(funcName));
+    public emitWasmCall(func: SpiderFunction, callWithoutEffects: boolean = false) {
+        if (callWithoutEffects && this.compiler.config.enable_optimization_binaryen) {            
+            this.emitWasm(SpiderOpcodes.ref_func, func);
+    
+            this.emitWasm(SpiderOpcodes.call, 
+                this.module.getBinaryenIntrinsic("call.without.effects",
+                    [...func.type.parameters, SpiderReferenceType.funcref],
+                    ...func.type.results
+                )
+            );
+        } else {
+            this.emitWasm(SpiderOpcodes.call, func);
+        }
+    }
+
+    public emitWasmRuntimeFunctionCall(funcName: CatnipRuntimeModuleFunctionName, callWithoutEffects: boolean = false) {
+        this.emitWasmCall(this.module.getRuntimeFunction(funcName), callWithoutEffects);
     }
 
     public emitWasmPushRuntime() {

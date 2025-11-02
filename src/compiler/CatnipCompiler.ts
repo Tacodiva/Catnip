@@ -239,6 +239,7 @@ export class CatnipCompiler {
 
                 binaryen.setOptimizeLevel(optLevel);
                 binaryenModule.optimize();
+                binaryenModule.runPasses(["intrinsic-lowering", "remove-unused-module-elements"]);
                 moduleSource = binaryenModule.emitBinary();
             }
 

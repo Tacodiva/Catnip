@@ -185,7 +185,7 @@ export class IR1InstrCast extends IR1Instruction {
                     // Convert from a number to a string
                     if (emitter !== null) {
                         emitter.emitWasmPushRuntime();
-                        emitter.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64_gc");
+                        emitter.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64_gc", true);
                     }
 
                     if (ctx) ctx.didGC = true;
@@ -381,12 +381,12 @@ export class IR1InstrCast extends IR1Instruction {
                             emitter => {
                                 // The first character of the string is a '#'
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
-                                emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_to_argb");
+                                emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_to_argb", true);
                             },
                             emitter => {
                                 // The first character is not a '#', we will try to parse it into a number then a color
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
-                                emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
+                                emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse", true);
 
                                 this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);
                             },
@@ -400,7 +400,7 @@ export class IR1InstrCast extends IR1Instruction {
                 }
 
                 if (emitter !== null) {
-                    emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
+                    emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse", true);
                 }
                 return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
             }

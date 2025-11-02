@@ -30,6 +30,6 @@ export class IR0InputOperatorLength extends IR0Input<["str"]> {
     }
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrSimple(this.name, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_length"));
+        return new IR1InstrSimple(this.name, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_length", true));
     }
 }

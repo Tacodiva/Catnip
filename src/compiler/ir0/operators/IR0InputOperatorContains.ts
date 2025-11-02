@@ -30,7 +30,7 @@ export class IR0InputOperatorContains extends IR0Input<["a", "b"]> {
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
         return new IR1InstrSimple(this.name, emitter => {
-            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_contains");
+            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_contains", true);
         });
     }
 }

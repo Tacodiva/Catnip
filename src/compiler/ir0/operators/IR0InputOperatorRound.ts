@@ -25,6 +25,6 @@ export class IR0InputOperatorRound extends IR0Input<["operand"]> {
     }
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrSimple(this.name, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_math_round"));
+        return new IR1InstrSimple(this.name, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_math_round", true));
     }
 }

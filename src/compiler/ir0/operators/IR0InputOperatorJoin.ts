@@ -26,7 +26,7 @@ export class IR0InputOperatorJoin extends IR0InputOperatorGenericBinary {
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrSimple(this.name, emitter => {
             emitter.emitWasmPushRuntime();
-            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_join_gc");
+            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_join_gc", true);
         });
     }
 

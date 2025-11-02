@@ -40,7 +40,7 @@ export class IR0InputOperatorLetterOf extends IR0Input<["str", "idx"]> {
             emitter.emitWasmPushNumber(SpiderNumberType.i32, 1);
             emitter.emitWasm(SpiderOpcodes.i32_sub);
             emitter.emitWasmPushRuntime();
-            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_char_at");
+            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_char_at", true);
         });
     }
 }

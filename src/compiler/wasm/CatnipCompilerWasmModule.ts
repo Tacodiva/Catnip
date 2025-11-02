@@ -1,16 +1,17 @@
-import { createModule, SpiderFunction, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderReferenceType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
+import { createModule, SpiderFunction, SpiderImportFunction, SpiderImportMemory, SpiderImportTable, SpiderModule, SpiderNumberType, SpiderReferenceType, SpiderType, SpiderTypeDefinition, SpiderValueType, writeModule } from "wasm-spider";
+import { CatnipEventID, CatnipEvents } from "../../CatnipEvents";
 import { CatnipRuntimeModuleFunctionName, CatnipRuntimeModuleFunctions } from "../../runtime/CatnipRuntimeModuleFunctions";
+import UTF16 from "../../utf16";
+import { CatnipWasmStructHeapString } from "../../wasm-interop/CatnipWasmStructHeapString";
 import { CatnipCompiler } from "../CatnipCompiler";
+import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "../CatnipCompilerModuleSubsystem";
+import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../CatnipValueFormatUtils";
-import { CatnipWasmStructHeapString } from "../../wasm-interop/CatnipWasmStructHeapString";
-import UTF16 from "../../utf16";
-import { CatnipEventID, CatnipEvents } from "../../CatnipEvents";
 import { CatnipCompilerWasmEvent, CatnipCompilerWasmEventFilter } from "./CatnipCompilerWasmEvent";
-import { CatnipCompilerStage } from "../CatnipCompilerStage";
-import { CatnipProjectModuleEvent } from "../../runtime/CatnipProjectModule";
-import { CatnipCompilerModuleSubsystem, CatnipCompilerModuleSubsystemClass } from "../CatnipCompilerModuleSubsystem";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
+
+type BinaryenIntrinsicName = "call.without.effects";
 
 export type catnip_compiler_callback = (...args: any[]) => void | number | string;
 
@@ -37,7 +38,10 @@ export class CatnipCompilerWasmModule {
 
     // We need to import all the functions we need from the runtime into the module we're constructing
     //   This maps between runtime function names and that function's import.
-    private readonly _runtimeFuncs: ReadonlyMap<CatnipRuntimeModuleFunctionName, SpiderImportFunction>;
+    private readonly _runtimeFuncs: Map<CatnipRuntimeModuleFunctionName, SpiderImportFunction>;
+    private readonly _binaryenIntrinsics: Map<BinaryenIntrinsicName, Map<SpiderTypeDefinition, SpiderImportFunction>>;
+
+    private readonly _types: SpiderTypeDefinition[];
 
     private readonly _functionTableOffset: number;
     private readonly _functionTable: SpiderFunction[];
@@ -60,24 +64,16 @@ export class CatnipCompilerWasmModule {
             "env", "indirect_function_table",
             SpiderReferenceType.funcref, 0
         );
-        this.spiderIndirectFunctionType = this.spiderModule.createType(
+
+        this._types = [];
+
+        this.spiderIndirectFunctionType = this.createType(
             [SpiderNumberType.i32]
         );
 
         this._subsystems = new Map();
-
-        // Create all the imports for the runtime functions
-        {
-            const runtimeFuncs = new Map();
-            this._runtimeFuncs = runtimeFuncs;
-
-            let funcName: CatnipRuntimeModuleFunctionName;
-            for (funcName in CatnipRuntimeModuleFunctions) {
-                const func = CatnipRuntimeModuleFunctions[funcName];
-                const funcType = this.spiderModule.createType(func.args, ...(func.result === undefined ? [] : [func.result]));
-                runtimeFuncs.set(funcName, this.spiderModule.importFunction("catnip", funcName, funcType));
-            }
-        }
+        this._binaryenIntrinsics = new Map();
+        this._runtimeFuncs = new Map();
 
         this._functionTableOffset = 1;
         this._functionTable = [];
@@ -125,13 +121,59 @@ export class CatnipCompilerWasmModule {
         return newSubsystem;
     }
 
+    public createType(params: SpiderValueType[], ...results: SpiderValueType[]): SpiderTypeDefinition {
+        for (const existingType of this._types) {
+            const existingParams = existingType.parameters;
+            if (existingParams.length !== params.length || !existingParams.every((v, i) => params[i] === v))
+                continue;
+
+            const existingResults = existingType.results;
+            if (existingResults.length !== results.length || !existingResults.every((v, i) => results[i] === v))
+                continue;
+
+            return existingType;
+        }
+
+        return this.spiderModule.createType(params, ...results);
+    }
+
     /**
      * Gets the import for the runtime function with the given name.
      */
     public getRuntimeFunction(funcName: CatnipRuntimeModuleFunctionName): SpiderImportFunction {
-        const func = this._runtimeFuncs.get(funcName);
-        if (func === undefined) throw new Error(`Unknown runtime function '${funcName}'.`);
+        let func = this._runtimeFuncs.get(funcName);
+
+        if (func === undefined) {
+            const funcInfo = CatnipRuntimeModuleFunctions[funcName];
+            if (funcInfo === undefined) throw new Error(`Unknown runtime function '${funcName}'.`);
+
+            func = this.spiderModule.importFunction("catnip", funcName,
+                this.createType(funcInfo.args, ...(funcInfo.result === undefined ? [] : [funcInfo.result]))
+            );
+            this._runtimeFuncs.set(funcName, func);
+
+        }
         return func;
+    }
+
+    public getBinaryenIntrinsic(name: BinaryenIntrinsicName, params: SpiderValueType[], ...results: SpiderValueType[]): SpiderImportFunction {
+        CatnipCompilerLogger.assert(!!this.compiler.config.enable_optimization_binaryen);
+        
+        let intrinsics = this._binaryenIntrinsics.get(name);
+
+        if (intrinsics === undefined)
+            this._binaryenIntrinsics.set(name, intrinsics = new Map());
+
+        const type = this.createType(params, ...results);
+
+        let intrinsic = intrinsics.get(type);
+
+        if (intrinsic !== undefined) return intrinsic;
+
+        intrinsic = this.spiderModule.importFunction("binaryen-intrinsics", name, type);
+        intrinsics.set(type, intrinsic);
+
+        return intrinsic;
     }
 
     /**
@@ -164,8 +206,8 @@ export class CatnipCompilerWasmModule {
                 "catnip_callbacks",
                 uniqueName,
                 returnFormat ?
-                    this.spiderModule.createType([...argFormats], returnFormat) :
-                    this.spiderModule.createType([...argFormats])
+                    this.createType([...argFormats], returnFormat) :
+                    this.createType([...argFormats])
             )
         };
 

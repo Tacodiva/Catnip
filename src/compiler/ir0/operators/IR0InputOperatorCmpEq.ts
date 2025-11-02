@@ -23,7 +23,7 @@ export class IR0InputOperatorCmpEq extends IR0InputOperatorGenericBinary {
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrSimple(this.name, emitter => {
             emitter.emitWasmPushRuntime();
-            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_value_eq");
+            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_value_eq", true);
         });
     }
 

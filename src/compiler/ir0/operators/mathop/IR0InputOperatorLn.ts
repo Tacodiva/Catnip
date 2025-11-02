@@ -12,7 +12,7 @@ export class IR0InputOperatorLn extends IR0InputOperatorGenericMathop {
     }
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrSimple(this.name, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_math_log"));
+        return new IR1InstrSimple(this.name, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_math_log", true));
     }
 
     public clone(ctx: IR0CloneContext): IR0Input<["operand"]> {

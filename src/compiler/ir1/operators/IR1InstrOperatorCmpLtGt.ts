@@ -35,7 +35,7 @@ export class IR1InstrOperatorCmpLtGt extends IR1Instruction {
 
         const emitFullCheck = (emitter: CatnipCompilerWasmEmitter) => {
             emitter.emitWasmPushRuntime();
-            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp");
+            emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_value_cmp", true);
             emitter.emitWasmPushNumber(SpiderNumberType.i32, 0);
 
             if (this.type === IR1InstrOperatorCmpLtGtType.GREATER_THAN) {
