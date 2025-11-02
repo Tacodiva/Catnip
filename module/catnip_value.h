@@ -10,9 +10,6 @@ typedef catnip_ui32_t catnip_value_flags;
 #define CATNIP_VALUE_FLAG_STRING CATNIP_VALUE_FLAG(0)
 #define CATNIP_VALUE_FLAG_DOUBLE CATNIP_VALUE_FLAG(1)
 
-
-// All exponent bits + significand bit #52
-#define CATINP_VALUE_CANNON_NAN_UPPER 0x7FF80000
 // All exponent bits + significand bit #52 + significand bit #33
 #define CATINP_VALUE_STRING_UPPER 0x7FF80001
 // All exponent bits + significand bit #52 + significand bit #33
@@ -36,8 +33,6 @@ union catnip_value {
     catnip_f64_t val_double;
     struct catnip_value_parts parts;
 };
-
-typedef union catnip_value catnip_value;
 
 catnip_f64_t catnip_value_to_number(catnip_value value);
 catnip_hstring *catnip_value_to_string_gc(catnip_runtime *runtime, catnip_value value);

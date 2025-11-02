@@ -39,6 +39,8 @@ typedef unsigned char catnip_uchar_t;
 typedef signed short catnip_wchar_t;
 typedef unsigned short catnip_uwchar_t;
 
+// All exponent bits + significand bit #52
+#define CATINP_CANNON_NAN_UPPER 0x7FF80000
 
 #ifdef CATNIP_DEBUG
 void catnip_assert(catnip_bool_t assertion, const char* name, const char* func, const char* file, catnip_ui32_t line);
@@ -56,8 +58,13 @@ typedef struct catnip_thread catnip_thread;
 typedef struct catnip_costume catnip_costume;
 typedef struct catnip_pen_line catnip_pen_line;
 typedef struct catnip_io catnip_io;
+
+typedef union catnip_value catnip_value;
+typedef struct catnip_hstring catnip_hstring;
+
 typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 
+#include "./catnip_value.h"
 #include "./catnip_math.h"
 #include "./catnip_obj_head.h"
 #include "./catnip_util.h"
@@ -68,7 +75,6 @@ typedef void (*catnip_thread_fnptr)(catnip_thread *thread);
 #include "./catnip_strings.h"
 #include "./catnip_import.h"
 #include "./catnip_numconv.h"
-#include "./catnip_value.h"
 #include "./catnip_variable.h"
 #include "./catnip_costume.h"
 #include "./catnip_io.h"

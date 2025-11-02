@@ -8,7 +8,11 @@ catnip_wchar_t *catnip_hstring_get_data(const catnip_hstring *str) {
 }
 
 catnip_hstring *catnip_hstring_new_simple(catnip_runtime *runtime, catnip_ui32_t len) {  
-  return (catnip_hstring *) catnip_runtime_gc_new_obj(runtime, sizeof(catnip_hstring) + len * sizeof(catnip_wchar_t));
+  catnip_hstring *str = (catnip_hstring *) catnip_runtime_gc_new_obj(runtime, sizeof(catnip_hstring) + len * sizeof(catnip_wchar_t));
+
+  str->parsed_number.parts.upper = CATINP_HSTRING_INVALID_UPPER;
+
+  return str;
 }
 
 

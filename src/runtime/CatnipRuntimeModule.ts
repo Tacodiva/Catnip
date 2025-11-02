@@ -11,6 +11,7 @@ import { CatnipRuntimeModuleFunctions, CatnipRuntimeModuleFunctionsObject } from
 import { ICatnipRenderer, PEN_ATTRIBUTE_STRIDE_BYTES } from "./ICatnipRenderer";
 import UTF16 from "../utf16";
 import { CatnipCompilerLogger } from "../compiler/CatnipCompilerLogger";
+import { Cast } from "../compiler/cast";
 
 /*
  * A wrapper for the catnip wasm runtime
@@ -139,7 +140,9 @@ export class CatnipRuntimeModule {
             bytelen: encodedStr.length + CatnipWasmStructHeapString.size,
             magic: CATNIP_STRING_HEADER_MAGIC,
             externref_count: 1,
-            move_ptr: strPtr
+            move_ptr: strPtr,
+
+            parsed_number: Cast.toNumber(str)
         });
 
         this.memoryBytes.set(encodedStr, strPtr + CatnipWasmStructHeapString.size);

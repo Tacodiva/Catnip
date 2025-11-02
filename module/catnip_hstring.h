@@ -4,11 +4,13 @@
 
 #include "./catnip.h"
 
+// All exponent bits + significand bit #52 + significand bit #33
+#define CATINP_HSTRING_INVALID_UPPER 0x7FF80001
+
 struct catnip_hstring {
   catnip_obj_head obj_head;
+  catnip_value parsed_number;
 };
-
-typedef struct catnip_hstring catnip_hstring;
 
 struct catnip_hstring_span
 {

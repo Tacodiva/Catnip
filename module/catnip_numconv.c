@@ -671,6 +671,8 @@ recheck_exp:
 
 catnip_hstring *catnip_numconv_stringify_f64_gc(catnip_runtime *runtime, catnip_f64_t x) {
 
+  catnip_hstring *result;
+
   catnip_i32_t radix = 10;
   catnip_i32_t digits = 0;
 
@@ -707,7 +709,8 @@ catnip_hstring *catnip_numconv_stringify_f64_gc(catnip_runtime *runtime, catnip_
       *p++ = '-';
     }
     p += catnip_numconv_dragon4_format_uint32(p, uval, radix);
-    return catnip_hstring_new_from_ascii(nc_ctx->runtime, (catnip_char_t *)buf, (catnip_i32_t)(p - buf));
+    result = catnip_hstring_new_from_ascii(nc_ctx->runtime, (catnip_char_t *)buf, (catnip_i32_t)(p - buf));
+    goto done;
   }
 
   /*
@@ -808,11 +811,20 @@ zero_skip:
   // 	 */
   // }
 
-  return catnip_numconv_dragon4_convert(nc_ctx, radix, digits, 0, is_neg);
+  result = catnip_numconv_dragon4_convert(nc_ctx, radix, digits, 0, is_neg);
+
+done:
+  result->parsed_number.val_double = x;
+  return result;
 }
 
 catnip_f64_t catnip_numconv_parse(catnip_hstring *str) {
   CATNIP_ASSERT(str != CATNIP_NULL);
+
+  // If the string already has a parsed number attached, return it.
+  if (str->parsed_number.parts.upper != CATINP_HSTRING_INVALID_UPPER) {
+    return str->parsed_number.val_double;
+  }
 
   // TODO Account for scratch's broken trim polyfill?
   catnip_hstring_span strSpan = catnip_hstring_trim(str);
@@ -1190,6 +1202,8 @@ negcheck_and_ret:
   if (is_negitive) {
     result = -result;
   }
+
+  str->parsed_number.val_double = result;
 
   return result;
 
