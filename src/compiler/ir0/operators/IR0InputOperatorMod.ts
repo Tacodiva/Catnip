@@ -14,42 +14,89 @@ export class IR0InputOperatorMod extends IR0InputOperatorGenericBinary {
 
     protected _getResult(left: CatnipValue, right: CatnipValue): CatnipValue {
         if (left.isConstant && right.isConstant)
-            return CatnipValue.constantF64(left.asConstantNumber() % right.asConstantNumber());
+            return CatnipValue.constantF64(left.asConstantNumber() % right.asConstantNumber()); // TODO This is wrong
 
         return CatnipValue.dynamic(CatnipValueFormat.F64_NUMBER_OR_NAN);
     }
 
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrSimple(this.name, emitter => {
+            const value = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER);
+            const valueCast = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
             const modulus = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER);
 
-            emitter.emitWasm(SpiderOpcodes.local_tee, modulus);
-            emitter.emitWasmRuntimeFunctionCall("catnip_math_fmod", true);
+            emitter.emitWasm(SpiderOpcodes.local_set, modulus);
+            emitter.emitWasm(SpiderOpcodes.local_set, value);
+            
+            emitter.emitWasmBlock(emitter => {
 
-            const result = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER_OR_NAN);
-            emitter.emitWasm(SpiderOpcodes.local_tee, result);
+                emitter.emitWasm(SpiderOpcodes.local_get, value);
+                emitter.emitWasm(SpiderOpcodes.i32_trunc_sat_f64_u);
+                emitter.emitWasm(SpiderOpcodes.local_tee, valueCast);
+                emitter.emitWasm(SpiderOpcodes.f64_convert_i32_u);
+                emitter.emitWasm(SpiderOpcodes.local_get, value);
+                emitter.emitWasm(SpiderOpcodes.f64_eq);
 
-            emitter.emitWasm(SpiderOpcodes.local_get, modulus);
+                emitter.emitWasmIf(
+                    emitter => {
+                        const modulusCast = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
 
-            // result / modulus
-            emitter.emitWasm(SpiderOpcodes.f64_div);
+                        emitter.emitWasm(SpiderOpcodes.local_get, modulus);
+                        emitter.emitWasm(SpiderOpcodes.i32_trunc_sat_f64_u);
+                        emitter.emitWasm(SpiderOpcodes.local_tee, modulusCast);
+                        emitter.emitWasm(SpiderOpcodes.f64_convert_i32_u);
+                        emitter.emitWasm(SpiderOpcodes.local_get, modulus);
+                        emitter.emitWasm(SpiderOpcodes.f64_eq);
 
-            emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
+                        emitter.emitWasmIf(emitter => {
 
-            emitter.emitWasm(SpiderOpcodes.f64_lt);
+                            // Both operands are positive integers. Fast path :3
+                            emitter.emitWasm(SpiderOpcodes.local_get, valueCast);
+                            emitter.emitWasm(SpiderOpcodes.local_get, modulusCast);
+                            emitter.emitWasm(SpiderOpcodes.i32_rem_u);
+                            emitter.emitWasm(SpiderOpcodes.f64_convert_i32_u);
 
-            // if (result / modulus) < 0
-            emitter.emitWasmIf(emitter => {
-                emitter.emitWasm(SpiderOpcodes.local_get, result);
+                            emitter.emitWasm(SpiderOpcodes.br, 2); // Skip to end of block
+                        });
+
+                        emitter.returnLocal(modulusCast);
+                    }
+                );
+
+                emitter.emitWasm(SpiderOpcodes.local_get, value);
                 emitter.emitWasm(SpiderOpcodes.local_get, modulus);
-                emitter.emitWasm(SpiderOpcodes.f64_add);
-                emitter.emitWasm(SpiderOpcodes.local_set, result);
-            });
 
-            emitter.emitWasm(SpiderOpcodes.local_get, result);
+                emitter.emitWasmRuntimeFunctionCall("catnip_math_fmod", true);
 
+                const result = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER_OR_NAN);
+                emitter.emitWasm(SpiderOpcodes.local_tee, result);
+
+                emitter.emitWasm(SpiderOpcodes.local_get, modulus);
+
+                // result / modulus
+                emitter.emitWasm(SpiderOpcodes.f64_div);
+
+                emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
+
+                emitter.emitWasm(SpiderOpcodes.f64_lt);
+
+                // if (result / modulus) < 0
+                emitter.emitWasmIf(emitter => {
+                    emitter.emitWasm(SpiderOpcodes.local_get, result);
+                    emitter.emitWasm(SpiderOpcodes.local_get, modulus);
+                    emitter.emitWasm(SpiderOpcodes.f64_add);
+                    emitter.emitWasm(SpiderOpcodes.local_set, result);
+                });
+
+                emitter.emitWasm(SpiderOpcodes.local_get, result);
+
+                emitter.returnLocal(result);
+
+            }, SpiderNumberType.f64);
+
+            emitter.returnLocal(value);
+            emitter.returnLocal(valueCast);
             emitter.returnLocal(modulus);
-            emitter.returnLocal(result);
         });
     }
 

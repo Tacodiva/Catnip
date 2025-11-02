@@ -26,7 +26,7 @@ async function main() {
         // enable_optimization_constant_folding: false,
         // enable_optimization_graph_reduction: false,
         // enable_optimization_dead_script_elimination: false,
-        enable_optimization_procedure_inlinling: false,
+        // enable_optimization_procedure_inlinling: false,
         // enable_optimization_dead_branch_elimination: false,
         // enable_optimization_variable_analysis: false
     });
@@ -60,6 +60,13 @@ async function main() {
         projectModule.triggerEvent("IO_MOUSE_DOWN");
     });
 
+    const greenFlag = document.createElement("button");
+    greenFlag.innerText = "Green Flag";
+    greenFlag.onclick = () => {
+        projectModule.start();
+    };
+    document.body.appendChild(greenFlag);
+
     (window as any).project = projectModule;
 
     let intervalToken: any;
@@ -77,8 +84,6 @@ async function main() {
             clearInterval(intervalToken);
         }
     }
-
-    projectModule.start();
 
     intervalToken = setInterval(frame, 1000 / stepRate);
 }
