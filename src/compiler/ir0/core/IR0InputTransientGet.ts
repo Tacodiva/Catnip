@@ -10,10 +10,12 @@ import { IR0Input } from "../IR0Node";
 export class IR0InputTransientGet extends IR0Input {
 
     public transient: CatnipCompilerTransientVariable;
+    public result: CatnipValue;
 
     public constructor(transient: CatnipCompilerTransientVariable) {
         super("transient_get", {});
         this.transient = transient;
+        this.result = CatnipValue.dynamic(this.transient.format);
     }
 
     private _getExternalValue(): IR1ExternalValue {
@@ -28,7 +30,7 @@ export class IR0InputTransientGet extends IR0Input {
     }
 
     public getResult(): CatnipValue {
-        return CatnipValue.dynamic(this.transient.format);
+        return this.result;
     }
 
     public emitIR1(emitter: IR1Emitter): IR1Instruction {

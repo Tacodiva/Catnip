@@ -135,11 +135,11 @@ export const IR0PassProcedureInlining: IR0Pass = {
                 const argumentTransients: CatnipCompilerTransientVariable[] = [];
 
                 for (const argument of callingFlow.args) {
-                    const argumentTransient = callingBlock.createTransient(`${argument.name}_inline`, argument.requiredFormat);
+                    const argumentTransient = callingBlock.createNewTransient(`${argument.name}_inline`, argument.requiredFormat);
                     argumentTransients.push(argumentTransient);
                     callingBlock.commands.push(new IR0CmdTransientSet(argumentTransient, argument.input));
                 }
-
+                
                 // This is where "returns" will now flow to
                 const returnLocation = callingFlow.next;
 
@@ -178,6 +178,11 @@ export const IR0PassProcedureInlining: IR0Pass = {
                             status: CatnipWasmEnumThreadStatus.RUNNING,
                             next: returnLocation
                         };
+
+                        // Also destroy all of our borrowed transients
+                        for (const argTransient of argumentTransients)
+                            block.destroyTransient(argTransient);
+                        
                     } else {
                         IR0ControlFlow.forEachBlock(block.flow, visit);
                     }

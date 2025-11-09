@@ -520,6 +520,9 @@ export class IR0ToIR1Info {
                     let dominatorInfo: BasicBlockInfo | null = block;
 
                     while (dominatorInfo !== null) {
+                        if (dominatorInfo !== block)
+                            CatnipCompilerLogger.assert(!dominatorInfo.block.destroyedTransients.includes(value.var));
+
                         if (dominatorInfo.block.createdTransients.includes(value.var)) {
                             // If a dominator has created the transient, we don't need to source it.
                             return;

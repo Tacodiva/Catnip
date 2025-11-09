@@ -20,8 +20,12 @@ export const IR0PassGraphReduction: IR0Pass = {
 
             dst.block.commands.push(...src.block.commands);
 
+            // Merge the created and destroyed transients
             for (const createdTransient of src.block.createdTransients)
-                dst.block.addCreatedTransient(createdTransient);
+                dst.block.createTransient(createdTransient);
+
+            for (const destroyedTransient of src.block.destroyedTransients)
+                dst.block.destroyTransient(destroyedTransient);
 
             // Everything going into 'src' should now go into 'dst'
             {
@@ -102,7 +106,7 @@ export const IR0PassGraphReduction: IR0Pass = {
                 }
             }
 
-            if (blockInfo.block.commands.length === 0) {
+            if (blockInfo.block.commands.length === 0 && blockInfo.block.destroyedTransients.length === 0) {
                 if (blockFlow.type === IR0ControlFlowType.Next && blockFlow.status === CatnipWasmEnumThreadStatus.RUNNING) {
                     // This is an empty node which just passes control to something else. It does not need to exist.
                     mergeBasicBlocks(blockInfo, graph.get(blockFlow.next)!);

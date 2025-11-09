@@ -60,6 +60,9 @@ export const op_for_each = new class extends CatnipCommandOpType<for_each_inputs
                 }
             );
         });
+
+        ctx.emitTransientDestroy(loopCount);
+        ctx.emitTransientDestroy(loopIndex);
     }
 }
 

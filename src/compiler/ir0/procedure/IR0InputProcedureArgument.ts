@@ -37,4 +37,8 @@ export class IR0InputProcedureArgument extends IR0Input {
     public clone() {
         return new IR0InputProcedureArgument(this.index);
     }
+
+    public getGraphVisNodeProperties(): string {
+        return `[label="${this.name} #${this.index}"]`;
+    }
 }

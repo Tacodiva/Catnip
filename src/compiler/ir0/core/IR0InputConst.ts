@@ -17,8 +17,6 @@ export class IR0InputConst extends IR0Input<[]> {
         this.format = format ?? null;
     }
 
-
-
     public getResultFormat(): CatnipValueFormat {
         const numberCast = Cast.toNumber(this.value);
 

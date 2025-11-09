@@ -4,8 +4,11 @@ import { CatnipValueFormat } from "./CatnipValueFormat";
 import { CatnipValueFormatUtils } from "./CatnipValueFormatUtils";
 
 export class CatnipValue {
+
+    private static _none = CatnipValue.dynamic(CatnipValueFormat.NONE);
+
     public static none(): CatnipValue {
-        return CatnipValue.dynamic(CatnipValueFormat.NONE);
+        return CatnipValue._none;
     }
 
     public static constantF64(value: number): CatnipValue {

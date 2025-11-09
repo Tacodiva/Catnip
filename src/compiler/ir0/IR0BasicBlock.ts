@@ -1,4 +1,5 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
+import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerStage } from "../CatnipCompilerStage";
 import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
 import { CatnipValueFormat } from "../CatnipValueFormat";
@@ -14,10 +15,19 @@ export class IR0BasicBlock {
 
     public commands: IR0Command[];
 
-    // A list of transient variables that this block "creates"
+    // Lists of transient variables that this block "creates" and "destroys". This operation doesn't really translate to anthing
+    //  in the WASM, but it makes the scope of the transients definite, as they must be created and destroyed at some point.
+    // This helps with analysis. Transients are not destroyed in the case of an infinite loop where the whole loop uses the transient. 
+
+    // Transients created right before the begining of this block
     private _createdTransients: CatnipCompilerTransientVariable[];
     public get createdTransients(): readonly CatnipCompilerTransientVariable[] { return this._createdTransients; }
 
+    // Transients destroyed right after the end of this block
+    private _destroyedTransients: CatnipCompilerTransientVariable[];
+    public get destroyedTransients(): readonly CatnipCompilerTransientVariable[] { return this._destroyedTransients; }
+
+    // The 'flow' of this block is what happens when all the commands in the block are completed.
     private _flow: IR0ControlFlow | null;
 
     public get flow(): IR0ControlFlow {
@@ -38,17 +48,26 @@ export class IR0BasicBlock {
         this.commands = instructions;
         this._flow = flow;
         this._createdTransients = [];
+        this._destroyedTransients = [];
     }
 
-    public createTransient(name: string, format: CatnipValueFormat): CatnipCompilerTransientVariable {
+    public createNewTransient(name: string, format: CatnipValueFormat): CatnipCompilerTransientVariable {
         const transient = new CatnipCompilerTransientVariable(name, format);
-        this.addCreatedTransient(transient);
+        this.createTransient(transient);
         return transient;
     }
-    
-    public addCreatedTransient(transient: CatnipCompilerTransientVariable) {
+
+    public createTransient(transient: CatnipCompilerTransientVariable): void {
         this.script.ir.compiler.assertStageBefore(CatnipCompilerStage.IR0_IR1_PREPASS);
+        // Transients must always be created exactly once.
+        CatnipCompilerLogger.assert(!this._createdTransients.includes(transient));
         this._createdTransients.push(transient);
+    }
+
+    public destroyTransient(transient: CatnipCompilerTransientVariable): void {
+        this.script.ir.compiler.assertStageBefore(CatnipCompilerStage.IR0_IR1_PREPASS);
+        if (this._destroyedTransients.includes(transient)) return;
+        this._destroyedTransients.push(transient);
     }
 
     public forEachRootNode(
@@ -176,13 +195,14 @@ export class IR0BasicBlock {
     public clone(ctx: IR0CloneContext): IR0BasicBlock {
         const clone = new IR0BasicBlock(ctx.dstScript, [], null);
 
-        for (const command of this.commands) {
+        for (const command of this.commands)
             clone.commands.push(command.clone(ctx));
-        }
 
-        for (const transient of this._createdTransients) {
+        for (const transient of this._createdTransients)
             clone._createdTransients.push(ctx.getTransient(transient));
-        }
+
+        for (const transient of this._destroyedTransients)
+            clone._destroyedTransients.push(ctx.getTransient(transient));
 
         ctx.blocks.set(this, clone);
 

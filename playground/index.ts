@@ -26,9 +26,9 @@ async function main() {
         // enable_optimization_constant_folding: false,
         // enable_optimization_graph_reduction: false,
         // enable_optimization_dead_script_elimination: false,
-        // enable_optimization_procedure_inlinling: false,
+        enable_optimization_procedure_inlinling: false,
         // enable_optimization_dead_branch_elimination: false,
-        // enable_optimization_variable_analysis: false
+        enable_optimization_variable_analysis: false
     });
 
     document.addEventListener("keydown", (event) => {

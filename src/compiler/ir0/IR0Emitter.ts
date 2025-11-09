@@ -2,11 +2,12 @@ import { CatnipCommandList, CatnipInputOp } from "../../ops";
 import { CatnipScript } from "../../runtime/CatnipScript";
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { catnip_compiler_constant } from "../cast";
-import { catnip_compiler_callback } from "../CatnipCompiler";
+import { catnip_compiler_callback, CatnipCompiler } from "../CatnipCompiler";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
 import { CatnipCompilerTransientVariable } from "../CatnipCompilerTransientVariable";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { IR0CmdCallback } from "./core/IR0CmdCallback";
+import { IR0CmdComment } from "./core/IR0CmdComment";
 import { IR0CmdRequestRedraw } from "./core/IR0CmdRequestRedraw";
 import { IR0InputCallback } from "./core/IR0InputCallback";
 import { IR0InputConst } from "./core/IR0InputConst";
@@ -30,20 +31,30 @@ export class IR0Emitter {
     public get compiler() { return this.ir0Script.ir.compiler; }
     public get project() { return this.compiler.project; }
 
+    // A set of all the transients we have created but not yet destroyed.
+    //  This is used as a sanity check, as each transient should be destroyed at least once.
+    //  If this set has anything left in it once emitting is completed, somebody forgot to destroy a transient.
+    private _undestroyedTransients: Set<CatnipCompilerTransientVariable>;
+
     public constructor(conversionInfo: SB3ToIR0Info, script: IR0Script) {
         this.conversionInfo = conversionInfo;
         this.ir0Script = script;
         this.sb3Script = this.conversionInfo.getScriptSB3(this.ir0Script);
         this.block = this.ir0Script.head;
+        this._undestroyedTransients = new Set();
     }
 
     public emitAll() {
-        if (this.block.isComplete) return;
+        CatnipCompilerLogger.assert(!this.block.isComplete);
 
         this.emitCommands(this.sb3Script.commands);
+
         this.completeBlock({
             type: IR0ControlFlowType.Return
         });
+
+        if (this._undestroyedTransients.size !== 0)
+            CatnipCompilerLogger.warn(`Emitting IR0 has ${this._undestroyedTransients.size} undestroyed transient/s.`);
     }
 
     public emitInput(input: CatnipInputOp) {
@@ -52,6 +63,10 @@ export class IR0Emitter {
 
     public emitConst(value: catnip_compiler_constant, format?: CatnipValueFormat): IR0InputConst {
         return new IR0InputConst(value, format);
+    }
+
+    public emitComment(text: string): void {
+        this.emitCommand(new IR0CmdComment(text));
     }
 
     public emitCommands(commands: CatnipCommandList) {
@@ -85,6 +100,9 @@ export class IR0Emitter {
     public emitReturn() {
         if (this.block.isComplete) return;
         this.completeBlock({ type: IR0ControlFlowType.Return });
+
+        for (const transient of this._undestroyedTransients)
+            this.block.destroyTransient(transient);
     }
 
     public emitYield(status: CatnipWasmEnumThreadStatus = CatnipWasmEnumThreadStatus.YIELD) {
@@ -191,6 +209,14 @@ export class IR0Emitter {
     }
 
     public emitTransientCreate(name: string, format: CatnipValueFormat): CatnipCompilerTransientVariable {
-        return this.block.createTransient(name, format);
+        const transient = this.block.createNewTransient(name, format);
+        this._undestroyedTransients.add(transient);
+        return transient;
+    }
+
+    public emitTransientDestroy(transient: CatnipCompilerTransientVariable) {
+        this._undestroyedTransients.delete(transient);
+        if (this.block.isComplete) return;
+        this.block.destroyTransient(transient);
     }
 }
