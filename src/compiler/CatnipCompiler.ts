@@ -177,8 +177,6 @@ export class CatnipCompiler {
 
         for (const script of ir0.scripts) {
             const emitter = new IR1Emitter(script, ir0ToIR1);
-
-
             emitter.emitAll();
         }
 

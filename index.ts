@@ -8,31 +8,31 @@ async function main() {
     const catnipModule = await WebAssembly.compile(catnipWasmFile as BufferSource);
 
 
-    // const projectFile = await fs.readFile("public/Project.sb3");
+    const projectFile = await fs.readFile("public/Project.sb3");
     // const projectFile = await fs.readFile("public/Memory Corruption.sb3");
     // const projectFile = await fs.readFile("public/lines.sb3");
     // const projectFile = await fs.readFile("public/Mandlebrot Set Benchmark.sb3");
     // const projectFile = await fs.readFile("public/Variable inlining bug.sb3");
     // const projectFile = await fs.readFile("public/Conway.sb3");    
     // const projectFile = await fs.readFile("public/fib.sb3");
-    const projectFile = await fs.readFile("public/LOS.sb3");
+    // const projectFile = await fs.readFile("public/LOS.sb3");
 
     const project = await run(catnipModule, projectFile);
     const projectModule = await project.compile({
-        // dump_ir0: "advanced",
+        dump_ir0: "advanced",
         // dump_ir0: "advanced",
         // dump_ir1: true,
         // dump_binaryen: "stack",
         // enable_compiler_timing: true,
         // dump_wasm_blob: "out.wasm",
         
-        enable_optimization_binaryen: false,
-        enable_optimization_constant_folding: false,
+        // enable_optimization_binaryen: false,
+        // enable_optimization_constant_folding: false,
         // enable_optimization_graph_reduction: false,
         // enable_optimization_dead_script_elimination: false,
         enable_optimization_procedure_inlinling: false,
-        // enable_optimization_dead_branch_elimination: false,
-        enable_optimization_variable_analysis: false,
+        enable_optimization_dead_branch_elimination: false,
+        // enable_optimization_variable_analysis: false,
 
         // events: {
         //     PROJECT_BROADCAST: {

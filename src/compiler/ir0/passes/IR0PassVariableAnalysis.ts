@@ -154,7 +154,7 @@ export const IR0PassVariableAnalysis: IR0Pass = {
                     blocksToAnalyze.push(blockInfo);
                 }
             }
-            // When a block is yielded to, this is the state it wil enter with.
+            // When a block is yielded to, this is the state it will enter with.
             // This is the same for all blocks we can yield to.
             let yieldVariableState: VariableState | null = null;
 

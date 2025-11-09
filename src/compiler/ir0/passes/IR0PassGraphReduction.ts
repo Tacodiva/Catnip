@@ -106,7 +106,23 @@ export const IR0PassGraphReduction: IR0Pass = {
                 if (blockFlow.type === IR0ControlFlowType.Next && blockFlow.status === CatnipWasmEnumThreadStatus.RUNNING) {
                     // This is an empty node which just passes control to something else. It does not need to exist.
                     mergeBasicBlocks(blockInfo, graph.get(blockFlow.next)!);
+                    modified = true;
+                    return;
                 }
+            }
+
+            if (blockFlow.type === IR0ControlFlowType.Condition && blockFlow.pass === blockFlow.fail) {
+                // If a condition does the same thing on pass or fail, we can get rid of the condition
+
+                block.flow = {
+                    type: IR0ControlFlowType.Next,
+                    next: blockFlow.pass,
+                    status: CatnipWasmEnumThreadStatus.RUNNING
+                };
+
+                modified = true;
+
+                return;
             }
         });
 

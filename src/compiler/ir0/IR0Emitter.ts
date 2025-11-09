@@ -12,7 +12,6 @@ import { IR0InputCallback } from "./core/IR0InputCallback";
 import { IR0InputConst } from "./core/IR0InputConst";
 import { IR0BasicBlock } from "./IR0BasicBlock";
 import { IR0ControlFlow, IR0ControlFlowType } from "./IR0ControlFlow";
-import { IR0Logger } from "./IR0Logger";
 import { IR0Command, IR0Input, IR0InputReference, IR0NodeArgument, IR0NodeArguments } from "./IR0Node";
 import { IR0Script } from "./IR0Script";
 import { IR0TriggerProcedure } from "./procedure/IR0TriggerProcedure";
