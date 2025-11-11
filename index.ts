@@ -21,13 +21,13 @@ async function main() {
     const projectModule = await project.compile({
         // dump_ir0: "advanced",
         // dump_ir0: "advanced",
-        // dump_ir1: true,
+        dump_ir1: true,
         // dump_binaryen: "stack",
         // enable_compiler_timing: true,
         // dump_wasm_blob: "out.wasm",
         
-        // enable_optimization_binaryen: false,
-        // enable_optimization_constant_folding: false,
+        enable_optimization_binaryen: false,
+        enable_optimization_constant_folding: false,
         // enable_optimization_graph_reduction: false,
         // enable_optimization_dead_script_elimination: false,
         enable_optimization_procedure_inlinling: false,

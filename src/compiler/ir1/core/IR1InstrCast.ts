@@ -36,20 +36,16 @@ export class IR1InstrCast extends IR1Instruction {
         isString: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => CatnipValueFormat | void,
         isNumber: (emitter: CatnipCompilerWasmEmitter, format: CatnipValueFormat, depth: number) => CatnipValueFormat | void): CatnipValueFormat | void {
 
-        {
-            // We do a block so if there is a br in the lambda, the index stays the same.
-            // Binaryen will get rid of this if it's not necessary
-            if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
-                emitter.emitWasm(SpiderOpcodes.drop);
-                isNumber(emitter, format, 0);
-                return;
-            }
+        if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
+            emitter.emitWasm(SpiderOpcodes.drop);
+            isNumber(emitter, format, 0);
+            return;
+        }
 
-            if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
-                emitter.emitWasm(SpiderOpcodes.drop);
-                isString(emitter, format, 0);
-                return;
-            }
+        if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
+            emitter.emitWasm(SpiderOpcodes.drop);
+            isString(emitter, format, 0);
+            return;
         }
 
         IR1Logger.assert(CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64));
@@ -185,7 +181,7 @@ export class IR1InstrCast extends IR1Instruction {
                     // Convert from a number to a string
                     if (emitter !== null) {
                         emitter.emitWasmPushRuntime();
-                        emitter.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64_gc", true);
+                        emitter.emitWasmRuntimeFunctionCall("catnip_numconv_stringify_f64_gc");
                     }
 
                     if (ctx) ctx.didGC = true;
@@ -351,12 +347,12 @@ export class IR1InstrCast extends IR1Instruction {
                             emitter => {
                                 // The first character of the string is a '#'
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
-                                emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_to_argb", true);
+                                emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_to_argb");
                             },
                             emitter => {
                                 // The first character is not a '#', we will try to parse it into a number then a color
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
-                                emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse", true);
+                                emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
 
                                 this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);
                             },
@@ -370,7 +366,7 @@ export class IR1InstrCast extends IR1Instruction {
                 }
 
                 if (emitter !== null) {
-                    emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse", true);
+                    emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
                 }
                 return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
             }

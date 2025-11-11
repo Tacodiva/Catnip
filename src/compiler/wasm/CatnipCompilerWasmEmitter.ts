@@ -149,10 +149,10 @@ export class CatnipCompilerWasmEmitter {
     }
 
     public emitWasmCall(func: SpiderFunction, callWithoutEffects: boolean = false) {
-        if (callWithoutEffects && this.compiler.config.enable_optimization_binaryen) {            
+        if (callWithoutEffects && this.compiler.config.enable_optimization_binaryen) {
             this.emitWasm(SpiderOpcodes.ref_func, func);
-    
-            this.emitWasm(SpiderOpcodes.call, 
+
+            this.emitWasm(SpiderOpcodes.call,
                 this.module.getBinaryenIntrinsic("call.without.effects",
                     [...func.type.parameters, SpiderReferenceType.funcref],
                     ...func.type.results
@@ -283,7 +283,7 @@ export class CatnipCompilerWasmEmitter {
         const newStackPtrVar = this.borrowLocal(CatnipValueFormat.I32_NUMBER);
         this.emitWasm(SpiderOpcodes.local_tee, newStackPtrVar);
 
-        // (stackEnd < stackPtr + targetFunc.stackSize)
+        // (stackEnd < stackPtr + frameSizeBytes)
         this.emitWasm(SpiderOpcodes.i32_lt_u);
 
         this.emitWasmIf(emitter => {
@@ -390,6 +390,20 @@ export class CatnipCompilerWasmEmitter {
         this.returnLocal(stackPointer);
     }
 
+    public emitDropFrame(frame: CatnipCompilerWasmEmitStackFrame) {
+        const frameSizeBytes = frame.length * 8;
+
+        if (frameSizeBytes === 0) return;
+
+        this.emitWasmPushThread();
+
+        this.emitWasmPushStackPtr();
+        this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
+        this.emitWasm(SpiderOpcodes.i32_sub);
+
+        this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+    }
+
     public createGCFrame(conditional: boolean): void {
         CatnipCompilerLogger.assert(this._gcFrameInfo === null);
 
@@ -457,17 +471,7 @@ export class CatnipCompilerWasmEmitter {
                     emitter.emitPopFrame(frameInfo.frame);
                 },
                 emitter => {
-                    const frameSizeBytes = this._gcFrameInfo!.frame.length;
-
-                    if (frameSizeBytes === 0) return;
-
-                    this.emitWasmPushThread();
-
-                    this.emitWasmPushStackPtr();
-                    this.emitWasmPushNumber(SpiderNumberType.i32, frameSizeBytes);
-                    this.emitWasm(SpiderOpcodes.i32_sub);
-
-                    this.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructThread.getMemberOffset("stack_ptr"));
+                    emitter.emitDropFrame(frameInfo.frame);
                 }
             );
 
