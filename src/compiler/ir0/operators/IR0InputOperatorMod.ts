@@ -5,7 +5,6 @@ import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Input } from "../IR0Node";
 import { IR0InputOperatorGenericBinary } from "./IR0InputOperatorGenericBinary";
-import { IR1InstrSimple } from "../../ir1/core/IR1InstrSimple";
 
 export class IR0InputOperatorMod extends IR0InputOperatorGenericBinary {
     public constructor(left: IR0Input, right: IR0Input) {
@@ -19,8 +18,8 @@ export class IR0InputOperatorMod extends IR0InputOperatorGenericBinary {
         return CatnipValue.dynamic(CatnipValueFormat.F64_NUMBER_OR_NAN);
     }
 
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrSimple(this.name, emitter => {
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => {
             const value = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER);
             const valueCast = emitter.borrowLocal(CatnipValueFormat.I32_NUMBER);
             const modulus = emitter.borrowLocal(CatnipValueFormat.F64_NUMBER);

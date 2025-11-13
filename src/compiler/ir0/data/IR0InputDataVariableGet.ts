@@ -4,7 +4,6 @@ import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1InstrDataVariableGet } from "../../ir1/data/IR1InstrDataVariableGet";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR1Instruction } from "../../ir1/IR1Instruction";
 import { IR0Input } from "../IR0Node";
 
 export class IR0InputDataVariableGet extends IR0Input {
@@ -25,8 +24,8 @@ export class IR0InputDataVariableGet extends IR0Input {
         return this.result;
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction {
-        return new IR1InstrDataVariableGet(this.target, this.variable);
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitIR1(new IR1InstrDataVariableGet(this.target, this.variable));
     }
 
     public getGraphVisNodeProperties(): string {

@@ -1,8 +1,9 @@
 import { CatnipWasmEnumThreadStatus } from "../../wasm-interop/CatnipWasmEnumThreadStatus";
 import { CatnipCompilerLogger } from "../CatnipCompilerLogger";
+import { CatnipValue } from "../CatnipValue";
 import { CatnipValueFormat } from "../CatnipValueFormat";
 import { IR0ControlFlowType } from "../ir0/IR0ControlFlow";
-import { IR0InputReference, IR0Node } from "../ir0/IR0Node";
+import { IR0Command, IR0InputReference, IR0Node } from "../ir0/IR0Node";
 import { IR0Script } from "../ir0/IR0Script";
 import { BasicBlockInfo, FunctionInfo, IR0ToIR1Info, ScriptInfo } from "../ir0/IR0ToIR1Info";
 import { IR1InstrBlock } from "./core/IR1InstrBlock";
@@ -18,6 +19,7 @@ import { IR1InstrPushExternalValue } from "./core/IR1InstrPushExternalValue";
 import { IR1InstrPushFunctionIndex } from "./core/IR1InstrPushFunctionIndex";
 import { IR1InstrReturn } from "./core/IR1InstrReturn";
 import { IR1InstrReturnTo } from "./core/IR1InstrReturnTo";
+import { IR1InstrSimple, IR1InstrSimpleEmitter } from "./core/IR1InstrSimple";
 import { IR1InstrStackFrame } from "./core/IR1InstrStackFrame";
 import { IR1InstrTerminate } from "./core/IR1InstrTerminate";
 import { IR1InstrYield } from "./core/IR1InstrYield";
@@ -25,6 +27,11 @@ import { IR1ExternalValue, IR1ExternalValueType } from "./IR1ExternalValue";
 import { IR1ExternalValueSourceType, IR1Function } from "./IR1Function";
 import { IR1Instruction } from "./IR1Instruction";
 import { IR1Logger } from "./IR1Logger";
+
+interface EmitContext {
+    readonly body: IR1Instruction[];
+    gcFlag: boolean;
+}
 
 export class IR1Emitter {
     public readonly conversionInfo: IR0ToIR1Info;
@@ -36,9 +43,12 @@ export class IR1Emitter {
 
     public get compiler() { return this.script.ir0.ir.compiler; }
 
+    private _emitCtx: EmitContext | null;
+
     public constructor(script: IR0Script, conversionInfo: IR0ToIR1Info) {
         this.conversionInfo = conversionInfo;
         this.script = this.conversionInfo.getScriptInfo(script);
+        this._emitCtx = null;
     }
 
     public emitAll(): void {
@@ -168,10 +178,16 @@ export class IR1Emitter {
 
             const body: IR1Instruction[] = [];
 
+            this.beginEmit(body);
+
             for (const command of x.block.commands) {
-                const canGC = this.emitIR0(command, body);
-                if (canGC) body.push(new IR1InstrGC([]));
+                this.emitIR0(command);
+
+                if (this.consumeGCFlag())
+                    this.emitIR1(new IR1InstrGC([]));
             }
+
+            this.endEmit();
 
             const flow = x.block.flow;
 
@@ -194,11 +210,11 @@ export class IR1Emitter {
 
                 case IR0ControlFlowType.Condition: {
 
-                    const conditionCanGC = this.emitIR0Input(flow.condition, body);
-
-                    if (conditionCanGC) {
+                    this.beginEmit(body);
+                    this.emitInput(flow.condition);
+                    if (this.consumeGCFlag())
                         body.push(new IR1InstrGC([CatnipValueFormat.I32_BOOLEAN]));
-                    }
+                    this.endEmit();
 
                     const branchCtx = ctx.inside({
                         type: ContainingSyntaxType.IfElseThen,
@@ -239,19 +255,18 @@ export class IR1Emitter {
                         this.prepareInternalCall(nextBlockInfo.func.ir1, body);
                     }
 
+                    this.beginEmit(body);
                     // If this were a function, it would be called "prepareExternalCall"
-                    let inputsCanGC = false;
                     {
                         for (const calledExternalValue of calledFunction.externalValues) {
                             switch (calledExternalValue.type) {
                                 case IR1ExternalValueType.PROCEDURE_ARGUMENT:
-                                    if (this.emitIR0Input(flow.args[calledExternalValue.index], body))
-                                        inputsCanGC = true;
+                                    this.emitInput(flow.args[calledExternalValue.index]);
                                     break;
                                 case IR1ExternalValueType.RETURN_LOCATION:
                                     IR1Logger.assert(nextBlockInfo.isEntrypoint);
                                     IR1Logger.assert(calledProcedureInfo.isYielding);
-                                    body.push(new IR1InstrPushFunctionIndex(nextBlockInfo.func.ir1));
+                                    this.emitIR1(new IR1InstrPushFunctionIndex(nextBlockInfo.func.ir1));
                                     break;
                                 case IR1ExternalValueType.TRANSIENT_VARIABLE:
                                     throw new Error("Procedure call should not have a transient variable as an argument.");
@@ -261,7 +276,7 @@ export class IR1Emitter {
                         this.stackifyArguments(calledFunction, body);
                     }
 
-                    if (inputsCanGC) {
+                    if (this.consumeGCFlag()) {
 
                         if (calledFunction.externalValueSource === IR1ExternalValueSourceType.STACK) {
                             // If the values are already on the stack, we don't need to capture them to do a GC
@@ -271,6 +286,8 @@ export class IR1Emitter {
                             body.push(new IR1InstrGC(calledFunction.externalValues.map(IR1ExternalValue.getFormat)));
                         }
                     }
+
+                    this.endEmit();
 
                     if (calledProcedureInfo.isYielding) {
                         // TODO If calledProcedureInfo.isYielding then this is a tail call
@@ -355,37 +372,74 @@ export class IR1Emitter {
         }
     }
 
-    private emitIR0Input(inputRef: IR0InputReference, body: IR1Instruction[]): boolean {
-        inputRef.input.requestResultFormat(inputRef.requiredFormat);
-
-        let canTriggerGC = this.emitIR0(inputRef.input, body);
-
-        const result = inputRef.input.getResult();
-
-        if (!result.isAlwaysFormat(inputRef.requiredFormat) && !result.isNone) {
-            const cast = new IR1InstrCast(result.format, inputRef.requiredFormat);
-            canTriggerGC ||= cast.canTriggerGC();
-            body.push(cast);
-        }
-
-        return canTriggerGC;
+    private beginEmit(body: IR1Instruction[]): void {
+        CatnipCompilerLogger.assert(this._emitCtx === null);
+        this._emitCtx = {
+            body,
+            gcFlag: false
+        };
     }
 
-    private emitIR0(node: IR0Node, body: IR1Instruction[]): boolean {
-        let canTriggerGC = false;
+    private endEmit(): void {
+        CatnipCompilerLogger.assert(this._emitCtx !== null);
+        CatnipCompilerLogger.assert(!this._emitCtx.gcFlag, true, "GC Flag not consumed.");
+        this._emitCtx = null;
+    }
 
-        node.preEmitIR1(this);
+    private consumeGCFlag(): boolean {
+        CatnipCompilerLogger.assert(this._emitCtx !== null);
+        const wasFlagged = this._emitCtx.gcFlag;
+        this._emitCtx.gcFlag = false;
+        return wasFlagged;
+    }
 
-        for (const argName in node.args) {
-            if (this.emitIR0Input(node.args[argName], body))
-                canTriggerGC = true;
+    private emitIR0(node: IR0Node): void {
+        CatnipCompilerLogger.assert(this._emitCtx !== null);
+        if (node.canTriggerGC) this.flagGC();
+        node.emitIR1(this);
+    }
+
+    public emitInput(inputRef: IR0InputReference, requiredFormat?: CatnipValueFormat): CatnipValue {
+        CatnipCompilerLogger.assert(this._emitCtx !== null);
+
+        if (requiredFormat === undefined)
+            requiredFormat = inputRef.requiredFormat;
+
+        inputRef.input.requestResultFormat(requiredFormat);
+        this.emitIR0(inputRef.input);
+
+        let result = inputRef.input.getResult();
+
+        if (!result.isAlwaysFormat(requiredFormat)) {
+            const cast = this.emitIR1(new IR1InstrCast(result.format, requiredFormat));
+
+            if (cast.canTriggerGC()) this.flagGC();
+
+            result = result.castTo(requiredFormat);
         }
 
-        const emitted = node.emitIR1(this);
+        return result;
+    }
 
-        if (Array.isArray(emitted)) body.push(...emitted);
-        else body.push(emitted);
+    public emitInputs(inputs: Readonly<Record<string, IR0InputReference>>): void {
+        for (const argName in inputs)
+            this.emitInput(inputs[argName]);
+    }
 
-        return canTriggerGC || node.canTriggerGC;
+    public emitIR1<T extends IR1Instruction | IR1Instruction[]>(instr: T): T {
+        CatnipCompilerLogger.assert(this._emitCtx !== null);
+        if (Array.isArray(instr)) this._emitCtx.body.push(...instr);
+        else this._emitCtx.body.push(instr);
+        return instr;
+    }
+
+    public emitSimpleIR1(node: IR0Node, emitter: IR1InstrSimpleEmitter) {
+        this.emitInputs(node.args);
+        this.emitIR1(new IR1InstrSimple(node.name, emitter));
+    }
+
+    public flagGC() {
+        CatnipCompilerLogger.assert(this._emitCtx !== null);
+        this._emitCtx.gcFlag = true;
     }
 }

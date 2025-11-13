@@ -2,9 +2,7 @@ import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
-import { IR1InstrSimple } from "../../ir1/core/IR1InstrSimple";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR1Instruction } from "../../ir1/IR1Instruction";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Input } from "../IR0Node";
 
@@ -22,8 +20,8 @@ export class IR0InputSensingTimerGet extends IR0Input<[]> {
         return new IR0InputSensingTimerGet();
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrSimple(this.name, emitter => {
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => {
             emitter.emitWasmPushRuntime();
             emitter.emitWasm(SpiderOpcodes.i64_load, 3, CatnipWasmStructRuntime.getMemberOffset("time"));
 

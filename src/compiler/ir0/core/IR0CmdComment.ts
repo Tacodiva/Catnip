@@ -1,5 +1,4 @@
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR1Instruction } from "../../ir1/IR1Instruction";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Command } from "../IR0Node";
 
@@ -12,9 +11,7 @@ export class IR0CmdComment extends IR0Command<[]> {
         this.text = text;
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return [];
-    }
+    public emitIR1(emitter: IR1Emitter) { }
 
     public clone(ctx: IR0CloneContext) {
         return new IR0CmdComment(this.text);

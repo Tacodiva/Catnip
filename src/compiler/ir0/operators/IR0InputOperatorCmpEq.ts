@@ -2,7 +2,6 @@ import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
 import { Cast } from "../../cast";
 import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
-import { IR1InstrSimple } from "../../ir1/core/IR1InstrSimple";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Input } from "../IR0Node";
@@ -21,8 +20,8 @@ export class IR0InputOperatorCmpEq extends IR0InputOperatorGenericBinary {
         return CatnipValue.dynamic(CatnipValueFormat.I32_BOOLEAN);
     }
 
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrSimple(this.name, emitter => {
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => {
             const left = emitter.borrowLocal(CatnipValueFormat.F64);
             const right = emitter.borrowLocal(CatnipValueFormat.F64);
 

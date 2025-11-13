@@ -23,8 +23,8 @@ export class IR0InputOperatorJoin extends IR0InputOperatorGenericBinary {
         return CatnipValue.dynamic(CatnipValueFormat.I32_HSTRING);
     }
 
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrSimple(this.name, emitter => {
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => {
             emitter.emitWasmPushRuntime();
             emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_join_gc", true);
         });

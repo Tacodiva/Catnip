@@ -2,13 +2,11 @@ import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
 import { IR1InstrPenChangeParam, IR1PenParameter, IR1PenParameterChangeType } from "../../ir1/pen/IR1InstrPenChangeParam";
-import { IR0InputNothing } from "../core/IR0InputNothing";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Command, IR0Input } from "../IR0Node";
 
 export class IR0CmdPenChangeProperty extends IR0Command<["parameter", "value"]> {
 
-    public parameter: IR1PenParameter;
     public type: IR1PenParameterChangeType;
 
     public constructor(type: IR1PenParameterChangeType, parameter: IR0Input, value: IR0Input) {
@@ -23,41 +21,45 @@ export class IR0CmdPenChangeProperty extends IR0Command<["parameter", "value"]> 
             }
         });
 
-        this.parameter = IR1PenParameter.DYNAMIC;
         this.type = type;
     }
 
-    public preEmitIR1(emitter: IR1Emitter): void {
+    public emitIR1(emitter: IR1Emitter) {
+
         const parameterValue = this.args.parameter.getResult();
+        let parameter: IR1PenParameter;
 
         if (parameterValue.isConstant) {
             const parameterValueString = parameterValue.asConstantString();
 
             switch (parameterValueString.toLowerCase()) {
                 case "color":
-                    this.parameter = IR1PenParameter.COLOR;
+                    parameter = IR1PenParameter.COLOR;
                     break;
                 case "saturation":
-                    this.parameter = IR1PenParameter.SATURATION;
+                    parameter = IR1PenParameter.SATURATION;
                     break;
                 case "brightness":
-                    this.parameter = IR1PenParameter.BRIGHTNESS;
+                    parameter = IR1PenParameter.BRIGHTNESS;
                     break;
                 case "transparency":
-                    this.parameter = IR1PenParameter.TRANSPARENCY;
+                    parameter = IR1PenParameter.TRANSPARENCY;
                     break;
                 default:
                     CatnipCompilerLogger.warn("Invalid pen property name constant.");
-                    this.parameter = IR1PenParameter.DYNAMIC;
-                    return;
+                    parameter = IR1PenParameter.DYNAMIC;
+                    break;
             }
-
-            this.args.parameter.input = new IR0InputNothing();
+        } else {
+            parameter = IR1PenParameter.DYNAMIC;
         }
-    }
 
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrPenChangeParam(this.parameter, this.type);
+        if (parameter === IR1PenParameter.DYNAMIC) {
+            emitter.emitInput(this.args.parameter);
+        }
+        
+        emitter.emitInput(this.args.value);
+        emitter.emitIR1(new IR1InstrPenChangeParam(parameter, this.type));
     }
 
     public clone(ctx: IR0CloneContext): IR0Command<string[]> {

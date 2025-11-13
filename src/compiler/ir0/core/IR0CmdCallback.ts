@@ -4,7 +4,7 @@ import { catnip_compiler_callback } from "../../wasm/CatnipCompilerWasmModule";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Command, IR0NodeArgument, IR0NodeArguments } from "../IR0Node";
 
-export class IR0CmdCallback extends IR0Command {
+export class IR0CmdCallback extends IR0Command<string[]> {
     public readonly callback: catnip_compiler_callback;
     public readonly name: string;
 
@@ -19,10 +19,11 @@ export class IR0CmdCallback extends IR0Command {
     }
 
     public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrCallback(
+        emitter.emitInputs(this.args);
+        emitter.emitIR1(new IR1InstrCallback(
             this.name, this.callback,
             Object.values(this.args).map(arg => arg.requiredFormat), null
-        );
+        ));
     }
 
     public clone(ctx: IR0CloneContext) {

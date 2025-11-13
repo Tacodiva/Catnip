@@ -35,8 +35,8 @@ export class IR0InputOperatorLetterOf extends IR0Input<["str", "idx"]> {
         return new IR0InputOperatorLetterOf(this.args.idx.input.clone(ctx), this.args.str.input.clone(ctx));
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrSimple(this.name, emitter => {
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => {
             emitter.emitWasmPushNumber(SpiderNumberType.i32, 1);
             emitter.emitWasm(SpiderOpcodes.i32_sub);
             emitter.emitWasmPushRuntime();

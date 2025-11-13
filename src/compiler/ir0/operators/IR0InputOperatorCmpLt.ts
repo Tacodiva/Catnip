@@ -20,12 +20,14 @@ export class IR0InputOperatorCmpLt extends IR0InputOperatorGenericBinary {
         return CatnipValue.dynamic(CatnipValueFormat.I32_BOOLEAN);
     }
 
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrOperatorCmpLtGt(
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitInput(this.args.left);
+        emitter.emitInput(this.args.right);
+        emitter.emitIR1(new IR1InstrOperatorCmpLtGt(
             IR1InstrOperatorCmpLtGtType.LESS_THAN,
             this.args.left.getResult().format,
             this.args.right.getResult().format
-        );
+        ));
     }
 
     public clone(ctx: IR0CloneContext) {

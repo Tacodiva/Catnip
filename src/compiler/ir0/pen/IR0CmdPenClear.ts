@@ -1,11 +1,10 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
+import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 import { IR1InstrCallback } from "../../ir1/core/IR1InstrCallback";
 import { IR1InstrSimple } from "../../ir1/core/IR1InstrSimple";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR1Instruction } from "../../ir1/IR1Instruction";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Command } from "../IR0Node";
-import { CatnipWasmStructRuntime } from "../../../wasm-interop/CatnipWasmStructRuntime";
 
 export class IR0CmdPenClear extends IR0Command<[]> {
 
@@ -13,8 +12,8 @@ export class IR0CmdPenClear extends IR0Command<[]> {
         super("pen_clear", {});
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return [
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitIR1([
             // TODO Check this doesn't import a different function every time
             new IR1InstrCallback("pen_clear_renderer", () => emitter.compiler.runtimeModule.renderer.penEraseAll(), [], null),
 
@@ -23,7 +22,7 @@ export class IR0CmdPenClear extends IR0Command<[]> {
                 emitter.emitWasmPushNumber(SpiderNumberType.i32, 0);
                 emitter.emitWasm(SpiderOpcodes.i32_store, 2, CatnipWasmStructRuntime.getMemberOffset("pen_line_buffer_length"));
             })
-        ];
+        ]);
     }
 
     public clone(ctx: IR0CloneContext): IR0Command<[]> {

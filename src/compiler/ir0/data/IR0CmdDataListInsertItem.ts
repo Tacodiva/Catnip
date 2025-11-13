@@ -3,7 +3,6 @@ import { CatnipTarget } from "../../../runtime/CatnipTarget";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { IR1InstrDataListInsertItem } from "../../ir1/data/IR1InstrDataListInsertItem";
 import { IR1Emitter } from "../../ir1/IR1Emitter";
-import { IR1Instruction } from "../../ir1/IR1Instruction";
 import { IR0CloneContext } from "../IR0CloneContext";
 import { IR0Command, IR0Input } from "../IR0Node";
 
@@ -30,8 +29,10 @@ export class IR0CmdDataListInsertItem extends IR0Command<["index", "item"]> {
         return new IR0CmdDataListInsertItem(this.list, this.target, this.args.index.input.clone(ctx), this.args.item.input.clone(ctx));
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrDataListInsertItem(this.list, this.target, this.args.index.getResult());
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitInput(this.args.index);
+        emitter.emitInput(this.args.item);
+        emitter.emitIR1(new IR1InstrDataListInsertItem(this.list, this.target, this.args.index.getResult()));
     }
 
     public getGraphVisNodeProperties(): string {

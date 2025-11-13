@@ -28,8 +28,8 @@ export class IR0InputOperatorContains extends IR0Input<["a", "b"]> {
         return new IR0InputOperatorContains(this.args.a.input.clone(ctx), this.args.b.input.clone(ctx));
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrSimple(this.name, emitter => {
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => {
             emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_contains", true);
         });
     }

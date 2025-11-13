@@ -33,11 +33,12 @@ export class IR0InputDataListContains extends IR0Input<["item"]> {
         return new IR0InputDataListContains(this.list, this.target, this.args.item.input.clone(ctx));
     }
 
-    public emitIR1(emitter: IR1Emitter) {
-        return [
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitInput(this.args.item);
+        emitter.emitIR1([
             new IR1InstrDataListIndexOf(this.list, this.target),
             new IR1InstrCast(CatnipValueFormat.I32_NUMBER, CatnipValueFormat.I32_BOOLEAN)
-        ];
+        ]);
     }
 
     public getGraphVisNodeProperties(): string {

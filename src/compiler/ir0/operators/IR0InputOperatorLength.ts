@@ -29,7 +29,7 @@ export class IR0InputOperatorLength extends IR0Input<["str"]> {
         return new IR0InputOperatorLength(this.args.str.input.clone(ctx));
     }
 
-    public emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[] {
-        return new IR1InstrSimple(this.name, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_length", true));
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_hstring_length", true));
     }
 }

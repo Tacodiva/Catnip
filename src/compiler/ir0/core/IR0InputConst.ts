@@ -1,4 +1,4 @@
-import { catnip_compiler_constant, Cast } from "../../cast";
+import { Cast, catnip_compiler_constant } from "../../cast";
 import { CatnipValue } from "../../CatnipValue";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
@@ -56,7 +56,7 @@ export class IR0InputConst extends IR0Input<[]> {
     }
 
     public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrConst(this.value, this.getResultFormat());
+        emitter.emitIR1(new IR1InstrConst(this.value, this.getResultFormat()));
     }
 
     public clone() {

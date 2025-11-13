@@ -19,8 +19,8 @@ export class IR0InputOperatorDiv extends IR0InputOperatorGenericBinary {
         return CatnipValue.dynamic(CatnipValueFormat.F64_NUMBER_OR_NAN);
     }
 
-    public emitIR1(emitter: IR1Emitter) {
-        return new IR1InstrSimple(this.name, emitter => emitter.emitWasm(SpiderOpcodes.f64_div));
+    public emitIR1(emitter: IR1Emitter): void {
+        emitter.emitSimpleIR1(this, emitter => emitter.emitWasm(SpiderOpcodes.f64_div));
     }
 
     public clone(ctx: IR0CloneContext) {

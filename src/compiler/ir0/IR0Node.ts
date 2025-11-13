@@ -87,8 +87,8 @@ export abstract class IR0Node<TParams extends string[] = string[]> {
     }
 
 
-    public abstract emitIR1(emitter: IR1Emitter): IR1Instruction | IR1Instruction[];
-    public preEmitIR1(emitter: IR1Emitter): void { }
+    public abstract emitIR1(emitter: IR1Emitter): void;
+    public preEmitIR1(emitter: IR1Emitter): string { return ""; }
 
 }
 
