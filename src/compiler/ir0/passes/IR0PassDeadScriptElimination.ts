@@ -3,8 +3,6 @@ import { IR0 } from "../IR0";
 import { IR0Script } from "../IR0Script";
 import { IR0TriggerProcedure } from "../procedure/IR0TriggerProcedure";
 
-// TODO This currently will not get rid of mutually recursive scripts
-
 export const IR0PassDeadScriptElimination: IR0Pass = {
     type: IRType.IR0,
     priority: 0,
@@ -12,22 +10,29 @@ export const IR0PassDeadScriptElimination: IR0Pass = {
     execute: function (ir: IR0): boolean {
 
         const callGraph = ir.createCallGraph();
+        const reachableScripts: Set<IR0Script> = new Set();
 
-        const scriptsToSplice: IR0Script[] = [];
+        function visitScript(script: IR0Script): void {
+            if (reachableScripts.has(script)) return;
 
-        for (const script of ir.scripts) {
+            reachableScripts.add(script);
 
-            if (!(script.trigger instanceof IR0TriggerProcedure))
-                continue;
+            const node = callGraph.get(script);
+            if (node === undefined) return;
 
-            const scriptGraphNode = callGraph.get(script);
-
-            if (scriptGraphNode === undefined || scriptGraphNode.callers.length === 0) {
-                // The procedure is not called, let's get rid of it
-                scriptsToSplice.push(script);
-            }
+            for (const call of node.calls)
+                visitScript(call.node.script);
         }
 
+        for (const script of ir.scripts) {
+            if (script.trigger instanceof IR0TriggerProcedure)
+                continue;
+
+            visitScript(script);
+        }
+
+        const scriptsToSplice = ir.scripts.filter(script => !reachableScripts.has(script));
+        
         for (const script of scriptsToSplice) {
             const scriptIndex = ir.scripts.indexOf(script);
             ir.scripts.splice(scriptIndex, 1);

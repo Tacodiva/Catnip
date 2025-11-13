@@ -20,11 +20,10 @@ async function main() {
     const project = await run(catnipModule, projectFile);
     const projectModule = await project.compile({
         // dump_ir0: "advanced",
-        // dump_ir0: "advanced",
-        dump_ir1: true,
+        // dump_ir1: true,
         // dump_binaryen: "stack",
+        // dump_wasm_blob: "out_new.wasm",
         // enable_compiler_timing: true,
-        // dump_wasm_blob: "out.wasm",
         
         enable_optimization_binaryen: false,
         enable_optimization_constant_folding: false,
@@ -32,7 +31,7 @@ async function main() {
         // enable_optimization_dead_script_elimination: false,
         enable_optimization_procedure_inlinling: false,
         enable_optimization_dead_branch_elimination: false,
-        enable_optimization_variable_analysis: false,
+        // enable_optimization_variable_analysis: false,
 
         // events: {
         //     PROJECT_BROADCAST: {

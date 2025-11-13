@@ -23,7 +23,6 @@ export class IR0InputOperatorCmpEq extends IR0InputOperatorGenericBinary {
 
     public emitIR1(emitter: IR1Emitter) {
         return new IR1InstrSimple(this.name, emitter => {
-
             const left = emitter.borrowLocal(CatnipValueFormat.F64);
             const right = emitter.borrowLocal(CatnipValueFormat.F64);
 
@@ -40,10 +39,13 @@ export class IR0InputOperatorCmpEq extends IR0InputOperatorGenericBinary {
                     emitter.emitWasm(SpiderOpcodes.local_get, left);
                     emitter.emitWasm(SpiderOpcodes.local_get, right);
                     emitter.emitWasmPushRuntime();
-                    emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_value_eq", true);
+                    emitter.emitWasmRuntimeFunctionCall("catnip_blockutil_value_eq");
                 },
                 SpiderNumberType.i32
             );
+
+            emitter.returnLocal(left);
+            emitter.returnLocal(right);
         });
     }
 

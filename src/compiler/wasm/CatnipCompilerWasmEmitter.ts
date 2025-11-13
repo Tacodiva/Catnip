@@ -119,6 +119,11 @@ export class CatnipCompilerWasmEmitter {
         this._expression.emit(opcode, ...args);
     }
 
+    public emitWasmExpression(expr: SpiderExpression): void {
+        for (const instr of expr.instructions)
+            this._expression.instructions.push(instr);
+    }
+
     public emitWasmBlock(emitFunc: CatnipCompilerWasmEmitFunc, type?: SpiderValueType): void {
         this.emitWasm(SpiderOpcodes.block, this.emitExpression(emitFunc), type);
     }
@@ -253,7 +258,8 @@ export class CatnipCompilerWasmEmitter {
         if (locals === undefined)
             this._locals.set(local.value, locals = []);
 
-        this._borrowedLocals.delete(local);
+        const didDelete = this._borrowedLocals.delete(local);
+        CatnipCompilerLogger.assert(didDelete);
 
         locals.push(local);
     }
@@ -270,7 +276,7 @@ export class CatnipCompilerWasmEmitter {
 
         this.emitWasmPushStackEnd();
 
-        // Get the stack pointer and save it it a local
+        // Get the stack pointer and save it to a local
         this.emitWasmPushStackPtr();
         const baseStackPtrVar = this.borrowLocal(CatnipValueFormat.I32_NUMBER);
         this.emitWasm(SpiderOpcodes.local_tee, baseStackPtrVar);

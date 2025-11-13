@@ -8,10 +8,14 @@ import { IR0InputTransientGet } from "../core/IR0InputTransientGet";
 import { IR0, IR0CallGraphNode } from "../IR0";
 import { IR0BasicBlock } from "../IR0BasicBlock";
 import { IR0CloneContext } from "../IR0CloneContext";
-import { IR0ControlFlow, IR0ControlFlowCall, IR0ControlFlowType } from "../IR0ControlFlow";
-import { IR0Input, IR0InputReference, IR0Node } from "../IR0Node";
-import { IR0Script, IR0ScriptInfo } from "../IR0Script";
+import { IR0ControlFlow, IR0ControlFlowType } from "../IR0ControlFlow";
+import { IR0InputReference, IR0Node } from "../IR0Node";
+import { IR0Script } from "../IR0Script";
 import { IR0InputProcedureArgument } from "../procedure/IR0InputProcedureArgument";
+
+// These are completly random values idk if they're any good
+const ALWAYS_INLINE_MAX_SIZE = 10;
+const INLINE_MAX_SIZE_INCREASE = 100;
 
 function tarjan(graph: Map<IR0Script, IR0CallGraphNode>): Map<IR0CallGraphNode, Set<IR0CallGraphNode>> {
     const groups: Set<IR0CallGraphNode>[] = [];
@@ -98,6 +102,47 @@ export const IR0PassProcedureInlining: IR0Pass = {
         const callGraph = ir.createCallGraph();
         const callGraphGroups = tarjan(callGraph);
 
+        const nodeSizes: Map<IR0CallGraphNode, number> = new Map();
+
+        // Returns the 'size' of a script (which is the number of IR0 nodes it has)
+        function getNodeSize(node: IR0CallGraphNode): number {
+            const size = nodeSizes.get(node);
+            if (size !== undefined) return size;
+
+            let sizeCount = 0;
+            node.script.forEachBasicBlock(block => {
+                block.forEachNode(() => ++sizeCount);
+            });
+
+            nodeSizes.set(node, sizeCount);
+            return sizeCount;
+        }
+
+        function shouldInline(calling: IR0CallGraphNode, called: IR0CallGraphNode): boolean {
+            CatnipCompilerLogger.assert(called.callers.findIndex(caller => caller.node === calling) !== -1);
+            CatnipCompilerLogger.assert(calling.calls.findIndex(call => call.node === called) !== -1);
+
+            // Don't inline recursive functions
+            const callGroup = callGraphGroups.get(calling)!;
+            // A function call is "recursive" if it is in the same strongly connected group as us
+            if (callGroup.has(called)) return false;
+
+            // Always inline functions who are only called by us.
+            if (called.callers.length === 1) return true;
+
+            const calledSize = getNodeSize(called);
+
+            // If the function is small enough, always inline it.
+            if (calledSize <= ALWAYS_INLINE_MAX_SIZE) return true;
+
+            // Otherwise, calculate the total 'cost' of inlining.
+            const sizeCost = calledSize * called.callers.length;
+
+            if (sizeCost <= INLINE_MAX_SIZE_INCREASE) return true;
+
+            return false;
+        }
+
         let modified = false;
 
         const attemptedInlining: Set<IR0CallGraphNode> = new Set();
@@ -118,17 +163,9 @@ export const IR0PassProcedureInlining: IR0Pass = {
                 CatnipCompilerLogger.assert(callingFlow.type === IR0ControlFlowType.Call);
                 CatnipCompilerLogger.assert(callingFlow.procedure === calledNode.script);
 
-                // Don't inline recursive functions
-                if (callingNode !== undefined && calledNode !== undefined) {
-                    const callGroup = callGraphGroups.get(callingNode)!;
-                    // A function call is "recursive" if it is in the same strongly connected group as us
-                    if (callGroup.has(calledNode)) continue;
-                }
+                if (!shouldInline(callingNode, calledNode)) continue;
 
                 // We are going to inline!
-                // TODO Some kind of heuristic here to check if we wanna inline, for now tho
-                //   we just inling everything
-
                 modified = true;
 
                 // First, we need to move all the parameters into transient variables.
@@ -139,7 +176,7 @@ export const IR0PassProcedureInlining: IR0Pass = {
                     argumentTransients.push(argumentTransient);
                     callingBlock.commands.push(new IR0CmdTransientSet(argumentTransient, argument.input));
                 }
-                
+
                 // This is where "returns" will now flow to
                 const returnLocation = callingFlow.next;
 
@@ -182,7 +219,7 @@ export const IR0PassProcedureInlining: IR0Pass = {
                         // Also destroy all of our borrowed transients
                         for (const argTransient of argumentTransients)
                             block.destroyTransient(argTransient);
-                        
+
                     } else {
                         IR0ControlFlow.forEachBlock(block.flow, visit);
                     }

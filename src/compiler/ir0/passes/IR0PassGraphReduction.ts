@@ -12,7 +12,7 @@ export const IR0PassGraphReduction: IR0Pass = {
         const graph = ir.createBasicBlockGraph(false);
 
         function mergeBasicBlocks(dst: IR0BasicBlockGraphNode, src: IR0BasicBlockGraphNode) {
-            CatnipCompilerLogger.assert(dst !== src);
+            CatnipCompilerLogger.assert(dst !== src);anyModified
             CatnipCompilerLogger.assert(dst.block.script === src.block.script);
             CatnipCompilerLogger.assert(dst.block.flow.type === IR0ControlFlowType.Next);
             CatnipCompilerLogger.assert(dst.out.includes(src));
@@ -81,55 +81,61 @@ export const IR0PassGraphReduction: IR0Pass = {
             graph.delete(src.block);
         }
 
-        let modified = false;
+        let anyModified = false, lastModified = true;
 
-        ir.forEachBasicBlock(block => {
-            const blockInfo = graph.get(block);
-            const blockFlow = block.flow;
+        while (lastModified) {
+            lastModified = false;
 
-            if (blockInfo === undefined) return;
+            ir.forEachBasicBlock(block => {
+                const blockInfo = graph.get(block);
+                const blockFlow = block.flow;
 
-            if (blockInfo.in.length === 1) {
-                // This block only has one inward edge, lets see if we can simplify.
-                const inBlockInfo = blockInfo.in[0];
-                const inBlockFlow = inBlockInfo.block.flow;
+                if (blockInfo === undefined) return;
 
-                // We can't merge a block with itself
-                if (inBlockInfo.block === block) return;
+                if (blockInfo.in.length === 1) {
+                    // This block only has one inward edge, lets see if we can simplify.
+                    const inBlockInfo = blockInfo.in[0];
+                    const inBlockFlow = inBlockInfo.block.flow;
 
-                if (inBlockFlow.type === IR0ControlFlowType.Next &&
-                    inBlockFlow.status === CatnipWasmEnumThreadStatus.RUNNING) {
-                    // We can merge this block and the inward block
-                    mergeBasicBlocks(inBlockInfo, blockInfo);
-                    modified = true;
+                    // We can't merge a block with itself
+                    if (inBlockInfo.block === block) return;
+
+                    if (inBlockFlow.type === IR0ControlFlowType.Next &&
+                        inBlockFlow.status === CatnipWasmEnumThreadStatus.RUNNING) {
+                        // We can merge this block and the inward block
+                        mergeBasicBlocks(inBlockInfo, blockInfo);
+                        lastModified = true;
+                        return;
+                    }
+                }
+
+                if (blockInfo.block.commands.length === 0 && blockInfo.block.destroyedTransients.length === 0) {
+                    if (blockFlow.type === IR0ControlFlowType.Next && blockFlow.status === CatnipWasmEnumThreadStatus.RUNNING) {
+                        // This is an empty node which just passes control to something else. It does not need to exist.
+                        mergeBasicBlocks(blockInfo, graph.get(blockFlow.next)!);
+                        lastModified = true;
+                        return;
+                    }
+                }
+
+                if (blockFlow.type === IR0ControlFlowType.Condition && blockFlow.pass === blockFlow.fail) {
+                    // If a condition does the same thing on pass or fail, we can get rid of the condition
+
+                    block.flow = {
+                        type: IR0ControlFlowType.Next,
+                        next: blockFlow.pass,
+                        status: CatnipWasmEnumThreadStatus.RUNNING
+                    };
+
+                    lastModified = true;
+
                     return;
                 }
-            }
+            });
 
-            if (blockInfo.block.commands.length === 0 && blockInfo.block.destroyedTransients.length === 0) {
-                if (blockFlow.type === IR0ControlFlowType.Next && blockFlow.status === CatnipWasmEnumThreadStatus.RUNNING) {
-                    // This is an empty node which just passes control to something else. It does not need to exist.
-                    mergeBasicBlocks(blockInfo, graph.get(blockFlow.next)!);
-                    modified = true;
-                    return;
-                }
-            }
+            anyModified ||= lastModified;
+        }
 
-            if (blockFlow.type === IR0ControlFlowType.Condition && blockFlow.pass === blockFlow.fail) {
-                // If a condition does the same thing on pass or fail, we can get rid of the condition
-
-                block.flow = {
-                    type: IR0ControlFlowType.Next,
-                    next: blockFlow.pass,
-                    status: CatnipWasmEnumThreadStatus.RUNNING
-                };
-
-                modified = true;
-
-                return;
-            }
-        });
-
-        return modified;
+        return anyModified;
     }
 }

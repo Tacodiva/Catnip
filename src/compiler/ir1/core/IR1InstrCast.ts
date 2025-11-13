@@ -1,13 +1,13 @@
 import { SpiderNumberType, SpiderOpcodes } from "wasm-spider";
+import { CatnipWasmStructHeapString } from "../../../wasm-interop/CatnipWasmStructHeapString";
+import { VALUE_CANNON_NAN_UPPER, VALUE_STRING_MASK } from "../../../wasm-interop/CatnipWasmStructValue";
+import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
 import { CatnipValueFormat } from "../../CatnipValueFormat";
 import { CatnipValueFormatUtils } from "../../CatnipValueFormatUtils";
 import { CatnipCompilerWasmEmitter } from "../../wasm/CatnipCompilerWasmEmitter";
 import { IR1Instruction } from "../IR1Instruction";
-import { IR1StringificationContext } from "../IR1StringificationContext";
 import { IR1Logger } from "../IR1Logger";
-import { VALUE_STRING_MASK, VALUE_STRING_UPPER } from "../../../wasm-interop/CatnipWasmStructValue";
-import { CatnipCompilerLogger } from "../../CatnipCompilerLogger";
-import { CatnipWasmStructHeapString } from "../../../wasm-interop/CatnipWasmStructHeapString";
+import { IR1StringificationContext } from "../IR1StringificationContext";
 
 interface CastContext {
     didGC: boolean;
@@ -38,49 +38,82 @@ export class IR1InstrCast extends IR1Instruction {
 
         if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_NUMBER_OR_NAN)) {
             emitter.emitWasm(SpiderOpcodes.drop);
-            isNumber(emitter, format, 0);
-            return;
+            return isNumber(emitter, format, 0);
         }
 
         if (CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64_BOXED_I32_HSTRING)) {
             emitter.emitWasm(SpiderOpcodes.drop);
-            isString(emitter, format, 0);
-            return;
+            return isString(emitter, format, 0);
         }
 
         IR1Logger.assert(CatnipValueFormatUtils.isAlways(format, CatnipValueFormat.F64));
 
-        // TODO Checking for NaN here might be faster, check performance
-
-        emitter.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
-        emitter.emitWasm(SpiderOpcodes.i64_const, 32);
-        emitter.emitWasm(SpiderOpcodes.i64_shr_u);
-        emitter.emitWasm(SpiderOpcodes.i32_wrap_i64);
-        emitter.emitWasmPushNumber(SpiderNumberType.i32, VALUE_STRING_UPPER);
-        emitter.emitWasm(SpiderOpcodes.i32_eq);
+        let stringFormat: CatnipValueFormat | void = undefined, numberFormat: CatnipValueFormat | void = undefined;
+        const stringExpr = emitter.emitExpression((emitter) => stringFormat = isString(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, 2));
+        const numberExpr = emitter.emitExpression((emitter) => numberFormat = isNumber(emitter, format & (~CatnipValueFormat.F64_BOXED_I32_HSTRING), 1));
 
         let outFormat: CatnipValueFormat | undefined;
-
-        let valueFormat0: CatnipValueFormat | void = undefined, valueFormat1: CatnipValueFormat | void = undefined;
-
-        const trueExpr = emitter.emitExpression((emitter) => valueFormat0 = isString(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, 1));
-        const falseExpr = emitter.emitExpression((emitter) => valueFormat1 = isNumber(emitter, format & (~CatnipValueFormat.F64_BOXED_I32_HSTRING), 1));
-
-        if (valueFormat0 === undefined || valueFormat1 === undefined) {
-            if (valueFormat0 !== undefined || valueFormat1 !== undefined)
+        if (stringFormat === undefined || numberFormat === undefined) {
+            if (stringFormat !== undefined || numberFormat !== undefined)
                 throw new Error("Both branches must return a value.");
 
             outFormat = undefined;
         } else {
-            outFormat = valueFormat0 | valueFormat1;
+            outFormat = stringFormat | numberFormat;
         }
 
+        const valueLocal = emitter.borrowLocal(format);
+        emitter.emitWasm(SpiderOpcodes.local_set, valueLocal);
 
-        emitter.emitWasm(SpiderOpcodes.if,
-            trueExpr, falseExpr,
+        emitter.emitWasmBlock(emitter => {
+
+            emitter.emitWasmBlock(emitter => {
+                emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                emitter.emitWasm(SpiderOpcodes.f64_eq);
+
+                // If the values equal eachother, it's a number
+                emitter.emitWasm(SpiderOpcodes.br_if, 0);
+
+                // Otherwise, the value is NaN, we need to check if it's a canonical NaN or not
+                emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                emitter.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
+                emitter.emitWasm(SpiderOpcodes.i64_const, 32);
+                emitter.emitWasm(SpiderOpcodes.i64_shr_u);
+                emitter.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                emitter.emitWasmPushNumber(SpiderNumberType.i32, VALUE_CANNON_NAN_UPPER);
+                emitter.emitWasm(SpiderOpcodes.i32_eq);
+
+                // If it a canonical NaN, it's a number
+                emitter.emitWasm(SpiderOpcodes.br_if, 0);
+
+                // Otherwise, it's a string!
+                emitter.emitWasmExpression(stringExpr);
+                emitter.emitWasm(SpiderOpcodes.br, 1);
+            });
+
+            emitter.emitWasmExpression(numberExpr);
+
+        },
             outFormat === undefined ? undefined : CatnipValueFormatUtils.getFormatSpiderType(outFormat)
         );
+
+        emitter.returnLocal(valueLocal);
+
         return outFormat;
+
+        // emitter.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
+        // emitter.emitWasm(SpiderOpcodes.i64_const, 32);
+        // emitter.emitWasm(SpiderOpcodes.i64_shr_u);
+        // emitter.emitWasm(SpiderOpcodes.i32_wrap_i64);
+        // emitter.emitWasmPushNumber(SpiderNumberType.i32, VALUE_STRING_UPPER);
+        // emitter.emitWasm(SpiderOpcodes.i32_eq);
+
+        // emitter.emitWasm(SpiderOpcodes.if,
+        //     stringExpr, numberExpr,
+        //     outFormat === undefined ? undefined : CatnipValueFormatUtils.getFormatSpiderType(outFormat)
+        // );
+        // return outFormat;
     }
 
     public static emitConversion(emitter: CatnipCompilerWasmEmitter | null, src: CatnipValueFormat, dst: CatnipValueFormat, ctx?: CastContext): CatnipValueFormat {
@@ -102,15 +135,11 @@ export class IR1InstrCast extends IR1Instruction {
                         if (emitter !== null) {
                             const local = emitter.borrowLocal(src);
                             emitter.emitWasm(SpiderOpcodes.local_tee, local);
+                            emitter.emitWasm(SpiderOpcodes.f64_const, 0);
+                            emitter.emitWasm(SpiderOpcodes.local_get, local);
                             emitter.emitWasm(SpiderOpcodes.local_get, local);
                             emitter.emitWasm(SpiderOpcodes.f64_eq);
-
-                            emitter.emitWasmIf(
-                                emitter => emitter.emitWasm(SpiderOpcodes.local_get, local),
-                                emitter => emitter.emitWasm(SpiderOpcodes.f64_const, 0),
-                                SpiderNumberType.f64
-                            );
-
+                            emitter.emitWasm(SpiderOpcodes.select);
                             emitter.returnLocal(local);
                         }
                         return this.emitConversion(emitter, src & (~CatnipValueFormat.F64_NAN), dst);
@@ -249,6 +278,52 @@ export class IR1InstrCast extends IR1Instruction {
                 return CatnipValueFormat.I32_COLOR;
             }
 
+            if (CatnipValueFormatUtils.isAlways(dst, CatnipValueFormat.F64_NUMBER)) {
+                // Faster conversion for F64 -> F64_NUMBER
+
+                if (emitter !== null) {
+
+                    const valueLocal = emitter.borrowLocal(CatnipValueFormat.F64);
+                    emitter.emitWasm(SpiderOpcodes.local_set, valueLocal);
+
+                    emitter.emitWasmBlock(emitter => {
+                        emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                        emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                        emitter.emitWasm(SpiderOpcodes.f64_eq);
+
+                        // If the values equal eachother, it's a number
+                        emitter.emitWasmIf(emitter => {
+                            emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                            emitter.emitWasm(SpiderOpcodes.br, 1);
+                        });
+
+                        // Otherwise, the value is NaN, we need to check if it's a canonical NaN or not
+                        emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                        emitter.emitWasm(SpiderOpcodes.i64_reinterpret_f64);
+                        emitter.emitWasm(SpiderOpcodes.i64_const, 32);
+                        emitter.emitWasm(SpiderOpcodes.i64_shr_u);
+                        emitter.emitWasm(SpiderOpcodes.i32_wrap_i64);
+                        emitter.emitWasmPushNumber(SpiderNumberType.i32, VALUE_CANNON_NAN_UPPER);
+                        emitter.emitWasm(SpiderOpcodes.i32_eq);
+
+                        // If it a canonical NaN, return 0
+                        emitter.emitWasmIf(emitter => {
+                            emitter.emitWasmPushNumber(SpiderNumberType.f64, 0);
+                            emitter.emitWasm(SpiderOpcodes.br, 1);
+                        });
+
+                        // Otherwise, it's a string!
+                        emitter.emitWasm(SpiderOpcodes.local_get, valueLocal);
+                        this.emitConversion(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, CatnipValueFormat.F64_NUMBER, ctx);
+
+                    }, SpiderNumberType.f64);
+
+                    emitter.returnLocal(valueLocal);
+                }
+
+                return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER, dst, ctx);
+            }
+
             if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.F64_NUMBER_OR_NAN | CatnipValueFormat.I32_NUMBER)) {
                 // Convert from an F64 that may be a boxed hstring or a number into a number
 
@@ -260,11 +335,11 @@ export class IR1InstrCast extends IR1Instruction {
                     const format = this.emitStringCheck(emitter, src,
                         (emitter) => {
                             emitter.emitWasm(SpiderOpcodes.local_get, value);
-                            return this.emitConversion(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst);
+                            return this.emitConversion(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst, ctx);
                         },
                         (emitter) => {
                             emitter.emitWasm(SpiderOpcodes.local_get, value);
-                            return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                            return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst, ctx);
                         }
                     );
 
@@ -272,7 +347,7 @@ export class IR1InstrCast extends IR1Instruction {
 
                     return format;
                 } else {
-                    return this.emitConversion(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst) | this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                    return this.emitConversion(emitter, CatnipValueFormat.F64_BOXED_I32_HSTRING, dst, ctx) | this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst, ctx);
                 }
             }
 
@@ -298,7 +373,7 @@ export class IR1InstrCast extends IR1Instruction {
                         (emitter) => {
                             emitter.emitWasm(SpiderOpcodes.local_get, value);
 
-                            return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_HSTRING);
+                            return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_HSTRING, ctx);
                         }
                     );
 
@@ -354,7 +429,7 @@ export class IR1InstrCast extends IR1Instruction {
                                 emitter.emitWasm(SpiderOpcodes.local_get, strPtr);
                                 emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
 
-                                this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR);
+                                this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, CatnipValueFormat.I32_COLOR, ctx);
                             },
                             SpiderNumberType.i32
                         );
@@ -368,7 +443,7 @@ export class IR1InstrCast extends IR1Instruction {
                 if (emitter !== null) {
                     emitter.emitWasmRuntimeFunctionCall("catnip_numconv_parse");
                 }
-                return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst);
+                return this.emitConversion(emitter, CatnipValueFormat.F64_NUMBER_OR_NAN, dst, ctx);
             }
 
             if (CatnipValueFormatUtils.isAlways(src, CatnipValueFormat.I32_BOOLEAN)) {
@@ -383,7 +458,7 @@ export class IR1InstrCast extends IR1Instruction {
                         );
                     }
 
-                    return this.emitConversion(emitter, CatnipValueFormat.I32_HSTRING, dst);
+                    return this.emitConversion(emitter, CatnipValueFormat.I32_HSTRING, dst, ctx);
                 }
 
                 if (CatnipValueFormatUtils.isSometimes(dst, CatnipValueFormat.I32_NUMBER)) {
@@ -400,7 +475,7 @@ export class IR1InstrCast extends IR1Instruction {
                         emitter.emitWasm(SpiderOpcodes.i32_ne);
                         emitter.emitWasm(SpiderOpcodes.f64_convert_i32_u);
                     }
-                    return this.emitConversion(emitter, CatnipValueFormat.F64_ZERO | CatnipValueFormat.F64_POS_INT, dst);
+                    return this.emitConversion(emitter, CatnipValueFormat.F64_ZERO | CatnipValueFormat.F64_POS_INT, dst, ctx);
                 }
             }
 
@@ -419,7 +494,7 @@ export class IR1InstrCast extends IR1Instruction {
                     emitter.emitWasm(SpiderOpcodes.f64_convert_i32_s);
                 }
 
-                return this.emitConversion(emitter, CatnipValueFormat.F64_INT, dst);
+                return this.emitConversion(emitter, CatnipValueFormat.F64_INT, dst, ctx);
             }
 
             notSupported();

@@ -19,16 +19,17 @@ async function main() {
 
     const project = await run(module, new Uint8Array(sb3File), renderer);
     const projectModule = await project.compile({
-        dump_wasm_blob: false,
+        // dump_wasm_blob: false,
         enable_compiler_timing: true,
+        dump_wasm_blob: "out.wasm",
 
-        enable_optimization_binaryen: false,
+        // enable_optimization_binaryen: false,
         // enable_optimization_constant_folding: false,
         // enable_optimization_graph_reduction: false,
         // enable_optimization_dead_script_elimination: false,
-        enable_optimization_procedure_inlinling: false,
+        // enable_optimization_procedure_inlinling: false,
         // enable_optimization_dead_branch_elimination: false,
-        enable_optimization_variable_analysis: false
+        // enable_optimization_variable_analysis: false
     });
 
     document.addEventListener("keydown", (event) => {
